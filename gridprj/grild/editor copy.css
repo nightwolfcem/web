@@ -1,0 +1,50 @@
+
+
+.TcodeEditor, .TcodeEditor textarea {
+    overflow:visible;
+    min-width: max-content;
+}
+.TcodeEditor, .TcodeEditor textarea {
+    margin-right: 20px;
+}
+.TcodeEditor
+{
+  
+    width: 100%;
+    height: 100%;
+}
+.TcodeEditor-container {
+    width: 400px;
+    height: 200px;
+    overflow: scroll;
+    border: 1px solid #ccc;
+    padding: 10px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+ 
+    white-space: pre-wrap;
+}
+.TcodeEditor .selection-highlight{
+   font-weight: bold;
+   background-color:rgba(184, 253, 251, 0.6);
+}
+.dark{background-color: black;color:white}
+.light{background-color:white;color:black}
+.TcodeEditor-container  .cursor-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+.TcodeEditor-container  .cursor {
+    position: absolute;
+    width: 2px;
+    background-color: rgb(255, 255, 255);
+    animation: blink 1s step-start 0s infinite;
+}
+
+@keyframes blink {
+    50% {
+        background-color: transparent;
+    }
+}

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>3D Uygulama ile Matris Anlama - Otomatik Tamamlama Entegreli</title>
+    <style>
+        body, html {
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+            display: flex;
+        }
+        #editor {
+            width: 50%;
+            height: 100vh;
+        }
+        #viewer {
+            width: 50%;
+            height: 100vh;
+        }
+        .CodeMirror {
+            height: 100%;
+        }
+    </style>
+    <!-- CodeMirror CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <!-- Tema (isteğe bağlı) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/dracula.min.css">
+    <!-- Hint CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/hint/show-hint.min.css">
+</head>
+<body>
+    <div id="editor">
+        <textarea id="code">
+    // Buraya JavaScript kodunuzu yazın
+    // Örnek: Küpü döndürme
+    cube.rotation.x += 0.01;
+    cube.rotation.y += 0.01;
+        </textarea>
+    </div>
+    <div id="viewer"></div>
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
+    <!-- CodeMirror -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <!-- JavaScript Modu -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+    <!-- Hint JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/hint/show-hint.min.js"></script>
+    <!-- JavaScript Hints -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/hint/javascript-hint.min.js"></script>
+    <!-- Tern.js -->
+    <script src="../files/js/global/tern.js"></script>
+
+
+    <!-- Ana Script -->
+    <script>
+    (async function() {
+        // ECMAScript ve Browser tanımlarını yükleme
+        var ecmascript = await fetch('../files/jsons/ecmascript.json').then(res => res.json());
+        var browser = await fetch('../files/jsons/browser.json').then(res => res.json());
+
+        // CodeMirror ve Tern.js Ayarları
+        var editor = CodeMirror.fromTextArea(document.getElementById('code'), {
+            mode: { name: "javascript", globalVars: true },
+            theme: "dracula",
+            lineNumbers: true,
+            gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+            foldGutter: true,
+            extraKeys: {
+                "Ctrl-Space": function(cm) { server.complete(cm); },
+                "Ctrl-I": function(cm) { server.showType(cm); },
+                "Ctrl-O": function(cm) { server.showDocs(cm); },
+                "Alt-.": function(cm) { server.jumpToDef(cm); },
+                "Alt-,": function(cm) { server.jumpBack(cm); }
+            },
+            hintOptions: { hint: CodeMirror.hint.anyword }
+        });
+
+        // Tern.js Sunucusunu Başlatma
+        var server = new Server.Server({
+            defs: [ecmascript, browser],
+        });
+
+        editor.on("cursorActivity", function(cm) {
+            server.updateArgHints(cm);
+        });
+
+        editor.on("keypress", function(cm, event) {
+            var typedChar = String.fromCharCode(event.charCode || event.keyCode);
+            if (typedChar === ".") {
+                server.complete(cm);
+            }
+        });
+
+        editor.on("inputRead", function(cm, change) {
+            if (change.text[0] === ".") {
+                server.complete(cm);
+            }
+        });
+
+        // Three.js Sahnesi
+        var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera(75, (window.innerWidth/2) / window.innerHeight, 0.1, 1000);
+        var renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth / 2, window.innerHeight);
+        document.getElementById('viewer').appendChild(renderer.domElement);
+
+        // Geometri ve Malzeme
+        var geometry = new THREE.BoxGeometry();
+        var material = new THREE.MeshStandardMaterial({ color: 0x007bff });
+        var cube = new THREE.Mesh(geometry, material);
+        scene.add(cube);
+
+        // Işıklandırma
+        var ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        var pointLight = new THREE.PointLight(0xffffff, 1);
+        pointLight.position.set(10, 10, 10);
+        scene.add(pointLight);
+
+        camera.position.z = 5;
+
+        // Pencere Boyutlandırma
+        window.addEventListener('resize', onWindowResize, false);
+        function onWindowResize() {
+            var width = window.innerWidth / 2;
+            var height = window.innerHeight;
+
+            renderer.setSize(width, height);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        }
+
+        // Kullanıcının Kodunu Güvenli Bir Şekilde Çalıştırma
+        function runUserCode() {
+            var userCode = editor.getValue();
+            try {
+                var func = new Function('scene', 'camera', 'renderer', 'cube', userCode);
+                func(scene, camera, renderer, cube);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // Animasyon Döngüsü
+        function animate() {
+            requestAnimationFrame(animate);
+
+            runUserCode();
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+    })();
+    </script>
+</body>
+</html>

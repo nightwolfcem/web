@@ -1,0 +1,119 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META http-equiv=content-type content=text/html;charset=iso-8859-9>
+<META http-equiv=content-type content=text/html;charset=windows-1254>
+<META http-equiv=content-type content=text/html;charset=x-mac-turkish>
+<style type="text/css">
+table {
+ border:12px,dashed,buttonshadow;
+ border-width: 12px;
+ padding: 5px;
+}
+</style>
+<script src="../../files/js/ortak/jquery.js" type="text/javascript"></script>
+<script src="../../files/js/ortak/dom.js" type="text/javascript"></script>
+<script src="../../files/js/ortak/datetime.js" type="text/javascript"></script>
+<script src="../../files/js/ortak/calender.js" type="text/javascript"></script>
+<script src="../../files/js/ortak/editcontrol.js" type="text/javascript"></script>
+<script src="../../files/js/ortak/dtform.js" type="text/javascript"></script>
+
+
+<script type="text/javascript">
+function Tkisi() // Yeni sınıf
+{
+	this.createClass(Telement,"INPUT");// Sınıfı oluştur
+	this.htmlObject.type="text"
+	
+
+}
+Tkisi.prototype=
+{
+	kisibilgileri:function () // Tkisi sınıfında tanımlı fonksiyon
+	{
+		return "Ad:" +this.ad+" Soyad:"+this.soyad;
+	}
+};
+function Tcalisan()// Yeni sınıf
+{
+	this.createClass(Tkisi);// Sınıfı oluştur
+	this.meslek="Bilgisayar Mühendisi";
+}
+Tcalisan.prototype=
+{
+	kisibilgileri:function ()
+	{
+		return this.inheritMethod()+" Meslek:"+this.meslek;//Bir üst sınıfın aynı fonksiyonunu çağır
+	}
+};
+function Tcalisan1()
+{
+	this.createClass(Tcalisan);
+	this.adres="9 Eylül mah. No:212 D:3";
+}
+Tcalisan1.prototype=
+{
+	adresi:function ()
+	{
+		return " Adres:"+this.adres;
+	}
+};
+function Tcalisan2()
+{
+	this.createClass(Tcalisan1);
+	this.mesai="6 saat";
+	this.adresil="BALIKESIR";
+	this.adresilce="Ayvalık";
+}
+Tcalisan2.prototype=
+{
+	kisibilgileri:function ()
+	{
+		return this.inheritMethod()+" Mesai:" +this.mesai;
+	},
+	adresi:function ()
+	{
+		return " Adres:"+this.adres+"  "+this.adresil+" / "+this.adresilce ;
+	}
+}
+function Tcalisan3()
+{
+	this.createClass(Tcalisan2);
+	
+}
+
+var kisi=new Tkisi();
+kisi.htmlObject.style.backgroundColor="red"
+kisi.htmlObject.value="asdqwe"
+var kisi1=kisi.copy(kisi1)
+	kisi1.htmlObject.type="checkbox"
+	
+		kisi1.htmlObject.value="aweqwewqe"
+
+var kisi2=kisi1.copy()
+
+
+	var kisi3=kisi2.copy()
+	kisi3.htmlObject.value="xxxxx"
+	
+</script>
+
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+<script type="text/javascript">
+kisi.body()
+kisi1.body()
+kisi2.body()
+	kisi3.body()	
+</script>
+<input type="button" width="50px" value="Geri Al"/>
+<input type="button" style="font-weight: bold" value="İlk kayıt" /> 
+<input type="button" style="width:50px" value="Geri" /> 
+<input type="button" style="width:50px" value="Ileri" /> 
+<input type="button" style="width:70px" value="Son kayıt" /> 
+<input type="button" style="width:50px" value="İptal et" /> 
+
+</body>
+</html>

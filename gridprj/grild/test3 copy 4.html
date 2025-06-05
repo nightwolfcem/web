@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>LayerEngine Test Sayfası<Örnek></title>  <style>
+    body { display: flex; height: 100vh; margin:0; font-family: sans-serif; }
+    #controls { width: 250px; padding: 10px; background: #f9f9f9; border-right: 1px solid #ccc; box-sizing: border-box; overflow-y: auto; }
+    #canvas { flex: 1; position: relative; background: #eef; }
+    #canvas > div { box-sizing: border-box; }
+    .btn { display: block; width: 100%; margin: 4px 0; padding: 6px; }
+    select { width: 100%; margin-bottom: 8px; padding: 4px; }
+    pre { background: #fff; height: 100px; overflow-y: auto; padding: 4px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <h3>Aktif Düğüm</h3>
+    <select id="nodeSelect"></select>
+    <button class="btn" id="addLayer">➕ Yeni Layer</button>
+    <button class="btn" id="addElement">➕ Yeni Element</button>
+    <button class="btn" id="deleteNode">🗑️ Sil</button>
+    <button class="btn" id="hideNode">🙈 Gizle</button>
+    <button class="btn" id="showNode">🙉 Göster</button>
+    <button class="btn" id="bringToFront">🔼 BringToFront</button>
+    <button class="btn" id="sendToBack">🔽 SendToBack</button>
+    <button class="btn" id="moveUp">⬆️ MoveUp</button>
+    <button class="btn" id="moveDown">⬇️ MoveDown</button>
+    <button class="btn" id="moveTo">➡️ MoveTo</button>
+    <h3>Log</h3>
+    <pre id="log"></pre>
+  </div>
+  <div id="canvas"></div>
+
+  <script>
+ 
+  </script>
+
+  <script>
+    const canvasEl = document.getElementById('canvas');
+    const engine = new LayerEngine(canvasEl);
+    let counter = 1;
+    const nodes = new Map([['root', engine.root]]);
+    const nodeSelect = document.getElementById('nodeSelect');
+    const logEl = document.getElementById('log');
+    const log = msg => { logEl.textContent += msg + '\n'; logEl.scrollTop = logEl.scrollHeight; };
+    const refreshSelect = () => {
+      nodeSelect.innerHTML = '';
+      nodes.forEach((v, k) => {
+        const o = document.createElement('option'); o.value = k; o.textContent = k;
+        nodeSelect.appendChild(o);
+      });
+    };
+    refreshSelect();
+
+    document.getElementById('addLayer').onclick = () => {
+      const parent = nodes.get(nodeSelect.value);
+      const id = 'L' + counter++;
+      const layer = engine.createLayer(parent);
+      nodes.set(id, layer);
+      refreshSelect(); log(`Layer eklendi: ${id}`);
+    };
+
+    document.getElementById('addElement').onclick = () => {
+      const parent = nodes.get(nodeSelect.value);
+      const id = 'E' + counter++;
+      const el = document.createElement('div'); el.textContent = id;
+      Object.assign(el.style, { width:'80px', height:'40px', background:'#' + Math.floor(Math.random()*0xffffff).toString(16).padStart(6,'0'), display:'flex', alignItems:'center', justifyContent:'center' });
+      const node = engine.createElement(parent, el);
+      nodes.set(id, node);
+      refreshSelect(); log(`Element eklendi: ${id}`);
+    };
+
+    document.getElementById('deleteNode').onclick = () => { const key = nodeSelect.value; if (key==='root') return; const node = nodes.get(key); node.delete(); nodes.delete(key); refreshSelect(); log(`${key} silindi`); };
+    document.getElementById('hideNode').onclick = () => { const n = nodes.get(nodeSelect.value); n.hide(); log(`${nodeSelect.value} gizlendi`); };
+    document.getElementById('showNode').onclick = () => { const n = nodes.get(nodeSelect.value); n.show(); log(`${nodeSelect.value} gösterildi`); };
+    document.getElementById('bringToFront').onclick = () => { const n = nodes.get(nodeSelect.value); n.bringToFront(); log(`${nodeSelect.value} öne getirildi`); };
+    document.getElementById('sendToBack').onclick = () => { const n = nodes.get(nodeSelect.value); n.sendToBack(); log(`${nodeSelect.value} arkaya gönderildi`); };
+    document.getElementById('moveUp').onclick = () => { const k = nodeSelect.value, n = nodes.get(k); const idx = n.parent.children.indexOf(n); n.moveToIndex(Math.min(n.parent.children.length-1, idx+1)); log(`${k} yukarı taşındı`); };
+    document.getElementById('moveDown').onclick = () => { const k = nodeSelect.value, n = nodes.get(k); const idx = n.parent.children.indexOf(n); n.moveToIndex(Math.max(0, idx-1)); log(`${k} aşağı taşındı`); };
+    document.getElementById('moveTo').onclick = () => {
+      const sourceKey = nodeSelect.value;
+      const targetKey = prompt('Hangi düğüme taşımak istersiniz? (ID giriniz)');
+      const source = nodes.get(sourceKey);
+      const target = nodes.get(targetKey);
+      if (source && target) {
+        source.moveTo(target);
+        refreshSelect();
+        log(`${sourceKey} taşındı -> ${targetKey}`);
+      } else {
+        alert('Geçersiz kaynak veya hedef ID');
+      }
+    };
+  </script>
+</body>
+</html>

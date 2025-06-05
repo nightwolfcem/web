@@ -1,0 +1,54 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!-- saved from url=(0049)http://nightwolfcem.byethost4.com/propeditor.html -->
+<html>
+<head>
+<meta http-equiv="Content-Type"
+	content="text/html; charset=windows-1254">
+
+
+
+<link src="propeditor.css" rel="stylesheet" type="text/css">
+<link src="dom.css" rel="stylesheet" type="text/css">
+<title>Insert title here</title>
+<script src="../files/js/global/dom.js" type="text/javascript"></script>
+<script type="module" src="../files/js/global/dragDropManager.js"></script>
+
+<body>
+
+	<button id="myBtn">Click Me</button>
+
+	<script type="module">
+ import { DragDropManager } from '../files/js/global/dragDropManager.js';
+// Örnek Telement oluşturuluyor.
+const myTelement = new Telement('div', 'draggable1');
+myTelement.htmlObject.innerHTML = 'Sürükle Beni';
+myTelement.htmlObject.css('background-color:yellow;width:100px;height:100px');
+// Telement, AllClass yapınız üzerinden oluşturulmuşsa, sayfanın uygun yerine ekleyin:
+document.body.appendChild(myTelement.htmlObject);
+
+// DragDropManager örneğini oluşturuyoruz.
+const ddManager = new DragDropManager();
+
+// Telement'e drag-drop işlevselliğini ekliyoruz.
+ddManager.attach(myTelement);
+
+// Drop callback tanımlaması:
+ddManager.setDropCallback((dragTelement, dropTarget, insertionIndicator, event) => {
+  console.log('Drop gerçekleşti!');
+  console.log('Sürüklenen Telement:', dragTelement);
+  console.log('Bırakılan hedef (HTML öğesi):', dropTarget);
+  // Örneğin: dropTarget eğer uygun ise (data-drag-accept="true"),
+  // dragTelement.htmlObject'i dropTarget içerisine ekleyebilirsiniz.
+  if (dropTarget && dropTarget.getAttribute('data-drag-accept') === "true") {
+    // Eğer insertionIndicator varsa, onu referans alarak yerleştirme yapılabilir:
+    if (insertionIndicator) {
+      dropTarget.insertBefore(dragTelement.htmlObject, insertionIndicator);
+    } else {
+      dropTarget.appendChild(dragTelement.htmlObject);
+    }
+  }
+});
+	</script>
+ 
+</body>
+</html>

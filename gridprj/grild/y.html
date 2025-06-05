@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Çember Çizimi</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #canvas {
+            border: 2px solid black;
+        }
+
+        .info {
+            margin-top: 20px;
+            font-size: 20px;
+        }
+
+        button, input {
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Çember Çizimi</h1>
+    <canvas id="canvas" width="400" height="400"></canvas>
+    <div class="info">
+        Yarıçap: <input type="number" id="radiusInput" value="150" min="10" max="200"> px
+    </div>
+    <button id="restartBtn">Animasyonu Tekrar Oynat</button>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const restartBtn = document.getElementById('restartBtn');
+        const radiusInput = document.getElementById('radiusInput');
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        let maxRadius;
+        const animationDuration = 5000; // 5 saniye
+        let startTime;
+
+        function drawCircle() {
+            const currentTime = new Date().getTime();
+            const elapsedTime = currentTime - startTime;
+            const progress = Math.min(1, elapsedTime / animationDuration);
+
+            // Çemberi çizmeye başla
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Yarıçap çizgisi
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(centerX + maxRadius * Math.cos(progress * 2 * Math.PI), centerY + maxRadius * Math.sin(progress * 2 * Math.PI));
+            ctx.strokeStyle = 'red';
+            ctx.stroke();
+
+            // Çemberi çiz
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, maxRadius, 0, progress * 2 * Math.PI);
+            ctx.strokeStyle = 'black';
+            ctx.stroke();
+
+            // Eğer 5 saniyeden az geçtiyse tekrar çiz
+            if (elapsedTime < animationDuration) {
+                requestAnimationFrame(drawCircle);
+            }
+        }
+
+        function startAnimation() {
+            maxRadius = parseInt(radiusInput.value); // Kullanıcı tarafından girilen yarıçapı al
+            startTime = new Date().getTime();
+            drawCircle();
+        }
+
+        // Animasyonu tekrar başlatmak için buton
+        restartBtn.addEventListener('click', function() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Ekranı temizle
+            startAnimation(); // Animasyonu başlat
+        });
+
+        // İlk animasyon başlangıcı
+        restartBtn.click(); // Sayfa açıldığında animasyon otomatik başlasın
+    </script>
+</body>
+</html>

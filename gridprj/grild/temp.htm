@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Çizgi Şekli</title>
+    <style>
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        
+        .shape {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        .horizontal {
+            width: 100px; /* Yatay çizginin genişliği */
+            height: 2px;
+            background-color: black;
+        }
+
+        .vertical {
+            width: 2px;
+            background-color: black;
+            flex-grow: 1; /* Esnek büyüme */
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="shape">
+        <div class="horizontal"></div> <!-- Üst yatay çizgi -->
+        <div class="vertical"></div>   <!-- Sol dikey çizgi -->
+        <div class="horizontal"></div> <!-- Alt yatay çizgi -->
+    </div>
+</div>
+
+</body>
+</html>

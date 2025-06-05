@@ -1,0 +1,67 @@
+<body>
+<h1>
+    Screen Capture
+</h1>
+<video id="dene" width="320" height="240" autoplay>
+    Dostum video yok içeride.
+</video>
+<button id="start">
+    Recording start
+</button>
+<button id="stop">
+    Recording Stop
+</button>
+<a id="dow" href="#">
+    Download div
+</a>
+</body>
+<script>
+let eror;
+let howmany=0;
+const start = document.getElementById("start");
+const stop=document.getElementById("stop");
+var videoElem;
+let mediarecorder=null;
+let chunks=[];
+navigator.mediaDevices.getDisplayMedia({video: true,DisplayCaptureSurfaceType:"browser"}).then(stream => {
+      console.log("Permission");
+      console.log("We have not a problem "+stream);
+      howmany++; // how sadece 1 oluyor yani streami baðlýyor video tagine arkadaþ. 
+      console.log("how: "+howmany);
+      videoElem = document.getElementById("dene");
+      videoElem.srcObject=stream;
+      strm=stream
+      mediarecorder=new MediaRecorder(stream);
+      mediarecorder.ondataavailable=function(e){
+       chunks.push(e.data)
+}
+mediarecorder.onstop=function(ev){
+	 let blob=new Blob(chunks,{type:"video/mp4"});
+	    let videourl=window.URL.createObjectURL(blob);
+	    const a = document.getElementById("dow");
+	    a.href=videourl;
+	    a.download="capture.mp4";
+	    console.log(videourl);
+}
+       //Evet media stream objesini almýþ durumdayýz. 
+       //This code works very good. 
+})
+
+.catch(e => {
+   console.log("Test mi lazým "+JSON.stringify(e));
+   eror=e;
+});
+start.onclick=function(){
+    mediarecorder.start()
+}
+stop.onclick=function(){
+	 if (mediarecorder.state!="inactive")
+		    mediarecorder.stop();
+	  let tracks = videoElem.srcObject.getTracks();
+	    tracks.forEach(track => track.stop());
+	    videoElem.srcObject = null;
+	
+}
+
+
+</script>

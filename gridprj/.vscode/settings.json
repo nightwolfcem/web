@@ -1,0 +1,10 @@
+{
+    "editor.inlineSuggest.showToolbar": "always",
+    "CodeGPT.apiKey": "CodeGPT Plus Beta",
+    "vscode-openai.serviceProvider": "OpenAI",
+    "vscode-openai.baseUrl": "https://api.openai.com/v1",
+    "vscode-openai.defaultModel": "gpt-4.5-preview",
+    "vscode-openai.embeddingModel": "text-embedding-ada-002",
+    "vscode-openai.scmModel": "gpt-4o-mini",
+    "bitoAI.codeCompletion.enableAutoCompletion": false
+}

@@ -1,0 +1,583 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!-- saved from url=(0049)http://nightwolfcem.byethost4.com/propeditor.html -->
+<html>
+<head>
+<meta http-equiv="Content-Type"
+	content="text/html; charset=windows-1254">
+
+
+
+<link src="propeditor.css" rel="stylesheet" type="text/css">
+<link src="dom.css" rel="stylesheet" type="text/css">
+<title>Insert title here</title>
+<script src="../files/js/ortak/dom.js" type="text/javascript"></script>
+
+<script src="../files/js/ortak/propeditor.js" type="text/javascript"></script>
+<script src="../files/js/ortak/datetime.js" type="text/javascript"></script>
+<script src="../files/js/ortak/underscore.js" type="text/javascript"></script>
+<script src="../files/js/ortak/jcanvas.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+
+	/**
+ 	 * String türündeki tarihi Date Nesnesi olarak dönderir
+ 	 * @param {String} datetime Pipe-separated list of attributes
+ 	 	@return {Object} Date 
+ 	 */    
+
+
+
+
+
+
+ 
+/**
+ * Verilen Siniftan türetilmiş veya ebebeyni olduğu nesneleri arar. 
+ * @param {Tclass Name} sınıf ismi
+ * @param {Boolean} Nesnelerin Ebebeyn sınıflarında aransınmı?
+ * @returns {Number} Returns Bulunan nesneleri dönderir.
+ */
+/*
+windowIndex = 1000,
+_$copyMode = false,
+events = "blur|focus|focusin|focusout|load|resize|scroll|unload|click|dblclick|mousedown|mouseup|mousemove|mouseover|mouseout|mouseenter|mouseleave|change|select|submit|keydown|keypress|keyup|error|contextmenu";
+var escapable = /[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g;
+meta = {    // table of character substitutions
+	'\b': '\\b',
+	'\t': '\\t',
+	'\n': '\\n',
+	'\f': '\\f',
+	'\r': '\\r',
+	'"': '\\"',
+	'\\': '\\\\'
+};
+	
+function quote(string) {
+	escapable.lastIndex = 0;
+	return escapable.test(string) ? '"' + string.replace(escapable, function(a) {
+		var c = meta[a];
+		return typeof c === 'string'
+			? c
+			: '\\u' + ('0000' + a.charCodeAt(0).toString(16)).slice(-4);
+	}) + '"' : '"' + string + '"';
+}
+function _ho(s, k) {
+	var r, t, x, y;
+	r = new RegExp((k ? k : "html"), "i");
+	t = typeof s == "object" ? s.constructor.toString() : s.toString();
+	x = t.search(/\[object/i) >= 0;
+	y = t.search(r);
+	return (x ? y + 1 : y) == 9;
+}
+
+
+
+class Cat extends TClass {
+	
+	constructor(name) {
+		super();
+	    this.name = name;
+	    var aaaa=3;
+	  };
+
+	  speak() {
+	    console.log(this.name + ' makes a noise.');
+	  }
+	}
+
+	class Lion extends Cat {
+	  speak() {
+	    super.speak();
+	    return  this.name + ' roars.';
+	  }
+	  static cem(){this.a=4;}
+
+	}
+	class Dino extends Lion { s(){this.aa=4};speak(){super.speak(); 
+	return this.name + ' makes a dinozzz.'}
+	
+	}
+
+	Ealign.assignTo("align",Dino.prototype);
+	Ealign.assignTo("align2",Dino.prototype);
+	window.a=new Dino("cem");
+window.b=new Dino("cem1");
+
+function cem(){
+	var x;
+	function cem2(){};
+	cem3=function (){};
+}
+(
+function(){ 
+	var func=function(){}
+	 function func1 (){}
+}
+())
+createFunc((a,b)=>{return a+b},"anyf");
+createFunc((a,b,c)=>{return a+b+c},"anyf");
+createFunc((a,b,c,d)=>{return a+b+c+d },"anyf");
+createFunc((a,b)=>{console.log(a*b)},"anyf1");
+createFunc((a,b,c)=>{console.log(a*b*c)},"anyf1");
+createFunc((a,b,c,d)=>{console.log(a*b*c*d)},"anyf1");
+window.any=function(a){if(arguments.length==1) alert(a); else window.__proto__.any.apply(window,Array.prototype.slice.call(arguments))};
+window.__proto__.any=function(a,b){if(arguments.length==1) alert(a); else window.__proto__.__proto__.any.apply(window,Array.prototype.slice.call(arguments))};
+window.__proto__.__proto__.any=function(a,b,c){if(arguments.length==3)  alert(a+b+c)};
+
+//_x1={a:1,b:2}
+//_x1.valueOf=function(){return Array(1,2)};
+//_x2={a:3,b:4}
+//_x2.valueOf=function(){return Array(1,2)};
+//defineProp(this,"x1",()=>{return x1},(v)=>{alert(v)})
+function anyfx(a,b){return a+b};
+var arg,pr,dt,dt2,dt3,dt4;
+dt=Date.now();
+arrg=[];
+for (var i=0;i<500;i++)
+{
+
+	arrg.push("a"+i);
+	pr=arrg.join();
+	eval('createFunc(('+pr+')=>{return a+b},"anyf");');
+}
+for (var i=0;i<100000;i++)
+{
+	anyfx(4,2);
+}
+dt2=Date.now();-dt;
+dt3=Date.now();;
+arrg=[];
+var k=0;
+for (var i=0;i<100000;i++)
+{
+	if (k==499) 
+	{arrg=[]; k=0;}
+	else
+	arrg.push(k);
+	anyf.apply(null,arrg);
+	k=k+1;
+}
+dt4=Date.now();-dt3;
+alert((dt4-dt2)/1000);
+//any(4);
+//any(4,2);
+//any(4,2,8);
+/*})();*/
+// Original code in main.js
+/*
+var theProperty = init;
+
+function init(){
+     alert("asd");
+}*/
+
+// Extending it by replacing and wrapping, in extended.js
+/*theProperty = (function(old) {
+    function extendsInit() {
+        old();
+       alert("sxxss");
+    }
+
+    return extendsInit;
+})(theProperty);
+
+function resolveAfter2Seconds() {
+	  return Promise(resolv => {
+	    setTimeout(() => {
+	      resolv('resolved');
+	    }, 2000);
+	  });
+	}
+
+	async function asyncCall() {
+	  console.log('calling');
+	  const result =await resolveAfter2Seconds();
+	  console.log(result);
+	  // expected output: "resolved"
+	}
+	console.log("A");
+	asyncCall();
+	console.log("b");
+	const p = new Promise((res, rej) => {
+		  res(1);
+		})
+
+		async function asyncReturn() {
+		  return  p;
+		}
+
+		async function basicReturn() {
+		  return Promise.resolve(p);
+		}
+
+		console.log(p === basicReturn()); // true
+		console.log(p === asyncReturn()); // false
+	
+		function resolveAfter2Seconds(x) {
+			  return new Promise(resolve => {
+			    setTimeout(() => {
+			      resolve(x);
+			    }, 2000);
+			  });
+			};
+
+			const add = async function(x) { // async function expression assigned to a variable
+			  let a = await resolveAfter2Seconds(20);
+			  let b = await resolveAfter2Seconds(30);
+			  return x + a + b;
+			};
+
+			add(10).then(v => {
+			  console.log("a"+v);  // prints 60 after 4 seconds.
+			});
+
+			(async function(x) { // async function expression used as an IIFE
+			  let p_a = await resolveAfter2Seconds(20);
+			  let p_b = await resolveAfter2Seconds(30);
+			  console.log(await p_a);
+			  return x + await  p_a +await   p_b;
+			})(10).then(v => {
+			  console.log("b"+v);  // prints 60 after 2 seconds.
+			});
+			function loadf()
+			{
+				Array.prototype.forEach.call(document.getElementsByTagName("DIV"),(el)=>el.addEventListener("mousemove",function(e)
+				{
+				 el.childNodes[1].innerHTML="X"+e.x+ "X"+e.y; 
+					el.childNodes[3].innerHTML="PageX"+e.offsetX+ "pageY"+e.offsetY; 
+					e.stopPropagation();
+					}
+				
+				))
+				
+			}	*/
+	/*		
+class Fnumber extends Number
+{
+				o=0;
+				  static get [Symbol.species]() { return Number; }
+				 [Symbol.toPrimitive](hint) {
+					 
+					    if (hint === 'object') {
+					      return this;
+					    }
+					    return this.o;
+					  };
+				add = function(v) {
+					var a = this.o;
+					a = a | v;
+					this.o = a;
+					return a;
+				};
+				subtract = function(v) {
+				let a = this.o;
+				//if (a < v)
+				//	return false;
+				if (a == v)
+					this.o = 0
+				else {
+					if (v == 0 && a > 0) return false;
+					let p = 0;
+					a1 = a;
+					while (v > 0) {
+						v = v >> 1;
+						a = a >> 1;
+						p = p + 1;
+						if (v % 2 == 1 && a % 2 == 1)
+							a1 ^= 1 << p
+					}
+				}
+				this.o = a1;
+				return a1;
+			};
+				forEach = function(func) {
+					let l;
+					l = s1;
+					for (let m = 0; m < l.length; m++) {
+						func(l[m], window[l[m]]);
+					}
+				};
+				
+}
+		
+			
+			const obj = {
+					  foo: 1,
+					  get bar() {
+					    return 2;
+					  }
+					};
+
+					let copy = Object.assign({}, obj);
+					console.log(copy);
+					// { foo: 1, bar: 2 }
+					// The value of copy.bar is obj.bar's getter's return value.
+
+					// This is an assign function that copies full descriptors
+					function completeAssign(target, ...sources) {
+					  sources.forEach(source => {
+					    let descriptors = Object.keys(source).reduce((descriptors, key) => {
+					      descriptors[key] = Object.getOwnPropertyDescriptor(source, key);
+					      return descriptors;
+					    }, {});
+
+					    // By default, Object.assign copies enumerable Symbols, too
+					    Object.getOwnPropertySymbols(source).forEach(sym => {
+					      let descriptor = Object.getOwnPropertyDescriptor(source, sym);
+					      if (descriptor.enumerable) {
+					        descriptors[sym] = descriptor;
+					      }
+					    });
+					    Object.defineProperties(target, descriptors);
+					  });
+					  return target;
+					}
+
+					copy = completeAssign({}, obj);
+					console.log(copy);
+					// { foo:1, get bar() { return 2 } }
+					class Fnumber extends Number
+{
+			
+			[Symbol.toPrimitive](hint) {
+					if (hint === 'object') {
+					     return this;
+					 }
+					  return Number(this);
+			};
+      //I don't want use Number.prototype.add method because this effect all Number values.
+			add = function(...v) {
+     	this.value+=Array.prototype.slice.call(arguments).reduce((o,v)=>o+v)
+      }
+}
+	
+var _nmbr=new Fnumber();
+Object.defineProperty(window,"nmbr",{
+	enumerable: true,
+	configurable: true,
+	writeable:true,
+
+    get() { return _nmbr; },
+	set(val) { if (typeof val=="number")_nmbr[Symbol.for("PrimitiveValue")]=val; }
+});
+
+class Telement2 {
+	constructor(name) {
+		if (name) {
+			this.name = name;
+		}
+	}
+}
+Telement2.prototype.add=function(x)
+{
+	this.value=this.value+x;
+}
+class newclass extends Telement
+{
+	constructor(tagname,id,name){
+		super(tagname,id);
+		this.value=0;
+		 Reflect.constructor(Telement2,name,this);
+	}
+}
+newclass.prototype.subtract=function(x)
+{
+	this.value=this.value-x;
+}
+
+	class A {
+	constructor(name)
+	{
+		//super();
+		this.name=name;
+	}
+	getname(){return this.name};
+	run(){console.log(`instance of A ${this instanceof A}`)};
+	}
+	class B {
+	constructor(surname,name)
+	{	
+		//super(name);
+		this.surname=surname;
+	}
+	getsurname(){return this.surname};
+	run(){
+		//super.run();
+	console.log(`instance of B ${this instanceof B}`)};
+	}
+    class C extends extendsClass(B,A){
+	constructor(name,surname)
+	{
+      super(surname,name);
+	}
+	getfullname(){return this.name+" "+this.surname};
+	};
+	 class D extends extendsClass(C,B,A) {
+	 constructor(name,surname,address)
+	{
+		super(surname,name);
+		this.address=address;
+	}
+	}   
+    var person=new (extendsClass(C,B,A))("Ed","Boon");
+    console.log(person.getname());//output Ed
+	console.log(person.getsurname());//output Boon
+	console.log(person.getfullname());//output Ed Boon
+    person.run();
+    var person2=new D("Cem","Firat","A place in the world");
+    console.log(person2.getname());//output Cem
+	console.log(person2.getsurname());//output Firat
+    person2.run();
+	class E extends (()=>x||Object)(){};
+var x=new newclass('div',"div1","cem")
+
+//extendsClass function create temprory, class C extends from B,B extends from A, A class dont create temporary stay as global class.
+var person=new (extendsClass(C,B,A))("Ed","Boon");
+console.log(person.getname());//output Ed
+console.log(person.getsurname());//output Boon
+console.log(person.getfullname());//output Ed Boon
+person.run();
+Function.prototype.b
+
+class Vector2{
+	constructor(x,y){this.x=x;this.y=y;
+	}
+	[Symbol.toPrimitive](hint) {if(hint!="object") return this.x*Math.min(this.x,this.y)+1+this.y}}
+	//function createVector2(x,y){var w=new Proxy(window,{set(v,prop,val){if (typeof val== "string"){this.x+=val.split()[0];this.y=val.split()[1]}}});w[x]=new Vector2(x,y);}
+	function createVector2(pname,x,y){
+	var vector=new Vector2(x,y);
+
+	Object.defineProperty(window,pname,{
+		get(){return vector;},
+		set(val) { if (typeof val=="object"){vector.x=vector.x+val[0];vector.y=vector.y+val[1]}else vector=val; }
+	});
+	}
+	 createVector2("x1",10,10);
+	createVector2("y1",20,20);
+	x1 += y1;
+	*/
+	function handleResolvedA(a){console.log("RA"+a);return true;}
+	function handleResolvedB(a){console.log("RB"+a);return false;}
+	function handleResolvedC(a){console.log("RC"+a);return false;}
+	function handleRejectedA(a){console.log("EA"+a);return true;}
+	function handleRejectedB(a){console.log("EB"+a);return false;}
+	function handleRejectedC(a){console.log("EC"+a);return false;}
+	console.log("start1")
+	  for (var i=0 ;i<1000000;i++)
+	{}
+	console.log('foo1');
+	console.log("end1")
+	const myPromise = new Promise((res, rej) => {
+		console.log("start")
+		  for (var i=0 ;i<1000000000;i++)
+	{}
+		    res('foo');
+		console.log("end")
+		});
+			
+		myPromise
+		  .then(handleResolvedA, handleRejectedA)
+		  .then(handleResolvedB, handleRejectedB)
+		  .then(handleResolvedC, handleRejectedC);
+		 console.log('s1');
+	var x=new Promise((resolve, reject) => {
+	    console.log('Initial');
+
+	    //resolve();
+	    reject();
+	})
+	.then(() => {
+	    
+	    console.log('resolve');
+	},() => {
+	    throw new Error('Something failed');
+
+	    console.log('Do this');
+	})
+	.catch(() => {
+	    console.error('Do that');
+	})
+	.then(() => {
+	    console.log('Do this, no matter what happened before');
+	});
+	console.log('s2');
+	func1=function(a){return "func1"+a;};
+	func2=function(a){return "func2"+a;};
+	func3=function(a){return "func3"+a;};
+	func4=function(a){return "func4"+a;};
+	[func1, func2, func3].reduce((p, f) => p.then(f), Promise.resolve()).then(result3 => { console.log(result3);});
+	
+	const status = response => {
+		  if (response.status >= 200 && response.status < 300) {
+		    return Promise.resolve(response)
+		  }
+		  return Promise.reject(new Error(response.statusText))
+		}
+
+		const json = response => response.json()
+
+		fetch('test.html')
+		  .then(status)    // note that the `status` function is actually **called** here, and that it **returns a promise***
+		  .then(json)      // likewise, the only difference here is that the `json` function here returns a promise that resolves with `data`
+		  .then(data => {  // ... which is why `data` shows up here as the first parameter to the anonymous function
+		    console.log('Request succeeded with JSON response', data)
+		  })
+		  .catch(error => {
+		    console.log('Request failed', error)
+		  })
+		
+		function waitforme(milisec) {
+			    return new Promise(resolve => {
+			        setTimeout(() => { resolve('cem') }, milisec);
+			    })
+			}
+			 
+		 function printy() {
+			    for (let i = 0; i < 10; ++i) {
+			         waitforme(5000).then(res=>console.log(res+i));
+			        console.log(i);
+			    }
+			    console.log("Loop execution finished!)");
+			}
+			 
+			printy();
+			var x=new Telement("div");
+			defineProp(x.htmlObject.style,"width",()=>x.htmlObject.css("width"),(v)=>{console.log(x.htmlObject.getBoundingClientRect());console.log(v);x.htmlObject.css("width",v);});
+	
+ </script>
+</head>
+<body onload=loadf()>
+<iframe src="https://www.localeplanet.com/api/auto/dfs.json" with=400 height=400></iframe>
+
+	<div id="div1"
+		style="width: 200px; height: 200px; background-color: rgb(255, 255, 128)">
+		<p>X,Y</p>
+		<p>clientX,ClientY</p>
+	</div>
+	<div id="div2"  style="Left: 100px; width: 600px; height: 600px; position: absolute; background-color: rgb(255, 255, 0); background-color: rgb(26, 122, 230)">
+		<p> id="clienX"</p>
+		<p>clientX,ClientY</p>
+		<div id="clienY"></div><p>X, Y</p> 
+		<p>clientX, ClientY</p> 
+		<div id="div3"
+			style="width: 400px; height: 300px; border: 24px rgb(128, 255, 128); padding-left: 20px; position: absolute; top: 150px; left: 100px; background-color: rgb(255, 25, 228)">
+		<p>X,Y</p>
+		<p>clientX,ClientY</p>
+		<div id="div4"
+			style="width: 200px; height: 100px; position: relative; top: 10px; left: 10px; background-color: rgb(128, 255, 128)">
+			<p>X,Y</p>
+			<p>clientX,ClientY</p>
+		</div>
+			</div>
+	</div>
+	<p id="clienX"
+		style="position: absolute; background-color: rgb(255, 125, 128)">dDIV1</p>
+	<p id="clientY"
+		style="position: absolute; background-color: rgb(255, 125, 128)">dDIV1</p>
+
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!-- saved from url=(0049)http://nightwolfcem.byethost4.com/propeditor.html -->
+<html>
+<head>
+    <meta http-equiv="Content-Type"
+          content="text/html; charset=windows-1254">
+    <style type="text/css" media="screen">
+
+    </style>
+
+
+<link href="propeditor.css" rel="stylesheet" type="text/css">
+<link href="dom.css" rel="stylesheet" type="text/css">
+<link href="menu.css" rel="stylesheet" type="text/css">
+<link href="editor.css" rel="stylesheet" type="text/css">
+    <title>Insert title here</title>
+    <script src="../files/js/global/dom.js" type="text/javascript"></script>
+    <script src="../files/js/global/propeditor.js" type="text/javascript"></script>
+    <script src="../files/js/global/datetime.js" type="text/javascript"></script>
+    <script src="../files/js/global/underscore.js" type="text/javascript"></script>
+    <script src="../files/js/global/menu.js" type="text/javascript"></script>
+    <script src="../files/js/global/editor.js" type="text/javascript"></script>
+    <script type="text/javascript">
+   
+    </script>
+</head>
+<body onload="">
+
+
+
+    <script src="../files/js/ace/ace.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../files/js/ace/ext-keybinding_menu.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../files/js/ace/ext-inline_autocomplete.js" type="text/javascript" charset="utf-8"></script>
+ <script>
+
+</script>
+
+    <div id="div1"
+         style="width: 200px; height: 200px; background-color: #ffff00">
+        <p>Deneme</p>
+    </div>
+
+    <script type="text/javascript">
+
+
+        
+        var x=new Object();
+        x.v=4;
+        var j = new TdragDropElement("INPUT");
+        j.htmlObject.style.cssText = "width:500px";
+        j.htmlObject.value = "asdasrwrqwr";
+        j.htmlObject.onclick = function () { alert('cem') };
+        var dm = j.copy();
+var editor=new TcodeEditor();
+        //var prp=new Twindow("�zellik editor",400,400);
+ 
+        //document.getElementById("div1")
+
+        var x = new Telement()
+        Ealign.bindTo("a",x); 
+        x.f = () => { console.log("cem") };
+        var p = new TpropEditor(250, 400);
+        p.maxSubLVL = 4;
+     
+       
+        //p.body();
+
+    </script>
+    <div ID="DIV1"
+         style="width: 400px; height: 400px; background-color: red">
+        <div style="width: 200px; height: 200px; left: 20px; top: 40px; background-color: blue">
+
+            &#x2610;&#x2611;
+        </div>
+    </div>
+    <script type="text/javascript">
+        j.body(document.getElementById("DIV1"));
+        j.htmlObject.style.width = "250px";
+        document.getElementById("DIV1").appendChild(document.createElement("SPAN"));
+        //dm.body();
+       
+        //p.body();
+        var prpeditor;
+        prpeditor=new TpropEditor(j,300,400);
+         prpeditor.body();
+        prpeditor.show(true,true);
+        p.show(true, true);
+       /* var menu=new Tmenu();
+        var menu2=new Tmenu();
+        var menu3=new Tmenu();
+        menu.addItem("View in Property Edi");
+       var r=menu.addItem("View in Property Edi");
+       menu2.addItem("xxxx");
+       r.subMenu=menu2;
+       var r=menu.addItem("qweqwrty Edi");
+       menu3.addItem("xxxwqeqwex");
+       r.subMenu=menu3;
+    
+       var r=menu.addItem("View in Property Editor");
+        menu.body();
+        menu.contextMenu=true;
+        menu.css("font-family:monospace;font-size:small");
+        menu.onpopup=function(t){menu.target=t};
+        r.onclick=function(t){var k=menu.target; p.viewObject(k);
+        };
+        var xxx={};*/
+    </script>
+
+</body>
+</html>

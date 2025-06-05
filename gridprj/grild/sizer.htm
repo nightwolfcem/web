@@ -1,0 +1,640 @@
+﻿<html>
+<head>
+
+
+<script src="files/js/ortak/jquery.min.js" type="text/javascript"></script>
+    <script src="files/js/ortak/dom.js" type="text/javascript"></script>
+<script type="text/javascript">
+function sizer(w,h)
+{
+    this.basili=false;
+    this.obj=document.createElement("div");
+    this.obj.style.cssText="padding-right:5px;padding-bottom:5px;background-color:Red;overflow:hidden";
+    document.onmousedown=this.mousedown.toEventFunc(this);
+    document.onmousemove=this.mousemove.toEventFunc(this);
+    document.onmouseup=this.mouseup.toEventFunc(this); 
+    document.body.appendChild(this.obj);
+    this.width(w);this.height(h);
+}
+sizer.prototype.onresize=null;
+sizer.prototype.width=function(w,e)
+{
+    if(w!=null)
+    {   var x={oldWidth:this._width,oldHeight:this._height,newWidth:w,newH:this._height,cancel:false};
+        /*
+        ile bir x değişkeni tanımladım. 
+        bu x değişkeni kullanıcı tarafından tanımlanıcak ve 
+        kutucuğun boyutlarının değişmesi sırasında tetiklenicek
+        olan onresize olayına parametre olarak geçilmek için tanımlanmıştır. 
+        x değişkeni(nesnesi) şu bilgileri içerir
+        x.oldWidth->kutunun eski Genişliği
+        x.oldHeight->kutunun eski Boyu
+        x.newWidth->kutunun yeni Genişliği
+        x.newHeight->kutunun yeni Boyu
+        x.cancel-> yeni boyutların uygulanıp uygulanmıycağını belirten değişken(varsayılan değeri false;
+        yani işleme devam edilicek;
+                                    */
+        if(e)x.clone(e,x);//e(mousemove event'ı)varsa özelliklerini x'e aktar
+        //eğer onresize olayına bir fonksiyon atanmışsa bu fonksiyonu çağır x değişkeninide parametre geç
+        if(this.onresize)this.onresize(x);
+        if(!x.cancel)//eğer x.cancel false ise yani iptal edilmemişse boyutlandırma
+        {this.obj.style.width=x.newWidth+"px";this._width=x.newWidth;}//yeni genişliği belirle
+    }else return this._width;//eğer w tanımlı değil ise geriye genişliği dönder
+}   
+sizer.prototype.height=function(h,e)
+{
+    if(h!=null)
+    {
+        var x={oldWidth:this._width,oldHeight:this._height,newWidth:this._width,newHeight:h,cancel:false};
+        if(e)x.clone(e,x);
+        if(this.onresize)this.onresize(x);
+        if(!x.cancel)
+        {  this._height=x.newHeight;this.obj.style.height=x.newHeight+"px";}
+    }else return  this._height;
+}   
+sizer.prototype.mousedown=function(e)
+{
+    if(e.target!=this.obj)return false;//eğer tıklanan bizim nesnemiz yani kutumuz değil ise çık
+    this.y=e.pageY;this.x=e.pageX;this.basili=true;//tıklanan kordinatları kaydet
+    return false;//seçmeyi iptal etmek için false dönder
+}
+sizer.prototype.mousemove=function(e)
+{ 
+  if(e.target==this.obj)//mousun altındaki nesne bizim kutumuzsa
+  {
+    var mod=0;
+    var r=$(this.obj).rect();    
+    if(e.pageX>r.right-5)mod=1;//mousun kordinatı kutunun sol kordinatı ile 5 eksiği arasındaysa
+    if(e.pageY>r.bottom-5)mod=mod==1?3:2;//...
+    if(!this.basili)//mouse basili değil ise cursorun şeklini belirle
+    {
+        document.body.style.cursor=mod==0?"default":mod==1?"w-resize":mod==2?"n-resize":"nw-resize";
+        this.mod=mod;//fare basılı değilse boyutlandırma modunu değiştir.
+    }
+   }else if(!this.basili) document.body.style.cursor="default";
+    if(this.basili){//eğer basılı ise 
+    //farenin yeni kordinatları ile  eski kordinatlar  arası farkı bul
+    var fx=e.pageX-this.x,fy=e.pageY-this.y;
+    //moda(1 veya 3 enine,2 veya 3 boyuna )ve farka göre yeni boyutları belirle event(e)'i boyutlandırma fonksiyonlarına parametre geç
+    if(this.mod==1 || this.mod==3)this.width(this.width()+fx,e);
+    if(this.mod==2 || this.mod==3)this.height(this.height()+fy,e);
+    this.x=e.pageX;this.y=e.pageY;//aktif kordinatları kaydet
+    }
+}
+sizer.prototype.mouseup=function(){this.basili=false;}
+function load()
+{
+    var div=new sizer();//kutucuğu oluştur
+    div.obj.appendChild(document.getElementById("context"));// içerik div içini kutucuğa al
+    div.width(250);div.height(250);//boyutları belirle
+    div.onresize=function(e)//boyutlandırma sırasında tetiklenicek fonksiyonu yaz
+    { 
+        //ekrana boyutlandırma sırasındaki değerleri yazdır.(eskiveyeni boyut değerleri
+        document.getElementById("x").innerHTML="LayerX:"+e.layerX+"LayerY:"+e.layerY+"<BR/>"+
+        "OldWidth:"+e.oldWidth+'NewWidth:'+e.newWidth+"<BR/>"+
+        "OldHeight:"+this.obj.offsetHeight
+        +' NewHeight:'+this.height();
+        if(e.newWidth<150)//eğer yeni genişlik 150 pixelden küçükse
+        e.cancel=true;// boyutlandırmayı iptal et (if(!x.cancel)'i hatırlayın
+        //eğer yeni genişlik 250 pixelden küçükse yeni boyu 400 olarak ata
+        if(e.newHeight<250)e.newHeight=400;
+    }
+}
+</script>
+    <style type="text/css">
+
+ p.MsoNormal
+	{margin-top:0cm;
+	margin-right:0cm;
+	margin-bottom:10.0pt;
+	margin-left:0cm;
+	line-height:115%;
+	font-size:11.0pt;
+	font-family:"Calibri","sans-serif";
+	}
+    </style>
+</head>
+<body bgcolor="yellow" onload="load()" >
+<div id="x" style=""><br/><br/><br/></div>
+<div id="context" style="overflow:scroll;width:100%;height:100%;background-color:white">
+<br/>
+    
+            <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;color:blue;mso-no-proof:yes">&lt;</span><span style="font-size:10.0pt;font-family:&quot;Courier New&quot;;color:#A31515;mso-no-proof:
+yes">script</span><span style="font-size:10.0pt;font-family:&quot;Courier New&quot;;
+mso-no-proof:yes"> <span style="color:red">type</span><span style="color:blue">=&quot;text/javascript&quot;&gt;<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;color:blue;mso-no-proof:yes">function</span><span 
+            style="font-size:10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes"> 
+        sizer(w,h)<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">{<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">this</span>.basili=<span style="color:blue">false</span>;<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">this</span>.obj=document.createElement(<span 
+            style="color:#A31515">&quot;div&quot;</span>);<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">this</span>.obj.style.cssText=<span 
+            style="color:#A31515">&quot;padding-right:5px;padding-bottom:5px;background-color:Red;overflow:hidden&quot;</span>;<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>document.onmousedown=<span 
+            style="color:blue">this</span>.mousedown.toEventFunc(<span 
+            style="color:blue">this</span>);<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>document.onmousemove=<span 
+            style="color:blue">this</span>.mousemove.toEventFunc(<span 
+            style="color:blue">this</span>);<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>document.onmouseup=<span 
+            style="color:blue">this</span>.mouseup.toEventFunc(<span style="color:blue">this</span>); <o:p></o:p>
+        </span>
+    <br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        document.body.appendChild(<span style="color:blue">this</span>.obj);<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">this</span>.width(w);<span style="color:blue">this</span>.height(h);<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">}<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">sizer.prototype.onresize=<span 
+            style="color:blue">null</span>;<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">sizer.prototype.width=<span 
+            style="color:blue">function</span>(w,e)<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">{<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">if</span>(w!=<span style="color:blue">null</span>)<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>{<span 
+            style="mso-spacerun:yes">&nbsp;&nbsp; </span><span style="color:blue">var</span> 
+        x={oldWidth:<span style="color:blue">this</span>._width,oldHeight:<span 
+            style="color:blue">this</span>._height,newWidth:w,newH:<span 
+            style="color:blue">this</span>._height,cancel:<span style="color:blue">false</span>};<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:green">/*<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;color:green;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        ile bir x değişkeni tanımladım. <o:p></o:p></span>
+    <br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;color:green;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        bu x değişkeni kullanıcı tarafından tanımlanıcak ve <o:p></o:p></span>
+    <br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;color:green;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        kutucuğun boyutlarının değişmesi sırasında tetiklenicek<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;color:green;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        olan onresize olayına parametre olarak geçilmek için tanımlanmıştır. <o:p></o:p>
+        </span>
+    <br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;color:green;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        x değişkeni(nesnesi) şu bilgileri içerir<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;color:green;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        x.oldWidth-&gt;kutunun eski Genişliği<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;color:green;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        x.oldHeight-&gt;kutunun eski Boyu<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;color:green;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        x.newWidth-&gt;kutunun yeni Genişliği<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;color:green;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        x.newHeight-&gt;kutunun yeni Boyu<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;color:green;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        x.cancel-&gt; yeni boyutların uygulanıp uygulanmıycağını belirten 
+        değişken(varsayılan değeri false;<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;color:green;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        yani işleme devam edilicek;<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;color:green;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        </span>*/<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">if</span>(e)x.clone(e,x);<span style="color:green">//e(mousemove 
+        event&#39;ı)varsa özelliklerini x&#39;e aktar<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:green">//eğer onresize olayına bir fonksiyon atanmışsa bu 
+        fonksiyonu çağır x değişkeninide parametre geç<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">if</span>(<span style="color:blue">this</span>.onresize)<span 
+            style="color:blue">this</span>.onresize(x);<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">if</span>(!x.cancel)<span style="color:green">//eğer 
+        x.cancel false ise yani iptal edilmemişse boyutlandırma<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        {<span style="color:blue">this</span>.obj.style.width=x.newWidth+<span 
+            style="color:#A31515">&quot;px&quot;</span>;<span style="color:blue">this</span>._width=x.newWidth;}<span 
+            style="color:green">//yeni genişliği belirle<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>}<span 
+            style="color:blue">else</span> <span style="color:blue">return</span>
+        <span style="color:blue">this</span>._width;<span style="color:green">//eğer w 
+        tanımlı değil ise geriye genişliği dönder<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">}<span 
+            style="mso-spacerun:yes">&nbsp;&nbsp; </span><o:p></o:p></span>
+    <br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">sizer.prototype.height=<span 
+            style="color:blue">function</span>(h,e)<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">{<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">if</span>(h!=<span style="color:blue">null</span>)<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>{<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">var</span> x={oldWidth:<span style="color:blue">this</span>._width,oldHeight:<span 
+            style="color:blue">this</span>._height,newWidth:<span style="color:blue">this</span>._width,newHeight:h,cancel:<span 
+            style="color:blue">false</span>};<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">if</span>(e)x.clone(e,x);<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">if</span>(<span style="color:blue">this</span>.onresize)<span 
+            style="color:blue">this</span>.onresize(x);<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">if</span>(!x.cancel)<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        {<span style="mso-spacerun:yes">&nbsp; </span><span style="color:blue">this</span>._height=x.newHeight;<span 
+            style="color:blue">this</span>.obj.style.height=x.newHeight+<span 
+            style="color:#A31515">&quot;px&quot;</span>;}<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>}<span 
+            style="color:blue">else</span> <span style="color:blue">return</span><span 
+            style="mso-spacerun:yes">&nbsp; </span><span style="color:blue">this</span>._height;<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">}<span 
+            style="mso-spacerun:yes">&nbsp;&nbsp; </span><o:p></o:p></span>
+    <br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">sizer.prototype.mousedown=<span 
+            style="color:blue">function</span>(e)<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">{<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">if</span>(e.target!=<span style="color:blue">this</span>.obj)<span 
+            style="color:blue">return</span> <span style="color:blue">false</span>;<span 
+            style="color:green">//eğer tıklanan bizim nesnemiz yani kutumuz değil ise 
+        çık<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">this</span>.y=e.pageY;<span style="color:blue">this</span>.x=e.pageX;<span 
+            style="color:blue">this</span>.basili=<span style="color:blue">true</span>;<span 
+            style="color:green">//tıklanan kordinatları kaydet<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">return</span> <span style="color:blue">false</span>;<span 
+            style="color:green">//seçmeyi iptal etmek için false dönder<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">}<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">sizer.prototype.mousemove=<span 
+            style="color:blue">function</span>(e)<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">{ <o:p></o:p></span>
+    <br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp; </span><span style="color:blue">if</span>(e.target==<span 
+            style="color:blue">this</span>.obj)<span style="color:green">//mousun 
+        altındaki nesne bizim kutumuzsa<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp; </span>{<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">var</span> mod=0;<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">var</span> r=$(<span style="color:blue">this</span>.obj).rect();<span 
+            style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span><o:p></o:p></span>
+    <br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">if</span>(e.pageX&gt;r.right-5)mod=1;<span 
+            style="color:green">//mousun kordinatı kutunun sol kordinatı ile 5 eksiği 
+        arasındaysa<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">if</span>(e.pageY&gt;r.bottom-5)mod=mod==1?3:2;<span 
+            style="color:green">//...<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">if</span>(!<span style="color:blue">this</span>.basili)<span 
+            style="color:green">//mouse basili değil ise cursorun şeklini belirle<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>{<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        document.body.style.cursor=mod==0?<span style="color:#A31515">&quot;default&quot;</span>:mod==1?<span style="color:
+#A31515">&quot;w-resize&quot;</span>:mod==2?<span style="color:#A31515">&quot;n-resize&quot;</span>:<span 
+            style="color:#A31515">&quot;nw-resize&quot;</span>;<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">this</span>.mod=mod;<span style="color:green">//fare 
+        basılı değilse boyutlandırma modunu değiştir.<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>}<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp; </span>}<span style="color:blue">else</span>
+        <span style="color:blue">if</span>(!<span style="color:blue">this</span>.basili) 
+        document.body.style.cursor=<span style="color:#A31515">&quot;default&quot;</span>;<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">if</span>(<span style="color:blue">this</span>.basili){<span 
+            style="color:green">//eğer basılı ise <o:p></o:p></span></span>
+    <br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:green">//farenin yeni kordinatları ile<span 
+            style="mso-spacerun:yes">&nbsp; </span>eski kordinatlar<span 
+            style="mso-spacerun:yes">&nbsp; </span>arası farkı bul<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">var</span> fx=e.pageX-<span style="color:blue">this</span>.x,fy=e.pageY-<span 
+            style="color:blue">this</span>.y;<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:green">//moda(1 veya 3 enine,2 veya 3 boyuna )ve farka göre 
+        yeni boyutları belirle event(e)&#39;i boyutlandırma fonksiyonlarına parametre geç<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">if</span>(<span style="color:blue">this</span>.mod==1 
+        || <span style="color:blue">this</span>.mod==3)<span style="color:blue">this</span>.width(<span 
+            style="color:blue">this</span>.width()+fx,e);<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">if</span>(<span style="color:blue">this</span>.mod==2 
+        || <span style="color:blue">this</span>.mod==3)<span style="color:blue">this</span>.height(<span 
+            style="color:blue">this</span>.height()+fy,e);<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">this</span>.x=e.pageX;<span style="color:blue">this</span>.y=e.pageY;<span 
+            style="color:green">//aktif kordinatları kaydet<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>}<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">}<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">sizer.prototype.mouseup=<span 
+            style="color:blue">function</span>(){<span style="color:blue">this</span>.basili=<span 
+            style="color:blue">false</span>;}<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;color:blue;mso-no-proof:yes">function</span><span 
+            style="font-size:10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes"> 
+        load()<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">{<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">var</span> div=<span style="color:blue">new</span> 
+        sizer();<span style="color:green">//kutucuğu oluştur<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        div.obj.appendChild(document.getElementById(<span style="color:#A31515">&quot;context&quot;</span>));<span 
+            style="color:green">// içerik div içini kutucuğa al<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>
+        div.width(250);div.height(250);<span style="color:green">//boyutları belirle<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>div.onresize=<span 
+            style="color:blue">function</span>(e)<span style="color:green">//boyutlandırma 
+        sırasında tetiklenicek fonksiyonu yaz<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>{ <o:p></o:p></span>
+    <br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:green">//ekrana boyutlandırma sırasındaki değerleri 
+        yazdır.(eskiveyeni boyut değerleri<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        document.getElementById(<span style="color:#A31515">&quot;x&quot;</span>).innerHTML=<span 
+            style="color:#A31515">&quot;LayerX:&quot;</span>+e.layerX+<span style="color:#A31515">&quot;LayerY:&quot;</span>+e.layerY+<span 
+            style="color:#A31515">&quot;&lt;BR/&gt;&quot;</span>+<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:#A31515">&quot;OldWidth:&quot;</span>+e.oldWidth+<span 
+            style="color:#A31515">&#39;NewWidth:&#39;</span>+e.newWidth+<span 
+            style="color:#A31515">&quot;&lt;BR/&gt;&quot;</span>+<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:#A31515">&quot;OldHeight:&quot;</span>+<span style="color:blue">this</span>.obj.offsetHeight<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        +<span style="color:#A31515">&#39; NewHeight:&#39;</span>+<span style="color:blue">this</span>.height();<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">if</span>(e.newWidth&lt;150)<span style="color:green">//eğer 
+        yeni genişlik 150 pixelden küçükse<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        e.cancel=<span style="color:blue">true</span>;<span style="color:green">// 
+        boyutlandırmayı iptal et (if(!x.cancel)&#39;i hatırlayın<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:green">//eğer yeni genişlik 250 pixelden küçükse yeni boyu 
+        400 olarak ata<o:p></o:p></span></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>
+        <span style="color:blue">if</span>(e.newHeight&lt;250)e.newHeight=400;<o:p></o:p></span><br/>
+
+        <span style="font-size:
+10.0pt;font-family:&quot;Courier New&quot;;mso-no-proof:yes">
+        <span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp; </span>}<o:p></o:p></span><br/>
+
+        <span style="font-size:10.0pt;line-height:115%;font-family:
+&quot;Courier New&quot;;mso-no-proof:yes">}</span><br/>
+</div>
+</body>
+</html>

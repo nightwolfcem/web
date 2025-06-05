@@ -1,0 +1,355 @@
+.editor {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+.editor-textarea {
+    white-space: nowrap;
+
+    width: 0px;
+    height: 0px;
+   top:-1000000px;
+   left:-1000000px;
+   margin: 0px;
+   border: none;
+    position: absolute;
+}
+
+.maincontainer {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+
+}
+.selectContainer,
+.cursorContainer,
+.selectionContainer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1000000px;
+  height: 100%;
+  cursor:text;
+}
+
+.editor-gutter {
+  min-width: 50px; /* Adjust as needed */
+  background-color: #2d2d2d;
+  color: #888;
+ overflow-y: hidden !important;
+
+  box-sizing: border-box;
+  user-select: none;
+  overflow: visible;
+  position: relative;
+}
+.editor-gutter .selected{
+  color:#f7fff8;
+}
+.line-number-container {
+  display: flex;
+  align-items: center;
+float: right;
+}
+
+.line-number {
+  font-family: monospace;
+  font-size: 14px;
+  cursor: default;
+  float: left;
+}
+
+.fold-icon {
+
+  margin-right: 5px;
+  user-select: none;
+  font-size: 12px;
+  font-weight: 900;
+  
+ width: 10px;
+height: 8px;
+  vertical-align: middle;
+  text-align: center;
+  display: inline-table;
+  cursor: default;
+  padding-top: 0px;
+}
+.fold-icon.plus {
+  cursor: pointer;
+  color: rgb(255, 255, 255);
+  background-color: #414141;
+  padding-top: 3px;
+}
+.fold-placeholder {
+  display: inline-block;
+  width: 12px; /* Should match fold-icon width */
+  margin-right: 5px;
+}
+
+.container {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  /* Adjust height as needed */
+}
+
+.outer-container {
+    width: 300px;
+    height: 200px;
+    overflow: hidden;
+    border: 1px solid #ccc;
+   position: relative;
+ 
+}
+
+.selectionContainer>.highlighted-word {
+  position: relative;
+    color: #79ff84;
+    text-decoration: underline;
+    
+    font-weight: bolder;
+}
+.container {
+  flex: 1;
+  position: relative;
+  overflow: auto;
+  background-color: #1e1e1e;
+  color: #87c3ff;
+}
+.container{
+    width: 100%;
+    height: 100%;
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 14px;
+    tab-size: 4;
+    line-height: 1.5;
+    font-weight: normal;
+    letter-spacing: normal;
+    box-sizing: border-box;
+    overflow-y: auto; /* Dikey kaydırmayı etkinleştirir */
+    scrollbar-width: none; /* Firefox için */
+    -ms-overflow-style: none; /* Internet Explorer 10+ için */
+    /* Chrome, Safari, Opera için */
+    &::-webkit-scrollbar {
+        display: none;
+
+    }
+    
+    overflow-x: auto; /* Yatay kaydırmayı etkinleştirir */
+    scrollbar-width: none; /* Firefox için */
+    -ms-overflow-style: none; /* Internet Explorer 10+ için */
+
+    /* Chrome, Safari, Opera için */
+    &::-webkit-scrollbar {
+        display: none;
+    }
+   
+ 
+}
+.selectContainer div{
+    white-space: pre;
+}  
+
+.editor-line{
+    min-width:1000000px;
+    white-space: pre-wrap;
+}
+
+.editor-line .collapseButton{
+  display: inline-flex; vertical-align: middle;
+  background-color:#cff5d56c;
+  color:rgb(255, 255, 255);
+  justify-content: center; align-items: center;
+  width:25px;
+  letter-spacing: -3px;
+}
+.editor-line .collapseButton span{
+  display: inline-block; 
+  vertical-align: middle;
+
+}
+.editor-line .selWord {
+  border: #79ff84 1px dashed;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box; 
+  padding: 0;
+}
+.editor-line .highlighted-word {
+text-decoration: underline;
+
+}
+.editor-line .selGroup {
+  border: #a7a7a7bb 1px solid;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box; 
+  padding: 0;
+}
+#horizontalScrollbar, #verticalScrollbar {
+    position: absolute;
+    z-index: 0;
+    overflow: scroll;
+    display:none;
+    scrollbar-width: 10px;
+    scrollbar-color: #555 #2d2d2d;
+}
+
+
+
+
+#horizontalScrollbar {
+    height: 16px; /* Yatay scrollbar yüksekliği */
+    bottom: 0;
+    left: 0;
+    right: 0px; /* Dikey scrollbar genişliği için yer bırak */
+  
+}
+
+#verticalScrollbar {
+    width: 16px; /* Dikey scrollbar genişliği */
+    top: 0;
+    right: 0;
+    bottom: 0px; /* Yatay scrollbar yüksekliği için yer bırak */
+
+}
+
+
+#horizontalScrollbar .scroll-content{
+    height: 16px;
+}
+#verticalScrollbar .scroll-content{
+    width: 16px;
+}
+
+.cursorContainer .cursor {
+    position: absolute;
+    width: 2px;
+    height: 1em;
+    background-color: rgb(255, 255, 255);
+    animation: blink 1s step-start 0s infinite;
+}
+.cursorContainer .cursor2 {
+    position: absolute;
+    width: 2px;
+    height: 1em;
+    background-color: rgb(255, 255, 255);
+  
+}
+.cursorContainer .cursor3 {
+    position: absolute;
+    width: 0px;
+    height: 1em;
+    background: transparent;
+    border-left: rgb(255, 243, 243) 1px dashed;
+
+}
+
+@keyframes blink {
+    50% {
+        background-color: transparent;
+    }
+}
+
+/* Autocomplete container stil */
+.autocomplete-container {
+    position: absolute;
+    background-color: #2d2d2d;
+    border: 1px solid #555;
+    max-height: 200px;
+    overflow-y: auto;
+   scrollbar-width: 6px;
+   scrollbar-color: #555 #2d2d2d;
+   font-size: medium;
+    z-index: 1000;
+    display: none; /* Başlangıçta gizli */
+    overflow-x: visible;
+  }
+  
+  /* Öneri öğesi stili */
+  .autocomplete-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+    overflow-x: visible;
+  }
+  
+  /* Öneri öğesi üzerine gelindiğinde */
+  .autocomplete-item:hover {
+    background-color: #555;
+  }
+  
+  /* Farklı türler için özel renkler */
+  .autocomplete-item.keyword {
+    color: #66d9ef; /* Mavi ton */
+  }
+  
+  .autocomplete-item.snippet {
+    color: #a6e22e; /* Yeşil ton */
+  }
+  
+  .autocomplete-item.date {
+    color: #ff9800; /* Turuncu ton */
+  }
+  
+  .autocomplete-item.object {
+    color: #8bc34a; /* Açık yeşil ton */
+  }
+  
+  .autocomplete-item.String {
+    color: #1ee928e0; /* Pembe ton */
+  }
+  
+  .autocomplete-item.number {
+    color: #ffc107; /* Altın ton */
+  }
+  
+  .autocomplete-item.boolean {
+    color: #03a9f4; /* Açık mavi ton */
+  }
+  
+  .autocomplete-item.null {
+    color: #9e9e9e; /* Gri ton */
+  }
+  
+  .autocomplete-item.type {
+    color: #ef9b7d;  /* Mor ton */
+  }
+  
+
+  .autocomplete-item.function {
+    color: #8effa1; /* Neon yeşil ton */
+  }
+  
+  /* Detay bilgisi stili */
+  .autocomplete-item .detail {
+    color: #a0a0a0;
+    font-size: 12px;
+    margin-left: 10px;
+  }
+  .autocomplete-item.selected {
+    background-color: #000000; /* Seçili öğe arka plan rengi */
+    border-bottom: #888888 1px solid;
+    border-top: #888888 1px solid;
+  }
+  
+  
+  
+
+
+.cursorContainer .topbottom {
+  border-top: dashed 1px #03ff18be;
+  height: 1px;
+  position: absolute;
+}
+.cursorContainer .left {
+  border-left: dashed 1px #03ff18be;
+  width: 1px;
+  position: relative;
+}

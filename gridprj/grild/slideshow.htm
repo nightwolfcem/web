@@ -1,0 +1,55 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7" />
+    <script src="../files/js/global/efects.js" type="text/javascript"></script>
+
+    <title>Untitled Page</title>
+    <script type="text/javascript">
+
+</script> 
+</head>
+<body bgcolor=black >
+<p>
+<br /></p>
+<h1 id="p1">Büyülü Bir Dünyanın Kapılarını Aralamaya Hazırmısınız!!!</h1>
+<div id="sp" style="font-weight:bold;font-size:x-large"></div>
+<div id="sp1" style="font-weight:bold;font-size:24px"></div>
+<div id="sp2" style="font-weight:bold;font-size:24px;margin-top:30px"></div>
+<div id="sp3" style="font-weight:bold;font-size:24px;margin-top:30px"></div>
+ <script type="text/javascript">
+ var slider=new  slideShow("slider1",700,300,24,6,["files/images/efect/image1.jpg","files/images/efect/image2.jpg","files/images/efect/image3.jpg"]);
+slider.body();
+document.getElementById("slider1").style.marginTop="50px";
+slider.startSlide();
+var glw=new fade();
+glw.sColor.rgb([0,255,0]);
+glw.eColor.rgb([55,55,255]);
+glw.onTimer=function(renk){document.getElementById("p1").style.color=renk.toString();};
+glw.start();
+var tex=new glow("Büyülü Bir Dünyanın Kapılarını Aralamaya Hazırmısınız!!!");
+tex.sColor.rgb([0,0,55]);tex.eColor.rgb([255,255,255]);
+tex.body(document.getElementById("sp"));
+tex.start();
+var tex1=new glow("Büyülü Bir Dünyanın Kapılarını Aralamaya Hazırmısınız!!!");
+tex1.mod(1);
+tex1.sColor.rgb([25,25,55]);tex1.eColor.rgb([255,0,0]);
+tex1.body(document.getElementById("sp1"));
+tex1.totalTime=3000;
+tex1.start();
+var tex2=new glow("Büyülü Bir Dünyanın Kapılarını Aralamaya Hazırmısınız!!!",[255,255,55],[255,255,55]);
+tex2.mod(2);
+tex2.body(document.getElementById("sp2"));
+tex2.start();
+var tex3=new glow("Büyülü Bir Dünyanın Kapılarını Aralamaya Hazırmısınız!!!",[255,255,55],[255,255,55]);
+tex3.mod(3);
+tex3.body(document.getElementById("sp3"));
+tex3.start();
+</script>
+
+<p>
+</p>
+
+</body>
+</html>

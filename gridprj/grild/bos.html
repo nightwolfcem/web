@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<script src="../files/js/global/dom.js" type="text/javascript"></script>
+	<script src="../files/js/global/propeditor.js" type="text/javascript"></script>
+	<script src="../files/js/global/datetime.js" type="text/javascript"></script>
+	<script src="../files/js/global/underscore.js" type="text/javascript"></script>
+	<script src="../files/js/global/jcanvas.js" type="text/javascript"></script>
+	<script type="text/javascript">
+		var xx, yy, zz = {};
+		loadJSON("../files/jsons/cssProps.json").then((a) => { xx = a; zz.assign(a.attrs, true) }).then(loadJSON("../files/jsons/a.json").then((a) => {
+			window.y=a;
+			Object.entries(a).forEach((e)=>{
+				try{ 
+					if(e[0] && zz[e[0]].editable==undefined){zz[e[0]].editable=e[1]=="editable"}
+				}catch(e1){if(e[0])window.str+=(window.str!=""?",":"")+e[0]}})}));
+        let isResizing = false;
+
+        function startResize(e) {
+            e.preventDefault(); // Prevent text selection during resize
+            isResizing = true;
+            const resizableDiv = e.target.parentNode;
+            const originalWidth = resizableDiv.offsetWidth;
+            const originalHeight = resizableDiv.offsetHeight;
+            const originalMouseX = e.pageX;
+            const originalMouseY = e.pageY;
+            resizableDiv.style.cursor = "resize"; // Set the cursor to resize
+            document.onmousemove = function (event) {
+                if (isResizing) {
+                    const width = originalWidth + (event.pageX - originalMouseX);
+                    const height = originalHeight + (event.pageY - originalMouseY);
+                    resizableDiv.style.width = width + "px";
+                    resizableDiv.style.height = height + "px";
+                }
+            };
+
+            document.onmouseup = function () {
+                isResizing = false;
+                document.onmousemove = null; // Stop resizing
+                document.onmouseup = null;
+                resizableDiv.style.cursor = "default"; // Set the cursor back to default
+            };
+        }
+
+        document.addEventListener("mouseenter", function (e) {
+            if (isResizing) {
+                //document.body.style.cursor = "resize"; // Set the cursor to resize when resizing is in progress
+            }
+        });
+
+        document.addEventListener("mouseleave", function (e) {
+            if (isResizing) {
+               // document.body.style.cursor = "default"; // Set the cursor to the default style when resizing is in progress and the mouse leaves the document
+            }
+        });
+
+
+
+	</script>
+	<meta charset="UTF-8">
+	<title>Insert title here</title>
+</head>
+<body onload="ce()">
+	<div style="
+    height: 2000px;
+">
+		"&gt;
+
+		class x//wqeqwr
+		{
+		constructor (a)//wqeqwr
+		{
+		//alert(arguments.callee);
+		}
+		x=this
+		}
+		function f(){
+		this.x=5;
+		this.y="qwewqe";
+
+		}
+
+		x.prototype=Object.create(f);
+		x.prototype.constructor=f;
+		x.prototype.z={a:[2,5,6,4]};
+		//wqeqwr
+		var y=4//wqewqrwqr
+		/*wqeqwr=6
+		* 	 *
+
+		qwewrwqrwqr
+		retertert */ var z=4;
+		var y=new x();
+		y.d=new x();
+		y.z.$owner=y;
+
+	</div>
+	<p id="p2" color="red">
+	</p>
+	<script type="text/javascript">
+
+		/**
+@typedef Trect {import('dom.d.ts').Trect} Trect
+*/
+		function ce() {
+
+
+		}
+		var x = new Telement("div");
+		
+		var y = new Telement("div");
+		x.htmlObject.onmousedown = (e) => { startResize(e) }
+		document.body.append(x.htmlObject);
+		document.body.append(y.htmlObject);
+		x.htmlObject.style.cssText = "left: 300px; top: 200px; width: 300px; height: 200px; background-color: rgb(35, 194, 255); position: absolute; border: 24px solid yellow; margin-left: 20px; padding-left: 15px;";
+        y.htmlObject.style.cssText = "left: 0px; top: 0px; width: 200px; height: 200px; background-color: blue; position: absolute;";
+		function c(e) { alert(this._$owner.name) };
+		c.bindToEvent(x.htmlObject, "click", null).bindToEvent(y.htmlObject, "click");
+	</script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detect Rectangle with OpenCV.js</title>
+  <style>
+    canvas {
+      display: block;
+      margin-top: 20px;
+      border: 1px solid #ccc;
+    }
+
+  .selectable{border:1px dashed #333;cursor:pointer}
+  .resizeHandle{background:#000;width:8px;height:8px;position:absolute}
+  #inlinePanel{background:#fff;padding:4px;border:1px solid #ccc;display:none;position:absolute}
+  #toolbox button.active{background:#ddd}
+  </style>
+  <script src="../files/js/global/dom.js" ></script>
+  <script src="../files/js/global/desingmode.js" ></script>
+
+ <div id="myToolbox" style="position: relative;top:0px;left:0px;width: 30px;height: 900px">
+
+ </div>
+</head>
+<body>
+  <script>
+    var divs = [];
+ /*   divs.push(Object.assign(new Telement("div"), {draggable: true}));
+    divs.push(Object.assign(new Telement("div"), {draggable: true}));
+    divs.push(Object.assign( new Telement("div"), {draggable: true}));
+    divs.push(Object.assign(new Telement("div"), {dockable: true}));
+    divs.push(Object.assign(new Telement("div"), {dockable: true}));
+    divs.push(Object.assign(new Telement("div"), {dockable: true}));*/
+   var x=new Telement("div");
+   x.status=EelementStatus.sizeable+EelementStatus.moveable;
+    divs.push(x);
+    x=new Telement("div");
+    x.status=EelementStatus.sizeable+EelementStatus.moveable;
+    divs.push(x);
+    x=new Telement("div");
+    x.status=EelementStatus.draggable;
+    divs.push(x);
+    x=new Telement("div");
+    x.status=EelementStatus.dockable;
+    divs.push(x);
+    let left=0; let clr;
+    divs.forEach(div =>{left+=100; div.htmlObject.style.left=`${left}px`; clr=`rgb(${Math.round(Math.random()*255)},${Math.round(Math.random()*255)},${Math.round(Math.random()*255)})`; Object.assign(div.htmlObject.style,{backgroundColor: clr,left:`${left}px`, width: '100px', height: '100px', position: 'absolute'}) });
+ 
+    document.addEventListener('DOMContentLoaded', () => {
+      new TtoolBox('#myToolbox');
+    });
+   
+    function initElement(el){
+      el.classList.add('selectable');
+      if(window.DragDropManager) DragDropManager.add(el);
+    }
+    document.addEventListener('DOMContentLoaded',()=>{
+      const box=document.createElement('div');
+      box.textContent='Demo';
+      box.style.position='absolute';
+      box.style.left='100px';
+      box.style.top='100px';
+      box.style.width='100px';
+      box.style.height='100px';
+      box.style.background='#f99';
+      canvas.appendChild(box);
+      initElement(box);
+    });
+ 
+ </script>
+ 

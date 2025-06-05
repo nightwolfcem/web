@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Scroll Okları Gizli Kutu</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background-color: #f0f0f0;
+    }
+
+    .scrollbox {
+      width: 300px;
+      height: 200px;
+      overflow-y: scroll;
+      background-color: white;
+      border: 1px solid #ccc;
+      padding: 10px;
+
+      /* Scrollbar tamamen gizleniyor */
+   
+    }
+
+  
+    /* (İsteğe bağlı) sadece scroll oklarını gizle - Chrome/Safari */
+    .scrollbox::-webkit-scrollbar-button {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Kaydırılabilir Kutu (Oklar Gizli)</h2>
+
+  <div class="scrollbox">
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+    <p>Vestibulum mattis sem ut sapien scelerisque, nec facilisis orci tincidunt.</p>
+    <p>Curabitur a metus eget odio vehicula sollicitudin.</p>
+    <p>Praesent commodo, elit in tristique fermentum, nulla lorem gravida nulla.</p>
+    <p>Integer tincidunt nisl in lorem dictum, in iaculis arcu porta.</p>
+    <p>Morbi luctus, lorem nec lobortis lacinia, velit metus facilisis urna.</p>
+    <p>Donec vel metus non nulla hendrerit pharetra.</p>
+    <p>Sed auctor turpis sit amet arcu fringilla, non vestibulum nunc dapibus.</p>
+    <p>Nulla facilisi. Donec luctus neque eu velit convallis ultrices.</p>
+  </div>
+
+</body>
+</html>

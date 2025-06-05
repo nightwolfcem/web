@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Nokta, Doğru ve Düzlem Görselleştirmesi</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <!-- Three.js kütüphanesini ekleme -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Ana JavaScript kodu -->
+    <script>
+        // Sahne oluşturma
+        const scene = new THREE.Scene();
+
+        // Kamera oluşturma
+        const camera = new THREE.PerspectiveCamera(
+            75, window.innerWidth / window.innerHeight, 0.1, 1000
+        );
+
+        // Renderer oluşturma
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Işık ekleme
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        const pointLight = new THREE.PointLight(0xffffff, 0.5);
+        camera.add(pointLight);
+        scene.add(camera);
+
+        // Nokta oluşturma
+        const pointGeometry = new THREE.SphereGeometry(0.1, 32, 32);
+        const pointMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const point = new THREE.Mesh(pointGeometry, pointMaterial);
+        point.position.set(0, 0, 0);
+        scene.add(point);
+
+        // Doğru oluşturma
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff });
+        const linePoints = [];
+        linePoints.push(new THREE.Vector3(-5, -5, -5));
+        linePoints.push(new THREE.Vector3(5, 5, 5));
+        const lineGeometry = new THREE.BufferGeometry().setFromPoints(linePoints);
+        const line = new THREE.Line(lineGeometry, lineMaterial);
+        scene.add(line);
+
+        // Düzlem oluşturma
+        const planeGeometry = new THREE.PlaneGeometry(10, 10);
+        const planeMaterial = new THREE.MeshBasicMaterial({
+            color: 0x00ff00,
+            side: THREE.DoubleSide,
+            opacity: 0.5,
+            transparent: true
+        });
+        const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.position.set(0, 0, 0);
+        plane.rotation.x = Math.PI / 2;
+        scene.add(plane);
+
+        // Kameranın başlangıç konumu
+        camera.position.z = 10;
+
+        // Pencere boyutu değiştiğinde boyutları güncelleme
+        window.addEventListener('resize', function() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            renderer.setSize(width, height);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        });
+
+        // Animasyon fonksiyonu
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Sahneyi render etme
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>

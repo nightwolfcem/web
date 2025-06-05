@@ -1,0 +1,156 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+
+	
+<META http-equiv=content-type content=text/html;charset=iso-8859-9>
+<META http-equiv=content-type content=text/html;charset=windows-1254>
+<META http-equiv=content-type content=text/html;charset=x-mac-turkish>
+<title>Insert title here</title>
+
+<script src="../files/js/global/jquery.js" type="text/javascript"></script>
+<script src="../files/js/global/dom.js" type="text/javascript"></script>
+<script src="../files/js/global/datetime.js" type="text/javascript"></script>
+<script src="../files/js/global/calender.js" type="text/javascript"></script>
+<script src="../files/js/global/editcontrol.js" type="text/javascript"></script>
+
+<script src="../files/js/global/Jcanvas.js" type="text/javascript"></script>
+<script src="../files/js/global/Jgrid.js" type="text/javascript"></script>
+<script src="../files/js/global/menu.js" type="text/javascript"></script>
+<script type="text/javascript">
+	
+	Tselector = function(id) {
+		this.createClass(Telement, "select");
+		this.htmlObject.id = id;
+	
+	}
+	Tselector.prototype = {
+		loadData : function(data) {
+			this.htmlObject.options.length = 0;
+			for ( var k in data) {
+				if (data.hasOwnProperty(k)) {
+					var ob = document.createElement("option");
+					ob.value = data[k];
+					ob.text = data[k];
+					this.htmlObject.add(ob, this.htmlObject.options[null]);
+				}
+			}
+		},
+		getSelected:function()
+		{
+			return this.htmlObject.options[this.htmlObject.selectedIndex].value;
+		}
+	}
+
+	function Tdatabases() {
+		this.createClass(Tselector, "dbs");
+		var o = this;
+		var ajax=new Tajax();
+		ajax.method="POST";
+		ajax.url="php/grid.php";
+		ajax.params="databs=true";
+		ajax.onresponse=function(rslt)
+		{
+			data = rslt.split(";");
+			o.loadData(data);
+			//seltb.load.call(seltb);
+		}
+		ajax.open();
+	/*	$.ajax({
+			type : "POST",
+			url : "php/grid.php",
+			data : "databs=true",
+			dataType : "",
+			success : function(rslt) {
+				
+				
+			}
+		});*/
+	}
+	function Ttables(dbselector, id) {
+		this.createClass(Tselector, "tbs");
+		this.dbs = dbselector;
+		this.htmlObject.id = id;
+	}
+	Ttables.prototype = {
+
+		load : function() {
+			var o = this;
+			var ajax=new Tajax();
+			ajax.method="POST";
+			ajax.url="php/grid.php";
+			ajax.params="tablenames="+ o.dbs.getSelected()
+			ajax.onresponse=function(rslt)
+			{
+				data = rslt.split(";");
+				o.loadData(data);
+				/*seltb.load.call(seltb);*/
+			}
+			ajax.open();
+			/*$.ajax({
+						type : "POST",
+						url : "php/grid.php",
+						data : "tablenames="
+								+ o.dbs.getSelected(),
+						dataType : "",
+						success : function(rslt) {
+							data = rslt.split(";");
+							o.loadData.call(o,data);
+						}
+					});*/
+		}
+	}
+	var s = new TGrid("grid1", 1200,800);
+	var seldb = new Tdatabases("dbs");
+	var seltb = new Ttables(seldb, "tbs");
+	seldb.htmlObject.onchange = function() {seltb.load.call(seltb);}
+	seltb.htmlObject.onchange = function() {
+		seltb.htmlObject.blur();
+s.createGridFromTable(seltb.getSelected(),seldb.getSelected() );
+	s.fixedColumns["navigate"].visible(true);
+	s.fixedColumns.addDelete.visible(true);
+	s.fixedColumns.check.visible(true);
+	s.fixedColumns.check.checkAll();
+	s._afterReadData+="";
+	}
+	var editB=document.createElement("input");
+	editB.type="button";
+	editB.value="De�i�tir";
+	editB.onclick=function(){s.editable(true);editB.disabled=true;cancelB.disabled=null;cancelB.focus();saveB.disabled=null;}
+	var cancelB=document.createElement("input");
+	cancelB.type="button";
+	cancelB.value="Geri Al";
+	cancelB.onclick=function(){s.cancel();s.editable(false);editB.disabled=null;cancelB.disabled=true;saveB.disabled=true;s.editable(false);}
+	var saveB=document.createElement("input");
+	saveB.type="button";
+	saveB.value="Kaydet";
+	saveB.onclick=function(){s.saveChanges();}
+	s.onaftersave=function(){
+		editB.disabled=null;cancelB.disabled=true;saveB.disabled=true;s.editable(false);
+	}
+	s.editable(false);editB.disabled=null;cancelB.disabled=true;saveB.disabled=true;
+</script>
+</head>
+
+
+	<div id="div1"
+		style="width: 200px; height: 50px; background-color: #c5c5c5">
+		<p>Tablo se�in</p><script type="text/javascript">
+		
+			seldb.body();
+			//seldb.obj.style.display="none";
+			seltb.body();
+			
+		</script>
+	</div>
+	<script type="text/javascript">
+		document.body.style.backgroundColor = "#fff";
+		document.body.appendChild(editB);
+		document.body.appendChild(cancelB);
+		document.body.appendChild(saveB);
+		document.writeln("</br>");
+		s.body();
+		
+	</script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+.Twindow{
+    display:none;position:absolute;border:3px groove #DDD; overflow:hidden;min-height: 20px;min-width: 50px;
+}
+
+.Twindow .context{display:inline-block;height:calc(100% - 20px);width:100%;overflow:scroll;background-color:#ffffdf;
+}
+.Twindow .caption{
+    width:100%;margin-left: 30px;font-weight: 600;display:inline;overflow:hidden;
+}
+.Twindow .head{
+    user-select: none;-webkit-user-select: none;-moz-user-select: none;display:flex;flex-direction: row; width:100%;cursor: move; height: 20px; background-color:#E8E8E8;text-align: center;
+}
+
+.Twindow .head>div{
+    display:flex;float: right;margin: 0 0px 0 0;height: 17px;min-width: 65px;border: 2px groove  #FFF;border-top-style: none;cursor: default;
+}
+.Twindow .head #sysbtnmin{font-size: medium;width: 20px;display: block;margin-top: -6px;}
+.Twindow .head #sysbtnmin:hover {color: #ffffff;background-color: rgba(0, 0, 0,0.2);border: 1px ridge #E8E8E8;border-top:0}
+.Twindow .head #sysbtnmin:active{font-size: large;width: 20px;display: block;margin-top:-7px;;border: #c2c2c2 1px inset;border: top 0px}
+.Twindow .head #sysbtnmax{font-weight: bolder;width: 20px;display: inline-block;margin-right: 2px;}
+.Twindow .head #sysbtnmax:hover {color: #ffffff;background-color: rgba(0, 0, 0,0.2);border: 1px ridge #E8E8E8;border-top:0}
+.Twindow .head #sysbtnmax:active{font-size: large;width: 20px;display: block;border: #c2c2c2 1px inset;border-top:0}
+.Twindow .head #sysbtnmax span{font-size: large;width: 20px;display: block;margin: -22px -12px 0 3px;}
+.Twindow .head #sysbtncls {color: #0D0D0D;font-weight: 900;font-size: initial;width: 18px;display: inline-block;margin-top: 0px;}
+.Twindow .head #sysbtncls:hover {color: #ffffff;background-color: rgb(236, 0, 0);border: 1px ridge #E8E8E8;border-top:0px}
+.Twindow .head #sysbtncls:active {border: #c2c2c2 1px inset;border-top:0px; margin-top: 1px}
+.fade-in{animation: fade-in 1sn}
+.fade-out{animation: fade-out 1sn}

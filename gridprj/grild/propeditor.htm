@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Gelişmiş Web Tasarım Editörü</title>
+  <!-- Referans dosyalarınız -->
+  <link href="../files/css/propeditor.css" rel="stylesheet" type="text/css">
+  <style>
+    /* Genel layout: Sol, Orta ve Sağ paneller */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+    }
+    #container {
+      display: flex;
+      height: 100vh;
+    }
+    #left-panel {
+      width: 20%;
+      padding: 10px;
+      background: #f7f7f7;
+      border-right: 1px solid #ccc;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+    #center-panel {
+      flex: 1;
+      padding: 10px;
+      position: relative;
+      background: #fff;
+      border-right: 1px solid #ccc;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+    #right-panel {
+      width: 20%;
+      padding: 10px;
+      background: #f7f7f7;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+    /* Sol panel: Element Ağaç Yapısı */
+    #element-tree {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #element-tree li {
+      margin: 5px 0;
+      padding: 5px;
+      border: 1px solid #ddd;
+      cursor: grab;
+      display: flex;
+      align-items: center;
+      user-select: none;
+    }
+    .toggle-btn {
+      width: 16px;
+      text-align: center;
+      font-weight: bold;
+      margin-right: 4px;
+      cursor: pointer;
+    }
+    .child-list {
+      list-style: none;
+      padding-left: 20px;
+      display: none;
+    }
+    .expanded > .child-list {
+      display: block;
+    }
+    /* Orta panel: Tasarım Alanı */
+    #design-canvas {
+      width: 100%;
+      height: calc(100% - 30px);
+      border: 1px dashed #aaa;
+      position: relative;
+      background: #fff;
+    }
+    .draggable-element {
+      position: absolute;
+      border: 1px solid #000;
+      padding: 5px;
+      background: #fff;
+      cursor: move;
+    }
+    .selected {
+      outline: 2px dashed blue;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <!-- Sol Panel: Element Kütüphanesi (ağaç yapısı şeklinde) -->
+    <div id="left-panel">
+      <h3>Element Kütüphanesi</h3>
+      <ul id="element-tree"></ul>
+    </div>
+    <!-- Orta Panel: Tasarım Alanı -->
+    <div id="center-panel">
+      <h3>Tasarım Alanı</h3>
+      <div id="design-canvas"></div>
+    </div>
+    <!-- Sağ Panel: Özellik Düzenleyici -->
+    <div id="right-panel">
+      <h3>Özellik Düzenleyici</h3>
+      <div id="prop-editor-container"></div>
+    </div>
+  </div>
+
+  <link href="propeditor.css" rel="stylesheet" type="text/css">
+  <link href="dom.css" rel="stylesheet" type="text/css">
+  <link href="menu.css" rel="stylesheet" type="text/css">
+  <link href="editor.css" rel="stylesheet" type="text/css">
+  <script src="../files/js/global/dom.js" type="text/javascript"></script>
+  <script type="module" src="../files/js/global/dragDropManager.js"></script>
+  <script src="../files/js/global/menu.js"></script>
+  <script src="../files/js/global/propeditor.js"></script>
+  <script src="../files/js/ace/ace.js" type="text/javascript" charset="utf-8"></script>
+  <script src="../files/js/ace/ext-keybinding_menu.js" type="text/javascript" charset="utf-8"></script>
+  <script src="../files/js/ace/ext-inline_autocomplete.js" type="text/javascript" charset="utf-8"></script>
+  <script>
+    /******** SOL PANEL: Element Ağaç Yapısını Oluşturma ********/
+    // Örnek veri modeli; gerçek uygulamanızda dom.js içerisindeki veri modelini kullanabilirsiniz.
+    const elementLibrary = [
+      { tag: "div", label: "Div" },
+      { tag: "p", label: "Paragraf" },
+      { tag: "img", label: "Resim" },
+      { tag: "table", label: "Tablo", children: [
+          { tag: "thead", label: "Table Head", children: [
+              { tag: "tr", label: "Row", children: [
+                  { tag: "th", label: "Header" }
+              ]}
+          ]},
+          { tag: "tbody", label: "Table Body", children: [
+              { tag: "tr", label: "Row", children: [
+                  { tag: "td", label: "Cell" }
+              ]}
+          ]},
+          { tag: "tfoot", label: "Table Footer", children: [
+              { tag: "tr", label: "Row", children: [
+                  { tag: "td", label: "Footer" }
+              ]}
+          ]}
+      ]}
+    ];
+
+    function buildElementTree(data, parentUl) {
+      data.forEach(item => {
+        const li = document.createElement("li");
+        li.setAttribute("data-element", item.tag);
+        li.setAttribute("draggable", true);
+        // Dragstart: Sürüklenen öğenin tipini aktar
+        li.addEventListener("dragstart", function(e) {
+          e.dataTransfer.setData("text/plain", item.tag);
+        });
+        // Eğer alt öğeler varsa, toggle simgesi ekle
+        if (item.children && item.children.length > 0) {
+          const toggle = document.createElement("span");
+          toggle.className = "toggle-btn";
+          toggle.textContent = "+";
+          toggle.addEventListener("click", function(e) {
+            e.stopPropagation();
+            if (li.classList.contains("expanded")) {
+              li.classList.remove("expanded");
+              toggle.textContent = "+";
+            } else {
+              li.classList.add("expanded");
+              toggle.textContent = "−";
+            }
+          });
+          li.appendChild(toggle);
+        } else {
+          const spacer = document.createElement("span");
+          spacer.className = "toggle-btn";
+          spacer.textContent = " ";
+          li.appendChild(spacer);
+        }
+        // Etiket ismi
+        const label = document.createTextNode(item.label || item.tag);
+        li.appendChild(label);
+        parentUl.appendChild(li);
+        // Alt öğeler için recursive çağrı
+        if (item.children && item.children.length > 0) {
+          const subUl = document.createElement("ul");
+          subUl.className = "child-list";
+          li.appendChild(subUl);
+          buildElementTree(item.children, subUl);
+        }
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+      const treeContainer = document.getElementById("element-tree");
+      buildElementTree(elementLibrary, treeContainer);
+    });
+
+    /******** ORTA PANEL: Tasarım Alanı ********/
+    const designCanvas = document.getElementById("design-canvas");
+    designCanvas.addEventListener("dragover", function(e) {
+      e.preventDefault();
+    });
+    designCanvas.addEventListener("drop", function(e) {
+      e.preventDefault();
+      const type = e.dataTransfer.getData("text/plain");
+      if (!type) return;
+      // dom.js'deki Telement sınıfını kullanarak yeni öğe oluşturun.
+      let telement = new Telement(type);
+      if (type === "p") {
+        telement.htmlObject.textContent = "Yeni Paragraf";
+      } else if (type === "div") {
+        telement.htmlObject.textContent = "Yeni Div";
+      } else if (type === "img") {
+        telement.htmlObject.src = "https://via.placeholder.com/150";
+        telement.htmlObject.alt = "Placeholder Image";
+      } else if (type === "table") {
+        telement.htmlObject.innerHTML = "<tr><td>Hücre</td></tr>";
+      }
+      // Bırakma koordinatları
+      telement.htmlObject.style.position = "absolute";
+      telement.htmlObject.style.left = e.clientX + "px";
+      telement.htmlObject.style.top = e.clientY + "px";
+      telement.htmlObject.classList.add("draggable-element");
+      designCanvas.appendChild(telement.htmlObject);
+      // dragDropManager.js içerisindeki attach() fonksiyonuyla öğeyi sürüklenebilir yapın.
+      if (typeof dragDropManager !== "undefined" && typeof dragDropManager.attach === "function") {
+        dragDropManager.attach(telement);
+      }
+      // Öğeye tıklandığında, sağ panelde özellikler gösterilsin.
+      telement.htmlObject.addEventListener("click", function(ev) {
+        ev.stopPropagation();
+        const prev = designCanvas.querySelector(".selected");
+        if (prev) prev.classList.remove("selected");
+        telement.htmlObject.classList.add("selected");
+        if (typeof propEditor !== "undefined" && typeof propEditor.showProperties === "function") {
+          propEditor.showProperties(telement);
+        }
+      });
+    });
+    designCanvas.addEventListener("click", function() {
+      const prev = designCanvas.querySelector(".selected");
+      if (prev) prev.classList.remove("selected");
+      if (typeof propEditor !== "undefined" && typeof propEditor.clear === "function") {
+        propEditor.clear();
+      }
+    });
+
+    /******** SAĞ PANEL: Özellik Düzenleyici ********/
+    const propEditorContainer = document.getElementById("prop-editor-container");
+    // propeditor.js’de tanımlı init() fonksiyonu varsa, onu kullanın.
+    if (typeof propEditor !== "undefined" && typeof propEditor.init === "function") {
+      propEditor.init(propEditorContainer);
+    } else if (typeof TpropEditor !== "undefined") {
+      // Gönderdiğiniz kodlarda TpropEditor tanımlı ise:
+      window.propEditor = new TpropEditor(300, 400);
+      propEditor.show(true, false);
+      propEditorContainer.appendChild(propEditor.htmlObject);
+    }
+
+    /******** CONTEXT MENU ********/
+    // menu.js'deki context menu işlevselliğini başlatın.
+    if (typeof initContextMenu === "function") {
+      initContextMenu();
+    } else if (typeof Tmenu !== "undefined") {
+      const contextMenu = new Tmenu("contextMenu");
+      let silItem = contextMenu.addItem("Sil");
+      silItem.onclick = function() {
+        const sel = designCanvas.querySelector(".selected");
+        if (sel) {
+          sel.parentNode.removeChild(sel);
+          if (typeof propEditor !== "undefined" && typeof propEditor.clear === "function") {
+            propEditor.clear();
+          }
+        }
+      };
+      designCanvas.addEventListener("contextmenu", function(e) {
+        e.preventDefault();
+        contextMenu.popup(e.clientX, e.clientY, e.target);
+        return false;
+      });
+    }
+  </script>
+</body>
+</html>

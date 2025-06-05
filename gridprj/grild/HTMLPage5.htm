@@ -1,0 +1,57 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+
+<head>
+
+    <script src="../files/js/ortak/jquery.js" type="text/javascript"></script>
+ <script src="../files/js/ortak/dom.js" type="text/javascript"></script>
+   <script src="../files/js/ortak/datetime.js" type="text/javascript"></script>
+    <script src="../files/js/ortak/calender.js" type="text/javascript"></script>
+     
+       
+   <script src="../files/js/ortak/editcontrol.js" type="text/javascript"></script>
+<script type="text/javascript">
+var editc=new TeditControl("edit1");
+editc.type(TeditTypes.date);
+editc.header();
+
+</script>
+</head>
+<body>
+<p style="background-color:Yellow;white-space:pre" >
+<b>Veri Giriþi Kriteri Belirlemede Kullanýlan Bazý Simgeler Ve Anlamlarý</b>
+"#"=>sayi giriþi,+,- deðerlerini alabilir.
+"0"=>zorunlu sayý giriþi "9" => zorunlu olmayan sayý giriþi
+"l"=>zorunlu olmayan karakter(A-Z) giriþi , "L"=>zorunlu karakter(A-Z) giriþi
+"a"=>zorunlu olmayan karakter(A-Z) ve sayý(0-9) giriþi , "A"=>zorunlu karakter(A-Z) ve sayý(0-9) giriþi
+"c"=>zorunlu olmayan herhangi bir karakter(2x!' gibi) giriþi,"C"=>"c"=>zorunlu herhangi bir karakter(2x!' gibi) giriþi
+">" => Bu iþaretten sonraki karakterler büyük harf yazýlýr "<" =>Bu iþaretten sonraki karakterler küçük harf yazýlýr
+"<>" =>Bu iþaretten sonraki Karakterler olduðu gibi yazýlýr
+";" =>Bu iþaretten sonraki Karakter,girilicek karakterleri simgeliyen herhangi bir karakterdir.
+Bazý Örnekler: Tarih Giriþi için  09/09/0000;_ ,  09.09.0000;_  ,  09-09-99;*
+Zaman Giriþi Ýçin : kýsa zaman 09:09;_  ,uzun zaman 09:09:09;_  ,AM PM li uzun zaman 99:99:00_LL;_
+</p> 
+<script type="text/javascript">
+var editc=new TeditControl("edit1");
+
+editc.body();
+
+</script>
+Veri Giriþi <script type="text/javascript">editc.body();</script>
+&nbsp;
+<select id="selector0"  onchange="getElementById('b1').disabled=this.value!=0?'':'disabled';editc.type(this.value)" name="D1" >
+<option value="0">Düz Yazý</option>
+<option value="1">Mask</option>
+<option value="3" selected="selected">Tarih Giriþi</option>
+<option value="4">Saat Giriþi</option>
+<option value="5">Number</option>
+<option value="2">Email</option>
+
+</select>
+    <input type="text" id="maskedit" value="09/09/0000" />
+<input id="b1" disabled="disabled" type="button" value="Kullan" 
+        onclick="if(editc.usemask())editc.mask(document.getElementById('maskedit').value)" 
+        style=" width: 54px"/>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>İlk inşaat-ARaç Takip"</title>
+<script src="../files/js/ortak/jquery.js" type="text/javascript"></script>
+<script src="../files/js/ortak/dom.js" type="text/javascript"></script>
+<script src="../files/js/ortak/datetime.js" type="text/javascript"></script>
+<script src="../files/js/ortak/calender.js" type="text/javascript"></script>
+<script src="../files/js/ortak/editcontrol.js" type="text/javascript"></script>
+
+<script src="../files/js/ortak/Jcanvas.js" type="text/javascript"></script>
+<script src="../files/js/ortak/Jgrid.js" type="text/javascript"></script>
+<script src="../files/js/ortak/menu.js" type="text/javascript"></script>
+<script type="text/javascript">
+var s = new TGrid("grid1", 900,600);
+s.createGridFromTable("test","ilkconstruction" );
+
+var editB=document.createElement("input");
+editB.type="button";
+editB.value="Değiştir";
+editB.onclick=function(){s.editable(true);editB.disabled=true;cancelB.disabled=null;cancelB.focus();saveB.disabled=null;}
+var cancelB=document.createElement("input");
+cancelB.type="button";
+cancelB.value="Geri Al";
+cancelB.onclick=function(){s.cancel();s.editable(false);editB.disabled=null;cancelB.disabled=true;saveB.disabled=true;s.editable(false);}
+var saveB=document.createElement("input");
+saveB.type="button";
+saveB.value="Kaydet";
+saveB.onclick=function(){s.saveChanges();}
+s.onaftersave=function(){
+	editB.disabled=null;cancelB.disabled=true;saveB.disabled=true;s.editable(false);
+}
+s.editable(false);editB.disabled=null;cancelB.disabled=true;saveB.disabled=true;
+</script>
+</head>
+<body>
+<script type="text/javascript">
+		document.body.style.backgroundColor = "#fff";
+		document.body.appendChild(editB);
+		document.body.appendChild(cancelB);
+		document.body.appendChild(saveB);
+		document.writeln("</br>");
+		s.body();
+		
+	</script>
+</body>
+</html>

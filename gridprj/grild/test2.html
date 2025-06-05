@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monaco JS Editor (RAM Monitor)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #1e1e1e;
+            color: white;
+            text-align: center;
+        }
+
+        #editor {
+            width: 80%;
+            height: 400px;
+            margin: 20px auto;
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+
+        #output {
+            width: 80%;
+            margin: 20px auto;
+            background: #252525;
+            color: #00ff00;
+            padding: 10px;
+            border-radius: 5px;
+            min-height: 50px;
+            text-align: left;
+        }
+
+        #ram-usage {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #ff9800;
+        }
+
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            margin: 10px;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background: #005fa3;
+        }
+    </style>
+    <script src="../files/js/vs/loader.js"></script>
+    <script src="../files/js/global/dom.js"></script>
+</head>
+
+<body>
+
+    <h2>JavaScript Editör (RAM Kullanımı İzleyici)</h2>
+
+    <div id="editor"></div>
+    <button onclick="executeCode()">Çalıştır</button>
+    <button onclick="clearOutput()">Çıktıyı Temizle</button>
+
+    <div id="output">Çıktı burada görünecek...</div>
+    <div id="ram-usage">RAM Kullanımı: Hesaplanıyor...</div>
+
+    <script>
+        let editor;
+        function getAbsolutePath(relativePath) {
+    return new URL(relativePath, window.location.origin).href;
+}
+
+const fullPath = getAbsolutePath('../files/js/vs');
+console.log(fullPath);
+        require.config({ paths: { 'vs': fullPath } });
+
+        require(["vs/editor/editor.main"], function () {
+            editor = monaco.editor.create(document.getElementById("editor"), {
+                value: `console.log("Merhaba Dünya!");`,
+                language: "javascript",
+                theme: "vs-dark",
+                fontSize: 14,
+                minimap: { enabled: true },
+                automaticLayout: true,
+                scrollbar: { vertical: "visible", horizontal: "auto" },
+                tabSize: 2
+            });
+
+            monaco.languages.registerFoldingRangeProvider("javascript", {
+  provideFoldingRanges(model, context, token) {
+        const lines = model.getLinesContent();
+        const foldingRanges = [];
+        const stack = []; // Parantezleri tutmak için stack
+        let lastOpened;
+        let frst=true;
+        for (let lineNumber = 0; lineNumber < lines.length; lineNumber++) {
+            const line = lines[lineNumber];
+            frst=true;
+            for (let charIndex = 0; charIndex < line.length; charIndex++) {
+                const char = line[charIndex];
+                if(stack.length>0)
+               { lastOpened = stack[stack.length-1];
+                if ((char === '}' && lastOpened .char== '{') ||
+                (char === ']' && lastOpened.char == '[') ||
+                (char === ')' && lastOpened.char == '(')) {
+                    if(frst)
+                    {    foldingRanges.push({
+                            start: lastOpened.line+1,
+                            end: lineNumber,
+                            kind: monaco.languages.FoldingRangeKind.Region,
+                        });
+                        frst=false;
+                    }
+                        stack.pop();
+                    
+                } 
+            }
+                if (char === '{' || char === '[' || char === '(') {
+                    stack.push({ char, line: lineNumber, index: charIndex });
+                
+                }
+
+            }
+        }
+
+        // Dönen folding aralıkları
+        return foldingRanges;
+    }
+});
+            let folldedLines = [];
+let lineNumber;
+let foldedRanges;
+let isProcessing = false; // Tekrar eden işlemleri engellemek için
+
+editor.onMouseDrag((e) => {
+    if (!e.target.position || isProcessing) return;
+
+    lineNumber = e.target.position.lineNumber;
+    let model = editor.getModel();
+    
+    // Folding bilgilerini al
+    let foldingController = editor.getContribution('editor.contrib.folding');
+    let foldingModel = foldingController.foldingModel;
+    if (!foldingModel) return; // Model yüklenmemişse hata almamak için
+    
+    // En son katlanmış bölgeyi kontrol et
+    if (folldedLines.length > 0) {
+        let lastFold = folldedLines[folldedLines.length - 1];
+        if (lastFold.startLineNumber > lineNumber || lastFold.endLineNumber < lineNumber) {
+            isProcessing = true;
+            requestAnimationFrame(() => {
+                foldingModel.toggleCollapseState([foldingModel.getRegionAtLine(lastFold.startLineNumber)]);
+                folldedLines.pop();
+                console.log("kapandi:", lastFold.startLineNumber);
+                isProcessing = false;
+            });
+        }
+    }
+    editor.onMouseUp((e) => {
+        folldedLines = [];
+    });
+
+    // Katlanmış satır aralıklarını al
+    foldedRanges = foldingModel._currentFoldedOrManualRanges();
+
+    // Yeni katlanmış satır ekleyelim
+    let foldl = null;
+    for (let i = 0; i < foldedRanges.length; i++) {
+        let start = foldedRanges[i].startLineNumber;
+        let end = foldedRanges[i].endLineNumber;
+        let isCollapsed = foldedRanges[i].isCollapsed;
+
+        if (isCollapsed && lineNumber == start) {
+            foldl = foldedRanges[i];
+            break;
+        }
+    }
+
+    // Eğer satır katlanmışsa ve daha önce eklenmediyse listeye al
+    if (foldl?.isCollapsed) {
+        isProcessing = true;
+        requestAnimationFrame(() => {
+            foldingModel.toggleCollapseState([foldingModel.getRegionAtLine(foldl.startLineNumber)]);
+            foldl.isCollapsed = false;
+            console.log("Acildi:", foldl.startLineNumber);
+            folldedLines.push(foldl);
+            isProcessing = false;
+        });
+    }
+});
+
+        });
+
+        function executeCode() {
+            const code = editor.getValue();
+            try {
+                const output = eval(code);
+                document.getElementById("output").innerText = output !== undefined ? output : "Kod çalıştırıldı.";
+            } catch (error) {
+                document.getElementById("output").innerText = "Hata: " + error.message;
+            }
+            updateRamUsage();
+        }
+
+        function clearOutput() {
+            document.getElementById("output").innerText = "Çıktı burada görünecek...";
+        }
+
+        function updateRamUsage() {
+            if (performance.memory) {
+                const used = Math.round(performance.memory.usedJSHeapSize / 1024 / 1024);
+                const total = Math.round(performance.memory.totalJSHeapSize / 1024 / 1024);
+                document.getElementById("ram-usage").innerText = `RAM Kullanımı: ${used}MB / ${total}MB`;
+            } else {
+                document.getElementById("ram-usage").innerText = "RAM Kullanımı ölçülemiyor!";
+            }
+        }
+
+        setInterval(updateRamUsage, 2000);
+    </script>
+
+</body>
+
+</html>

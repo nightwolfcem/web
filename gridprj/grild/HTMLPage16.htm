@@ -1,0 +1,82 @@
+<html>
+<head>
+<style type="text/css" >
+  .normal{ background-color:White;}
+.selected{background-color:#00AAFF;}  
+#list1{cursor:pointer} 
+    </style>
+<script type="text/javascript">
+
+function ekle() {
+var items=document.getElementById("items1").getElementsByTagName("select");
+var txt="";
+for(var i=0;i<items.length;i++)
+{
+    txt=txt+items[i].value;
+}
+var listbox=document.getElementById("list1");
+var item=document.createElement("div");
+var onceki=null;
+item.onclick=function(){var r=this.getElementsByTagName("input")[0];r.checked=r.checked?"":"checked";this.className=r.checked?"selected":"normal";}
+item.innerHTML='<input type="checkbox" />'+txt;
+listbox.appendChild(item);
+}
+function secililer()
+{
+var listbox=document.getElementById("list1");
+var items=listbox.getElementsByTagName("div");
+var degerler=new Array();
+for(var i=0;i<items.length;i++)
+{
+
+   if( items[i].childNodes[0].checked) 
+   degerler.push(items[i].innerHTML.replace(/<.*>/,"" ));
+}
+return degerler;
+}
+function goster()
+{
+var d=secililer();
+document.getElementById("aktar").innerHTML="";
+for(var i=0;i<d.length;i++)
+document.getElementById("aktar").innerHTML+=d[i]+"<br\>";
+}
+
+</script>
+    <style type="text/css">
+     
+        #Button2
+        {
+            width: 102px;
+        }
+     
+    </style>
+
+</head>
+<body>
+<div id="items1" > 
+    <select  id="Select1">
+        <option value="B1">bolum1</option>
+        <option value="B2">bolum2</option>
+        <option value="B3">bolum3</option>
+	</select><br><br>
+    <label for="Terms"></label>
+      <select name="Terms"  id="Terms">
+        <option value="Fall">all</option>
+        <option value="Spring">Spring</option>
+	</select><br><br>
+	  <label for="Years"></label>
+      <select name="Years" id="Years">
+        <option value="Year 1">Year 1</option>
+        <option value="Year 2" >Year 2</option>
+        <option  value="Year 3">Year 3</option>
+        <option  value="Year 4">Year 4</option>
+      </select>
+      <input id="Button1" type="button" value="ekle" onclick="return ekle()" /></div>
+<div id="list1" style="width:200px;height:100px;overflow-x:hidden;overflow-y:scroll; border:groove 2px"> 
+</div>
+<input id="Button2" type="button" value="goster" onclick="return goster()" />
+<div id="aktar" style="background-color:#ccccff; width:378px; height:100px;"></div>
+
+</body>
+</html>  

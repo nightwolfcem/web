@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Cube Grid with Mouse Control</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <script src=""></script>
+    <script>
+        // Sahne, kamera ve render oluşturuluyor
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Küp dizisini oluşturuyoruz
+        const gridSize = 10;
+        const cubeSize = 1;
+        const gap = 0.1;
+
+        // Küpleri 10x10 ızgara şeklinde oluştur
+        const cubes = [];
+        for (let x = 0; x < gridSize; x++) {
+            for (let z = 0; z < gridSize; z++) {
+                const geometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
+                const material = new THREE.MeshBasicMaterial({
+                    color: (x + z) % 2 === 0 ? 0x00bcd4 : 0xffc107, // Turkuaz ve Kavun rengi
+                    transparent: true,
+                    opacity: 0.5
+                });
+                const cube = new THREE.Mesh(geometry, material);
+                cube.position.set(x * (cubeSize + gap), 0, z * (cubeSize + gap));
+                scene.add(cube);
+                cubes.push(cube);
+            }
+        }
+
+        // Kamera konumunu ayarlama
+        camera.position.z = 20;
+
+        // Fare ile döndürme işlemi için değişkenler
+        let isMouseDown = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+
+        // Fare hareketiyle döndürme
+        window.addEventListener('mousedown', (e) => {
+            isMouseDown = true;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isMouseDown) return;
+
+            const deltaX = e.clientX - lastMouseX;
+            const deltaY = e.clientY - lastMouseY;
+
+            // Döndürmeyi kameraya yansıtma
+            scene.rotation.y += deltaX * 0.005; // Y ekseninde döndürme
+            scene.rotation.x += deltaY * 0.005; // X ekseninde döndürme
+
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        });
+
+        window.addEventListener('mouseup', () => {
+            isMouseDown = false;
+        });
+
+        // Render fonksiyonu
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // Pencere boyutları değişirse kamera ve render boyutlarını ayarlama
+        window.addEventListener('resize', () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+        });
+    </script>
+</body>
+</html>

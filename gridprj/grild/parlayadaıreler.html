@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>requestAnimationFrame Testi</title>
+   
+</head>
+<body style="background-color: rgba(134, 5, 5, 0.842);">
+
+
+    <script>
+ // Yardımcı Fonksiyonlar (Dışarıda tanımla)
+ function hexToRgb(hex) {
+  let bigint = parseInt(hex.replace("#", ""), 16);
+  return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
+}
+function lerpColor(a, b, amount) { 
+  const ah = parseInt(a.replace('#', ''), 16),
+        ar = ah >> 16, ag = (ah >> 8) & 0xff, ab = ah & 0xff,
+        bh = parseInt(b.replace('#', ''), 16),
+        br = bh >> 16, bg = (bh >> 8) & 0xff, bb = bh & 0xff,
+        rr = ar + amount * (br - ar),
+        rg = ag + amount * (bg - ag),
+        rb = ab + amount * (bb - ab);
+  return [rr|0, rg|0, rb|0];
+}
+
+class SparkEffect {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext("2d");
+    this.particles = [];
+    this.running = false;
+    this.gravity = 0.1;
+    document.body.appendChild(canvas);
+  }
+
+  emit(x, y, count = 100) {
+    for (let i = 0; i < count; i++) {
+      const speed = Math.random() * 3 + 1;
+      const angle = Math.random() * 2 * Math.PI;
+      const vx = Math.cos(angle) * speed;
+      const vy = Math.sin(angle) * speed;
+      const size = Math.random() * 100 + 1;
+      const life = Math.random() * 120 + 30;
+      const colors = ["#fff", "#ffeea8", "#ffd800", "#ff9300", "#ff3b00"];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+
+      this.particles.push({
+        x: x,
+        y: y,
+        vx: vx,
+        vy: vy,
+        radius: size,
+        initialRadius: size,
+        color: color,
+        life: life,
+        maxLife: life
+      });
+    }
+  }
+
+  updateAndDraw() {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    this.particles.forEach((p, i) => {
+      p.vy += this.gravity;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life--;
+
+      if (p.life <= 0) {
+        this.particles.splice(i, 1);
+        return;
+      }
+
+      const lifeRatio = p.life / p.maxLife;
+
+      // Yarıçap küçültme
+      p.radius = p.initialRadius * lifeRatio;
+
+      let currentColor=hexToRgb( p.color);
+    
+
+      const alpha = lifeRatio;
+
+      // Gradient oluştur
+   
+      const gradient = this.ctx.createRadialGradient(
+  p.x, p.y, 0,
+  p.x, p.y, p.radius
+);
+
+// 0% - merkez: %70 beyaz + %30 renk
+let blend1 = lerpColor('#ffffff', p.color, 0.4);
+gradient.addColorStop(0.0, `rgba(${blend1[0]},${blend1[1]},${blend1[2]},${0.6 * alpha})`);
+
+// 20% - %90 renk + %10 beyaz
+let blend2 = lerpColor('#ffffff', p.color, 0.6);
+gradient.addColorStop(0.2, `rgba(${blend2[0]},${blend2[1]},${blend2[2]},${0.8 * alpha})`);
+
+// 50% - %50 beyaz + %50 renk
+let blend3 = lerpColor('#ffffff', p.color, 0.5);
+gradient.addColorStop(0.5, `rgba(${blend3[0]},${blend3[1]},${blend3[2]},${alpha})`);
+
+// 80% - %50 kendi rengi + %50 saydamlık
+let blend4 = lerpColor('#000000', p.color, 0.5);
+gradient.addColorStop(0.8, `rgba(${blend4[0]},${blend4[1]},${blend4[2]},${0.3 * alpha})`);
+
+// 100% - tamamen saydam kendi rengi
+gradient.addColorStop(1.0, `rgba(${currentColor[0]},${currentColor[1]},${currentColor[2]},0)`);
+
+      // Parçacığı çiz
+      this.ctx.beginPath();
+      this.ctx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI);
+      this.ctx.fillStyle = gradient;
+      this.ctx.fill();
+    });
+
+    if (this.running) {
+      requestAnimationFrame(() => this.updateAndDraw());
+    }
+  }
+
+  start() {
+    if (!this.running) {
+      this.running = true;
+      requestAnimationFrame(() => this.updateAndDraw());
+    }
+  }
+
+  stop() {
+    this.running = false;
+  }
+}const spark = new SparkEffect(document.createElement("canvas"));
+spark.start();
+spark.canvas.addEventListener("mousedown", (e) => {
+  const rect = spark.canvas.getBoundingClientRect();
+  spark.emit(e.clientX - rect.left, e.clientY - rect.top, 30);
+});
+spark.canvas.addEventListener("mousemove", (e) => {
+  const rect = spark.canvas.getBoundingClientRect();
+  spark.emit(e.clientX - rect.left, e.clientY - rect.top, 30);
+});
+window.addEventListener('load', () => {
+  spark.canvas.width = window.innerWidth;
+  spark.canvas.height = window.innerHeight;
+});
+    </script>
+
+</body>
+</html>

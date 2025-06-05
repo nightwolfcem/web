@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <script src="../files/js/global/dom.js" type="text/javascript"></script>
+  <meta charset="UTF-8">
+  <title>Layer Manager with TreeView</title>
+  <style>
+    body, html { margin:0; padding:0; height:100%; }
+    body { display:flex; flex-direction:column; font-family:Arial, sans-serif; }
+    
+    #app-container { display:flex; flex:1; }
+    
+    /* Controls */
+    #controls { 
+      padding:10px; 
+      background:#f0f0f0; 
+      display:flex; 
+      flex-wrap:wrap; 
+      gap:5px; 
+    }
+    
+    /* Treeview Container */
+    #tree-container { 
+      width:250px; 
+      border-right:1px solid #ccc; 
+      overflow:auto; 
+      padding:10px;
+      background: #f8f8f8;
+    }
+    
+    /* Viewbox (Layer Container) */
+    #viewbox { 
+      flex:1; 
+      position:relative; 
+      background:#fff; 
+      overflow:auto;
+      border: 1px solid #ddd;
+    }
+    
+    /* Layer Stilleri */
+    .layer { 
+      position:absolute; 
+      width:100px; 
+      height:100px; 
+      display:flex; 
+      align-items:center; 
+      justify-content:center;
+      cursor:move;
+      border-radius:4px;
+      font-size: 12px;
+      font-weight: bold;
+      box-sizing: border-box;
+    }
+    
+    .static-layer { 
+      position:static !important; 
+      margin:10px; 
+      padding:10px; 
+      background:rgba(0,128,0,0.3); 
+      color:#fff; 
+    }
+    
+    .absolute-layer {
+      background:rgba(128,0,0,0.3);
+      color:#fff;
+    }
+    
+    .group-layer {
+      background:rgba(200,200,200,0.2);
+      border:1px dashed #999;
+      min-height:100px;
+    }
+    
+    .layer.locked { 
+      opacity:0.5; 
+      pointer-events:none; 
+      outline: 2px dashed red;
+    }
+    
+    .layer.selected {
+      outline: 2px solid #4af;
+    }
+    
+    button {
+      padding: 8px 12px;
+      background: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    button:hover {
+      background: #0b7dda;
+    }
+    
+    button:disabled {
+      background: #cccccc;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <button id="add-static">Add Static Element</button>
+    <button id="add-absolute">Add Absolute Element</button>
+    <button id="add-group">Add Group</button>
+    <button id="bring-front" disabled>Bring to Front</button>
+    <button id="send-back" disabled>Send to Back</button>
+    <button id="lock-layer" disabled>Lock</button>
+    <button id="unlock-layer" disabled>Unlock</button>
+    <button id="remove-layer" disabled>Remove</button>
+  </div>
+  <div id="app-container">
+    <div id="tree-container"></div>
+    <div id="viewbox" style="position:relative"></div>
+  </div>
+  <script>
+    // ----------- Kök Layer oluştur -----------
+    const rootLayer = new Tlayer(document.getElementById('viewbox'),{layerName: 'root', createSubLayers: true});
+rootLayer.status.visible = true;
+
+    // ----------- TreeView oluştur -----------
+    const treeView = new TtreeView('#tree-container', rootLayer);
+
+    // ----------- Viewbox'a Layer render helper -----------
+  
+    // Layer event’lerinde viewbox’ı güncelle
+   
+
+    // ----------- Kontrol Butonları ve İşlevleri -----------
+    const controls = {
+        addStatic: document.getElementById('add-static'),
+        addAbsolute: document.getElementById('add-absolute'),
+        addGroup: document.getElementById('add-group'),
+        bringFront: document.getElementById('bring-front'),
+        sendBack: document.getElementById('send-back'),
+        lockLayer: document.getElementById('lock-layer'),
+        unlockLayer: document.getElementById('unlock-layer'),
+        removeLayer: document.getElementById('remove-layer')
+    };
+
+    function getSelectedLayer() {
+        // rootLayer içinde selected olanı bul
+        function findSel(layer) {
+            if (layer.isSelected) return layer;
+            for (const c of layer.children) {
+                const f = findSel(c);
+                if (f) return f;
+            }
+            return null;
+        }
+        return findSel(rootLayer);
+    }
+
+    function updateControls() {
+        const sel = getSelectedLayer();
+        const hasSel = !!sel && !sel.isRoot;
+        const isLocked = sel?.locked;
+        controls.bringFront.disabled  = !hasSel || isLocked;
+        controls.sendBack.disabled    = !hasSel || isLocked;
+        controls.lockLayer.disabled   = !hasSel || isLocked;
+        controls.unlockLayer.disabled = !hasSel || !isLocked;
+        controls.removeLayer.disabled = !hasSel;
+    }
+
+    controls.addStatic.addEventListener('click', () => addLayer('static'));
+    controls.addAbsolute.addEventListener('click', () => addLayer('absolute'));
+    controls.addGroup.addEventListener('click', () => addLayer('group'));
+
+    function addLayer(type) {
+        const sel = getSelectedLayer() || rootLayer;
+        const id = type + '-' + Math.floor(Math.random()*10000);
+        
+        const layer = new Tlayer({ id });
+       layer.status.visible = true;
+        sel.appendChild(layer);
+        layer.status.visible=true;
+        if (type !== 'group') layer.select();
+        Object.assign(layer.htmlObject.style, {
+    
+            width: type === 'group' ? 'auto' : '100px',
+            height: type === 'group' ? 'auto' : '100px',
+            minHeight: type === 'group' ? '100px' : '',
+            backgroundColor: type === 'static' ? 'rgba(0,128,0,0.3)' : 
+            type === 'absolute' ? 'rgba(128,0,0,0.3)' : 'rgba(200,200,200,0.2)',
+            border: type === 'group' ? '1px dashed #999' : '',
+            position: type === 'static' ? 'static' : 'absolute',
+            left: type === 'absolute' ? `${Math.random() * 300}px` : '',
+            top: type === 'absolute' ? `${Math.random() * 300}px` : '',
+            margin: type === 'static' ? '10px' : '',
+            padding: '10px',
+            color: 'white'
+          });
+       
+    }
+
+    controls.bringFront.addEventListener('click', () => {
+        getSelectedLayer()?.bringToFront();
+    });
+    controls.sendBack.addEventListener('click', () => {
+        getSelectedLayer()?.sendToBack();
+    });
+    controls.lockLayer.addEventListener('click', () => {
+        getSelectedLayer()?.lock();
+        updateControls();
+    });
+    controls.unlockLayer.addEventListener('click', () => {
+        getSelectedLayer()?.unlock();
+        updateControls();
+    });
+    controls.removeLayer.addEventListener('click', () => {
+        const sel = getSelectedLayer();
+        if (sel && !sel.isRoot && sel.parent) sel.parent.removeChild(sel);
+        updateControls();
+    });
+
+    // Layer veya selection değişince kontrol butonları güncellensin
+    rootLayer.addChangeListener(updateControls);
+
+    // Sayfa yüklendiğinde render
+    document.addEventListener('DOMContentLoaded', () => {
+     
+        updateControls();
+    });
+  </script>
+</body>
+</html>

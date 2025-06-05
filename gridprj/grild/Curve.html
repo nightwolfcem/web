@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bézier Eğrisi Çizici</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        canvas {
+            border: 1px solid black;
+        }
+        input, button {
+            margin: 10px;
+            padding: 5px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Bézier Eğrisi Çizici</h2>
+    
+    <label for="formula">Matematiksel Formül (t parametresi ile):</label>
+    <input type="text" id="formula" value="(1 - t)**3 * P0 + 3 * (1 - t)**2 * t * P1 + 3 * (1 - t) * t**2 * P2 + t**3 * P3">
+    
+    <button onclick="drawCurve()">Çiz!</button>
+    
+    <canvas id="canvas" width="500" height="400"></canvas>
+
+    <script>
+        function drawCurve() {
+            const canvas = document.getElementById("canvas");
+            const ctx = canvas.getContext("2d");
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Kontrol noktaları (manuel olarak belirleyebiliriz)
+            let P0 = {x: 50, y: 0};
+            let P1 = {x: 150, y: 400};
+            let P2 = {x: 350, y: 400};
+            let P3 = {x: 450, y: 0};
+
+            // Kullanıcının girdiği formülü al
+            let formula = document.getElementById("formula").value;
+            
+            // Eğriyi çiz
+            ctx.beginPath();
+            ctx.moveTo(P0.x, P0.y);
+
+            for (let i = 0; i <= 100; i++) {
+                let t = i / 100;  // t parametresi 0 ile 1 arasında gider
+
+                // Kontrol noktalarını JavaScript'e uygun hale getir
+                let x = eval(formula.replace(/P0/g, P0.x).replace(/P1/g, P1.x).replace(/P2/g, P2.x).replace(/P3/g, P3.x));
+                let y = eval(formula.replace(/P0/g, P0.y).replace(/P1/g, P1.y).replace(/P2/g, P2.y).replace(/P3/g, P3.y));
+
+                ctx.lineTo(x, y);
+            }
+
+            ctx.strokeStyle = "blue";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Kontrol noktalarını çiz
+            ctx.fillStyle = "red";
+            ctx.beginPath();
+            ctx.arc(P0.x, P0.y, 5, 0, Math.PI * 2);
+            ctx.arc(P1.x, P1.y, 5, 0, Math.PI * 2);
+            ctx.arc(P2.x, P2.y, 5, 0, Math.PI * 2);
+            ctx.arc(P3.x, P3.y, 5, 0, Math.PI * 2);
+            
+
+            // Kontrol noktalarını bağlayan çizgiler
+            ctx.strokeStyle = "gray";
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(P0.x, P0.y);
+            ctx.lineTo(P1.x, P1.y);
+            ctx.lineTo(P2.x, P2.y);
+            ctx.lineTo(P3.x, P3.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+    </script>
+
+</body>
+</html>

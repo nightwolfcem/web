@@ -1,0 +1,4 @@
+:root{--menucolor:#d5d5db}
+.Tmenu{position: absolute; border: 1px solid; opacity: 0; transition: opacity 1s ease 0s; margin: 3px;border-collapse: collapse;}
+.Tmenu tr:hover{border:1px solid;background: linear-gradient(rgba(0, 0, 0,0) 0%,rgba(255, 255, 255,0.2) 40%, rgba(0, 0, 0,0.2) 60% ,rgba(0, 0, 0,0.1)100% );}
+.Tmenu td span{text-align: left;font-size: 14px; padding: 2px 4px 0 0;cursor:default}
