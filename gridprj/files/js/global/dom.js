@@ -11,9 +11,10 @@
  * bu islemlerden sonra window degiskenleri bir listeye alinir. sayfa kaydedilecegi zaman
  * 
  * 
- *
+ * 
  */
 //const { object } = require("underscore");
+
 var $ = $ || void 0;
 
 function getDeviceInfo() {
@@ -1504,6 +1505,8 @@ Object.prototype.copy = function () {
             removeFromNestedArr(AllClass.byClass, this);
         }
     }
+
+    let Telementstyles=false;
     /**
     * Gelişmiş Temel Telement Sınıfı
     * - Alt sınıflar için kolay genişletme
@@ -1761,10 +1764,9 @@ Object.prototype.copy = function () {
         }
 
         #injectStyles() {
-            if (document.getElementById('telement-styles')) return;
-            const style = document.createElement('style');
-            style.id = 'telement-styles';
-            style.textContent = `
+            if (Telementstyles) return;
+            
+          let textContent = `
       .locked { pointer-events: none; }
       .draggable { user-select: none; }
       .movable { cursor: move; }
@@ -1782,7 +1784,8 @@ Object.prototype.copy = function () {
       .res-left { left: -3px; }
       .res-right { right: -3px; }
     `;
-            document.head.appendChild(style);
+           DOM.addStyle(textContent);
+           Telementstyles = true;
         }
         #toggleFeature(name, isOn) {
             this.htmlObject.classList.toggle(name, isOn);
@@ -1973,7 +1976,6 @@ selection.style.display = "";
         let selection = document.getElementById('descendant-bbox-selection');
         if (selection) selection.remove();
     }
-
     Tlayer = class Tlayer extends Telement {
         #changeListeners = [];
 
@@ -2020,6 +2022,7 @@ selection.style.display = "";
             if (options.createSubLayers || options.subLayerNames) {
                 this.createSubLayers(options.subLayerNames || Olayers);
             }
+            this.htmlObject.style.pointerEvents = "auto";
         }
 
         // --- Değişiklik dinleyicisi ekle
@@ -2071,15 +2074,14 @@ selection.style.display = "";
         createSubLayers(names = Olayers,visible=true) {
         names.forEach(name => {
             const lyr = new Tlayer('div', { layerName: name });
+            lyr.htmlObject.classList.add("baseLayer");
             lyr.htmlObject.dataset.baseLayer = true;
-            Object.assign(lyr.htmlObject.style, {
-                position: 'absolute',
-                inset: '0',
-                pointerEvents: 'none'
-            });
+           
             this.mainLayers[name] = lyr;
             lyr.status.visible=visible;
             this.appendChild(lyr);
+            lyr.htmlObject.style.pointerEvents = "none";
+              lyr.htmlObject.style.inset = "0";
         });
     }
      
@@ -2250,25 +2252,29 @@ selection.style.display = "";
             if (update)
                 this._notifyChange('deselect');
         }
+      
        bringToFront() {
-        if (this.parent) {
-            if (this.isStatic) {
-                this.parent.htmlObject.appendChild(this.htmlObject);
-            } else {
-                const dyn = this.parent.#dynamicChildren();
-                const max = dyn.reduce((m, l) => Math.max(m, l.zIndex), 0);
-                this.zIndex = max + 1;
-                 this.parent.children.push(this);
-                this.parent.reflowZ();
-                 this._notifyChange('bringToFront');
-            }
+        if (!this.parent) return;
+
+        if (this.isStatic) {
+            this.parent.appendChild(this);
+        } else {
+            const parent = this.parent;
+            parent.children = parent.children.filter(c => c !== this);
+            parent.children.push(this);
+            const dyn = parent.#dynamicChildren();
+            const max = dyn.reduce((m, l) => Math.max(m, l.zIndex), 0);
+            this.zIndex = max + 1;
+            parent.reflowZ();
         }
+
+        this._notifyChange('bringToFront');
     }
   sendToBack() {
             const parent = this.parent;
             if (!parent) return false;
             if (this.isStatic) {
-                parent.htmlObject.insertBefore(this.htmlObject, parent.htmlObject.firstElementChild);
+                parent.insertBefore(this, parent.children[0]);
             } else {
                 parent.children = parent.children.filter(c => c !== this);
                 parent.children.unshift(this);
@@ -2296,7 +2302,7 @@ selection.style.display = "";
         }
     };
 
-
+ let treeviewStyles=false;
     TtreeView = class TtreeView {
         /**
          * @param {string|HTMLElement} containerSelector - Ağacın konulacağı DOM elemanı (veya CSS selector).
@@ -2324,10 +2330,9 @@ selection.style.display = "";
 
         // --- Stil dosyası (lock için renk vurgusu ve selection)
         #injectStyles() {
-            if (document.getElementById('tlayer-treeview-style')) return;
-            const style = document.createElement('style');
-            style.id = 'tlayer-treeview-style';
-            style.textContent = `
+            if (treeviewStyles) return;
+
+           let textContent = `
       [data-treeview] ul { list-style:none; padding-left:20px; margin:0; }
       [data-treeview] li { padding:4px; cursor:pointer; position:relative; transition: background-color 0.2s; border: 1px solid transparent; }
       [data-treeview] li.selected { background:#d0eaff; border:1px solid #80bfff; }
@@ -2380,7 +2385,8 @@ selection.style.display = "";
     right: -10px;
 }
     `;
-            document.head.appendChild(style);
+        DOM.addStyle(textContent);
+            treeviewStyles=true;
         }
 
         // --- Layer'dan <li> DOM oluşturur
@@ -3152,88 +3158,7 @@ selection.style.display = "";
 
     // Varsayımlar: EwindowStatus, EcaptionButton ve TabsoluteElement daha önce tanımlı.
 
-    const css = document.createElement('style');
-    css.textContent = `
-      .locked { outline: 2px dashed rgba(255,0,0,0.5); pointer-events: none !important; }
-      [data-layer] { box-sizing: border-box; position: absolute; }
-      .selected { outline: 2px solid #4af !important; }`;
-
-    document.head.appendChild(css);
-    /** 
-        TlayerEngine = class TlayerEngine extends EventTarget {
-            static instance = null;
-            static root = null;
-            #treeView = null;
-            #observer = null;
-            constructor(rootElement = document.body) {
-                super();
-                if (TlayerEngine.instance) return TlayerEngine.instance;
-    
-                this.root = rootElement instanceof Tlayer
-                    ? rootElement
-                    : new Tlayer(rootElement);
-    
-                // DOM değişikliklerini gözlemle
-                this.#observer = new MutationObserver(muts => this.#handleMutations(muts));
-                this.#observer.observe(this.root.htmlObject, {
-                    childList: true,
-                    subtree: true
-                });
-                TlayerEngine.instance = this;
-            }
-            getLayerById(id) {
-                const el = this.root.htmlObject.querySelector(`[data-layer="${id}"]`);
-                return el?.owner instanceof Tlayer ? el.owner : this.root;
-            }
-            get selection() { return this.root.htmlObject.querySelector('.selected'); }
-            get selections() { return this.root.htmlObject.querySelectorAll('.selected'); }
-    
-            get treeView() { return this.#treeView; }
-            set treeView(view) {
-                this.#treeView = view;
-                view.TlayerEngine = this;
-                view.refreshTree();
-            }
-            refreshTreeView() { this.#treeView?.refreshTree(); }
-    
-            #handleMutations(muts) {
-                let touched = false;
-                for (const m of muts) {
-                    for (const n of m.addedNodes) {
-                        if (!(n instanceof HTMLElement) || !n.dataset.layer) continue;
-                        if (!(n.owner instanceof Tlayer)) new Tlayer(n);
-                        touched = true;
-                    }
-                    for (const n of m.removedNodes) {
-                        if (!(n instanceof HTMLElement) || !n.dataset.layer) continue;
-                        touched = true;
-                    }
-                }
-                if (touched) this._notifyChange();
-            }
-    
-            _notifyChange(layer = null) {
-                this.#treeView?.refreshTree();
-                this.dispatchEvent(new CustomEvent('layerchange', {
-                    detail: { layer }
-                }));
-            }
-            updateParent(childId, newParentId) {
-                const child = this.getLayerById(childId);
-                const newParent = this.getLayerById(newParentId);
-                if (child && newParent && (child !== newParent)) {
-                    const oldParent = child.parent;
-                    newParent.htmlObject.appendChild(child.htmlObject);
-                    oldParent?.reflowZ();
-                    newParent.reflowZ();
-                }
-            }
-        }*/
-
-
-
-
-    // gizlenir
+   
 
     function controlAtPos(x, y, findobj, compobj) {
         x = x || mouse.x;
@@ -3500,15 +3425,6 @@ selection.style.display = "";
     // Locale ayarları yapılıyor ve Telement sınıfına ait örneklerin body metodu çağrılıyor.
     const onLoadFunction = () => {
         Intl.locate(navigator.language);
-        function findMovableElement(el) {
-            while (el && el !== document.body) {
-                const pos = getComputedStyle(el).position;
-                if (pos === 'absolute' || pos === 'relative') return el;
-                el = el.parentElement;
-            }
-            return document.body;
-        }
-
         // Tüm otomatik eklenmesi gerekenleri sırayla body() ile DOM'a kat.
         for (let el of AllClass.byOrder) {
             if (typeof el.body === "function" && !el.loaded) {
@@ -3734,7 +3650,7 @@ selection.style.display = "";
         }
     };
     wonmup.bindToEvent(document, "mouseup");
-
+let _styleEl=null;
     window.DOM = {
         modaldiv: document.createElement("DiV"),
         timers: new Array(),
@@ -3753,56 +3669,100 @@ selection.style.display = "";
                 };
             target.style.cursor = "default";
         },
-        ghost: new Telement("DiV"),
-        spareSpan: new Telement("SPAN"),
-        pointer: new Telement("DiV"),
-        disableScreen: new Telement("DiV"),
-        dialogBox: new TabsoluteElement("DiV", "dlgBox"),
-        scrollBox: new TabsoluteElement("DiV", "scrollBox")
-
+         head: document.head,
+  path: window.location.href,
+  addStyle: function(cssText) {
+    if (!_styleEl) {
+      _styleEl = document.createElement('style');
+      document.head.appendChild(_styleEl);
     }
-    DOM.defineProp("head", () => { return document.head });
-
-    DOM.head.addStyleSheet = function (path) {
-        let link = document.createElement("link");
-        link.href = path;
-        link.type = "text/css";
-        link.rel = "stylesheet";
-        link.media = "screen,print";
-        DOM.head.appendChild(link);
-        delete link;
+    _styleEl.appendChild(document.createTextNode(cssText));
+    return _styleEl;
+  },
+  addMeta: function(attributes) {
+    const meta = document.createElement('meta');
+    for (const key in attributes) {
+      meta.setAttribute(key, attributes[key]);
+    }
+    document.head.appendChild(meta);
+    return meta;
+  },
+  addLink: function(attributes) {
+    const link = document.createElement('link');
+    for (const key in attributes) {
+      link.setAttribute(key, attributes[key]);
+    }
+    document.head.appendChild(link);
+    return link;
+  },
+  addScript: function(pathOrOptions) {
+    if (typeof pathOrOptions === 'string') {
+      if (!document.querySelector(`script[src='${pathOrOptions}']`)) {
+        const script = document.createElement('script');
+        script.src = pathOrOptions;
+        document.head.appendChild(script);
+        return script;
+      }
+      return null;
+    } else {
+      const { src = null, inlineContent = '', attributes = {} } = pathOrOptions;
+      if (src && document.querySelector(`script[src='${src}']`)) return null;
+      const script = document.createElement('script');
+      if (src) script.src = src;
+      if (inlineContent) script.appendChild(document.createTextNode(inlineContent));
+      for (const key in attributes) {
+        script.setAttribute(key, attributes[key]);
+      }
+      document.head.appendChild(script);
+      return script;
+    }
+  },
+  setTitle: function(text) {
+    let title = document.head.querySelector('title');
+    if (!title) {
+      title = document.createElement('title');
+      document.head.appendChild(title);
+    }
+    title.textContent = text;
+    return title;
+  },
+  addStyleSheet: function(path) {
+    let link = document.createElement('link');
+    link.href = path;
+    link.type = 'text/css';
+    link.rel = 'stylesheet';
+    link.media = 'screen,print';
+    document.head.appendChild(link);
+    return link;
+  },
+  getUpPath: function(currentPath = null, levels = 1) {
+    const fullUrl = currentPath
+      ? new URL(currentPath, window.location.origin).href
+      : window.location.href;
+    const url = new URL(fullUrl);
+    let pathname = url.pathname;
+    const parts = pathname.split('/').filter(p => p !== '');
+    levels = Math.floor(Math.abs(levels));
+    if (levels >= parts.length) {
+      pathname = '/';
+    } else {
+      pathname = '/' + parts.slice(0, -levels).join('/') + '/';
+    }
+    return url.origin + pathname;
+  }
     }
 
-    DOM.head.addScript = function (path) {
-        if (!document.querySelector(`script[src='${path}']`)) {
-            const script = document.createElement("script");
-            script.src = path;
-            document.head.appendChild(script);
-        }
-    }
-    DOM.getUpPath = function (currentPath = null, levels = 1) {
-
-        const fullUrl = currentPath
-            ? new URL(currentPath, window.location.origin).href
-            : window.location.href;
-        const url = new URL(fullUrl);
-        let pathname = url.pathname; // "/grid/temp.html"
-        const parts = pathname.split('/').filter(p => p !== '');
-        levels = Math.floor(Math.abs(levels));
-
-        if (levels >= parts.length) {
-            pathname = '/';
-        } else {
-            pathname = '/' + parts.slice(0, -levels).join('/') + '/';
-        }
-        return url.origin + pathname;
-    };
-    DOM.head.addStyleSheet(
+    DOM.addStyleSheet(
         DOM.getUpPath(null, 2) + "files/css/dom.css"
 
     );
     DOM.head.innerHTML += " #d3d {background-image:" + "url(" + DOM.getUpPath(null, 2) + "/files/images/ortak/gradienObutton.png);background-repeat:repeat-x;background-size:auto 100%;};";
-
+        DOM.ghost= new Telement("DiV"),
+        DOM.spareSpan= new Telement("SPAN"),
+        DOM.pointer= new Telement("DiV"),
+        DOM.disableScreen= new Telement("DiV"),
+        DOM.dialogBox= new TabsoluteElement("DiV", "dlgBox"),
+        DOM.scrollBox= new TabsoluteElement("DiV", "scrollBox"),
 
     DOM.designMode = false;
     DOM.selectedElements = new Set();
@@ -4302,8 +4262,8 @@ selection.style.display = "";
 
     // Initialize design mode CSS
 
-    const style = document.createElement('style');
-    style.textContent = `
+
+    const css =`
         [data-layer] {
             transition: box-shadow 0.2s;
         }
@@ -4341,7 +4301,7 @@ selection.style.display = "";
         border-color: #1896ff;
         }
     `;
-    document.head.appendChild(style);
+    DOM.addStyle(css);
     DOM.loadFuncs = [];
     document.addEventListener('DOMContentLoaded', () => { // ensure Eborder enums exist
         DOM.loadFuncs.forEach(f => f());
