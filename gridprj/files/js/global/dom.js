@@ -1908,18 +1908,23 @@ globs.historyManager = new HistoryManager();
             dragend: e => this.#onDragEnd(e),
         };
         handle.addEventListener('dragstart', this.#dragHandlers.dragstart);
+        handle.addEventListener('dragend', this.#dragHandlers.dragend);
     }
-    
+
     #disableDrag() {
         if (!this.#dragHandlers) return;
         this.htmlObject.setAttribute('draggable', 'false');
         const handle = this.dragOptions.handle ? this.htmlObject.querySelector(this.dragOptions.handle) : this.htmlObject;
         handle?.removeEventListener('dragstart', this.#dragHandlers.dragstart);
+        handle?.removeEventListener('dragend', this.#dragHandlers.dragend);
         this.#dragHandlers = null;
     }
 
     #onDragStart(e) {
         e.stopPropagation();
+        if (this.htmlObject._moveCleanup) this.htmlObject._moveCleanup();
+        if (this.htmlObject._interaction) return;
+        this.htmlObject._interaction = 'dragging';
         if (!globs.selectionManager.has(this)) this.#handleSelection(e);
 
         const draggedIds = Array.from(globs.selectionManager).map(el => el.htmlObject.id);
@@ -1947,8 +1952,9 @@ globs.historyManager = new HistoryManager();
             el.htmlObject.classList.remove(el.dragOptions.dragClass);
             el.#dragState = {};
         });
-        
+
         document.querySelectorAll('.drop-placeholder').forEach(p => p.remove());
+        this.htmlObject._interaction = null;
     }
     
     #enableDrop() {
@@ -4508,6 +4514,8 @@ let _styleEl=null;
         function getResizeHandler(dir, el) {
             return function (e) {
                 e.preventDefault(); e.stopPropagation();
+                if (el._interaction) return;
+                el._interaction = 'resizing';
                 const parentRect = el.offsetParent ? el.offsetParent.getBoundingClientRect() : { left: 0, top: 0 };
                 const elRect = el.getBoundingClientRect();
                 const minW = 20, minH = 20;
@@ -4556,7 +4564,11 @@ let _styleEl=null;
                     }
                 }
                 document.addEventListener('mousemove', drag);
-                document.addEventListener('mouseup', () => document.removeEventListener('mousemove', drag), { once: true });
+                const up = () => {
+                    document.removeEventListener('mousemove', drag);
+                    el._interaction = null;
+                };
+                document.addEventListener('mouseup', up, { once: true });
             }
         }
 
@@ -5021,6 +5033,17 @@ let _styleEl=null;
 
         // Bu fonksiyon, pointerdown anında tetikleniyor
         const onPointerDown = e => {
+            const threshold = 7;
+            const rect = element.getBoundingClientRect();
+            const nearEdge = (
+                e.clientX - rect.left < threshold || rect.right - e.clientX < threshold ||
+                e.clientY - rect.top < threshold || rect.bottom - e.clientY < threshold
+            );
+            if ((element._resizeHandles && element._resizeHandles.includes(e.target)) || nearEdge) {
+                return; // resizing has priority
+            }
+            if (element._interaction) return;
+            element._interaction = 'moving';
 
             // e.preventDefault();
             //  e.stopPropagation();
@@ -5081,11 +5104,17 @@ let _styleEl=null;
                 ev.stopPropagation();
             };
 
-            const onPointerUp = ev => {
-                handle.releasePointerCapture(ev.pointerId);
+            const cleanup = (pid) => {
+                handle.releasePointerCapture(pid);
                 handle.removeEventListener('pointermove', onPointerMove);
                 handle.removeEventListener('pointerup', onPointerUp);
+                if (element._moveCleanup === cleanup) delete element._moveCleanup;
+                element._interaction = null;
             };
+
+            const onPointerUp = ev => cleanup(ev.pointerId);
+
+            element._moveCleanup = cleanup.bind(null, e.pointerId);
 
             handle.addEventListener('pointermove', onPointerMove);
             handle.addEventListener('pointerup', onPointerUp, { once: true });
@@ -5250,7 +5279,10 @@ let _styleEl=null;
             if (customDragging) {
                 // Pointer-events kullanarak özelleştirilmiş sürükleme
                 let dragging = false, offsetX = 0, offsetY = 0;
-          const pointerDown = (e) => {
+            const pointerDown = (e) => {
+                    if (element._moveCleanup) element._moveCleanup();
+                    if (element._interaction) return;
+                    element._interaction = 'dragging';
                     dragging = true;
                     offsetX = e.clientX - element.offsetLeft;
                     offsetY = e.clientY - element.offsetTop;
@@ -5268,6 +5300,7 @@ let _styleEl=null;
                     dragging = false;
                     target.releasePointerCapture(e.pointerId);
                     element.classList.remove('dragging');
+                    element._interaction = null;
                 };
 
                 target.addEventListener('pointerdown', pointerDown);
@@ -5284,10 +5317,16 @@ let _styleEl=null;
                 // Browser'ın kendi sürükleme davranışı (HTML5 drag-drop)
                 target.setAttribute('draggable', 'true');
                 const dragStart = e => {
+                    if (element._moveCleanup) element._moveCleanup();
+                    if (element._interaction) { e.preventDefault(); return; }
+                    element._interaction = 'dragging';
                     e.dataTransfer.setData('text/plain', element.id);
                     element.classList.add('dragging');
                 };
-                const dragEnd = () => element.classList.remove('dragging');
+                const dragEnd = () => {
+                    element.classList.remove('dragging');
+                    element._interaction = null;
+                };
 
                 target.addEventListener('dragstart', dragStart);
                 target.addEventListener('dragend', dragEnd);
