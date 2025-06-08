@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Telement Status Test</title>
+  <script src="../files/js/global/dom.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    #test-box {
+      width: 150px;
+      height: 150px;
+      background: #cef;
+      margin-top: 10px;
+    }
+    label { margin-right: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Telement Status Test</h1>
+  <div id="controls"></div>
+  <script>
+    const box = new Telement('div', {
+      id: 'test-box',
+      parent: document.body,
+      style: { width: '150px', height: '150px', background: '#cef' },
+      status: EelementStatus.visible
+    });
+
+    const statuses = ['sizable','movable','draggable','dockable','scrollable','selectable','lockable','disable','visible'];
+    const controls = document.getElementById('controls');
+
+    statuses.forEach(flag => {
+      const label = document.createElement('label');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = box.status[flag];
+      cb.addEventListener('change', () => {
+        box.status[flag] = cb.checked;
+      });
+      label.appendChild(cb);
+      label.appendChild(document.createTextNode(' ' + flag));
+      controls.appendChild(label);
+    });
+  </script>
+</body>
+</html>
