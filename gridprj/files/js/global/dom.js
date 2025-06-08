@@ -5098,12 +5098,16 @@ let _styleEl=null;
                 ev.stopPropagation();
             };
 
-            const onPointerUp = ev => {
-                handle.releasePointerCapture(ev.pointerId);
+             const cleanup = (pid) => {
+                handle.releasePointerCapture(pid);
                 handle.removeEventListener('pointermove', onPointerMove);
                 handle.removeEventListener('pointerup', onPointerUp);
+                if (element._moveCleanup === cleanup) delete element._moveCleanup;
                 element._interaction = null;
             };
+
+            const onPointerUp = ev => cleanup(ev.pointerId);
+            element._moveCleanup = cleanup.bind(null, e.pointerId);
             handle.addEventListener('pointermove', onPointerMove);
             handle.addEventListener('pointerup', onPointerUp, { once: true });
         };
@@ -5264,10 +5268,11 @@ let _styleEl=null;
         const target = handle || element;
 
         if (enable) {
-         if (customDragging) {
+                  if (customDragging) {
                 // Pointer-events kullanarak özelleştirilmiş sürükleme
                 let dragging = false, offsetX = 0, offsetY = 0;
             const pointerDown = (e) => {
+                    if (element._moveCleanup) element._moveCleanup();
                     if (element._interaction) return;
                     element._interaction = 'dragging';
                     dragging = true;
