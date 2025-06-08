@@ -1208,12 +1208,12 @@ Object.prototype.copy = function () {
             for (let n in s) {
                 if (s.hasOwnProperty(n) && typeof s[n] == "number") {
                     defineProp.call(x, n, function (k) {
-                        var a = 1 << k;
+                        var a = 1 << k-1;
                         return Boolean((p == 0 && x.value == 0) || (x.value & a) != 0)
                     }.bind(x, p),
                         function (v, k) {
                             ov = x.value;
-                            var a = 1 << v;
+                            var a = 1 << v-1;
                             if (k)
                                 x.value |= a
                             else
@@ -1832,7 +1832,7 @@ globs.historyManager = new HistoryManager();
             for (let child of children) this.appendChild(child);
             // ---- Parent Otomatik Ekleme ----
            // if (parent instanceof HTMLElement || parent instanceof Telement) { if (parent instanceof Telement) this.parent = parent; parent.appendChild(this.htmlObject); }
-              if (parent) (parent instanceof Telement ? parent : new Telement(parent)).appendChild(this);
+              if (parent) (parent instanceof Telement ?  parent.appendChild(this): parent.appendChild(this.htmlObject));
             // ---- Diğer Ayarlar ----
             this.useResizeHelper = useResizeHelper;
             this.#injectStyles();
@@ -2033,7 +2033,7 @@ globs.historyManager = new HistoryManager();
     }
     
     #enableSizing(isOn) {
-        DOM.makeResizable?.(this.htmlObject, isOn ? { handles: this.resize_flags, helper: this.useResizeHelper } : false);
+        DOM.makeResizable?.(this.htmlObject, isOn ? { flags: this.resize_flags, useHelper: this.useResizeHelper } : false);
     }
         #injectStyles() {
             if (Telementstyles) return;
@@ -4427,14 +4427,14 @@ let _styleEl=null;
         document.removeEventListener('mousemove', DOM.handleDesignDrag);
         document.removeEventListener('mouseup', DOM.handleDesignDragEnd);
     };
-    DOM.makeResizable = function (el, flags, useHelper = false) {
-       
+    DOM.makeResizable = function (el, options) {
+    
         if (el._resizeHandles) { el._resizeHandles.forEach(h => h.remove()); delete el._resizeHandles; }
         if (el._resizeMouseMove) el.removeEventListener('mousemove', el._resizeMouseMove);
         if (el._resizeMouseDown) el.removeEventListener('mousedown', el._resizeMouseDown);
         el.style.cursor = '';
-        if (!flags) return;
-
+        if (!options) return;
+       let {flags,useHelper} = options;
         // --- Direction meta tablosu ---
         // handle'ı ortalamak için offsetX/offsetY kullanıyoruz
         const SIZE_KOSE = 12, SIZE_KENAR = 12, KENAR_DIST = 2; // px
@@ -4508,6 +4508,8 @@ let _styleEl=null;
         function getResizeHandler(dir, el) {
             return function (e) {
                 e.preventDefault(); e.stopPropagation();
+                if (el._interaction) return;
+                el._interaction = 'resizing';
                 const parentRect = el.offsetParent ? el.offsetParent.getBoundingClientRect() : { left: 0, top: 0 };
                 const elRect = el.getBoundingClientRect();
                 const minW = 20, minH = 20;
@@ -4555,11 +4557,14 @@ let _styleEl=null;
                         el.style.top = (newT - start.parentTop) + 'px';
                     }
                 }
-                document.addEventListener('mousemove', drag);
-                document.addEventListener('mouseup', () => document.removeEventListener('mousemove', drag), { once: true });
+                   document.addEventListener('mousemove', drag);
+                const up = () => {
+                    document.removeEventListener('mousemove', drag);
+                    el._interaction = null;
+                };
+                document.addEventListener('mouseup', up, { once: true });
             }
         }
-
         // ---- HELPER'LI MOD ----
         if (useHelper) {
             el._resizeHandles = [];
@@ -4621,6 +4626,7 @@ let _styleEl=null;
 
         el.addEventListener('mousemove', el._resizeMouseMove);
         el.addEventListener('mousedown', el._resizeMouseDown);
+
     }
     // Modify existing makeMovable to respect designMode
 
@@ -5021,6 +5027,17 @@ let _styleEl=null;
 
         // Bu fonksiyon, pointerdown anında tetikleniyor
         const onPointerDown = e => {
+            const threshold = 7;
+            const rect = element.getBoundingClientRect();
+            const nearEdge = (
+                e.clientX - rect.left < threshold || rect.right - e.clientX < threshold ||
+                e.clientY - rect.top < threshold || rect.bottom - e.clientY < threshold
+            );
+            if ((element._resizeHandles && element._resizeHandles.includes(e.target)) || nearEdge) {
+                return; // resizing has priority
+            }
+            if (element._interaction) return;
+            element._interaction = 'moving';
 
             // e.preventDefault();
             //  e.stopPropagation();
@@ -5085,8 +5102,8 @@ let _styleEl=null;
                 handle.releasePointerCapture(ev.pointerId);
                 handle.removeEventListener('pointermove', onPointerMove);
                 handle.removeEventListener('pointerup', onPointerUp);
+                element._interaction = null;
             };
-
             handle.addEventListener('pointermove', onPointerMove);
             handle.addEventListener('pointerup', onPointerUp, { once: true });
         };
@@ -5247,27 +5264,29 @@ let _styleEl=null;
         const target = handle || element;
 
         if (enable) {
-            if (customDragging) {
+         if (customDragging) {
                 // Pointer-events kullanarak özelleştirilmiş sürükleme
                 let dragging = false, offsetX = 0, offsetY = 0;
-          const pointerDown = (e) => {
+            const pointerDown = (e) => {
+                    if (element._interaction) return;
+                    element._interaction = 'dragging';
                     dragging = true;
                     offsetX = e.clientX - element.offsetLeft;
                     offsetY = e.clientY - element.offsetTop;
                     target.setPointerCapture(e.pointerId);
                     element.classList.add('dragging');
                 };
-
                 const pointerMove = (e) => {
                     if (!dragging) return;
                     element.style.left = (e.clientX - offsetX) + 'px';
                     element.style.top = (e.clientY - offsetY) + 'px';
                 };
 
-                const pointerUp = (e) => {
+                 const pointerUp = (e) => {
                     dragging = false;
                     target.releasePointerCapture(e.pointerId);
                     element.classList.remove('dragging');
+                    element._interaction = null;
                 };
 
                 target.addEventListener('pointerdown', pointerDown);
@@ -5283,12 +5302,16 @@ let _styleEl=null;
             } else {
                 // Browser'ın kendi sürükleme davranışı (HTML5 drag-drop)
                 target.setAttribute('draggable', 'true');
-                const dragStart = e => {
+                    const dragStart = e => {
+                    if (element._interaction) { e.preventDefault(); return; }
+                    element._interaction = 'dragging';
                     e.dataTransfer.setData('text/plain', element.id);
                     element.classList.add('dragging');
                 };
-                const dragEnd = () => element.classList.remove('dragging');
-
+                const dragEnd = () => {
+                    element.classList.remove('dragging');
+                    element._interaction = null;
+                };
                 target.addEventListener('dragstart', dragStart);
                 target.addEventListener('dragend', dragEnd);
 
