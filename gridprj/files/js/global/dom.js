@@ -1903,23 +1903,28 @@ globs.historyManager = new HistoryManager();
         if (this.#dragHandlers) return;
         this.htmlObject.setAttribute('draggable', 'true');
         const handle = this.dragOptions.handle ? this.htmlObject.querySelector(this.dragOptions.handle) : this.htmlObject;
-        this.#dragHandlers = {
+          this.#dragHandlers = {
             dragstart: e => this.#onDragStart(e),
             dragend: e => this.#onDragEnd(e),
         };
         handle.addEventListener('dragstart', this.#dragHandlers.dragstart);
+        handle.addEventListener('dragend', this.#dragHandlers.dragend);
     }
-    
+
     #disableDrag() {
         if (!this.#dragHandlers) return;
         this.htmlObject.setAttribute('draggable', 'false');
         const handle = this.dragOptions.handle ? this.htmlObject.querySelector(this.dragOptions.handle) : this.htmlObject;
         handle?.removeEventListener('dragstart', this.#dragHandlers.dragstart);
+        handle?.removeEventListener('dragend', this.#dragHandlers.dragend);
         this.#dragHandlers = null;
     }
 
     #onDragStart(e) {
         e.stopPropagation();
+        if (this.htmlObject._moveCleanup) this.htmlObject._moveCleanup();
+        if (this.htmlObject._interaction) return;
+        this.htmlObject._interaction = 'dragging';
         if (!globs.selectionManager.has(this)) this.#handleSelection(e);
 
         const draggedIds = Array.from(globs.selectionManager).map(el => el.htmlObject.id);
@@ -1938,7 +1943,7 @@ globs.historyManager = new HistoryManager();
         this.dragOptions.dragStart?.(this, e, globs.selectionManager);
     }
 
-    #onDragEnd(e) {
+  #onDragEnd(e) {
         globs.selectionManager.forEach(el => {
             if (el.#dragState.isDropped === false && el.dragOptions.revertIfNotDropped) {
                 el.#dragState.originalParent?.htmlObject.insertBefore(el.htmlObject, el.#dragState.originalNextSibling);
@@ -1947,8 +1952,9 @@ globs.historyManager = new HistoryManager();
             el.htmlObject.classList.remove(el.dragOptions.dragClass);
             el.#dragState = {};
         });
-        
+
         document.querySelectorAll('.drop-placeholder').forEach(p => p.remove());
+        this.htmlObject._interaction = null;
     }
     
     #enableDrop() {
