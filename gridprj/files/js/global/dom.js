@@ -61,7 +61,193 @@ function getDeviceInfo() {
 // Kullanım
 const deviceInfo = getDeviceInfo();
 var OID = 0;
-globs = {
+(() => {
+   
+  class BaseCommand {
+    constructor(label = "") { this.label = label; }
+    execute() {}
+    undo() {}
+    getState(when) { return undefined; }
+}
+
+// ==== Batch (Çoklu İşlem) Komutu ====
+class BatchCommand extends BaseCommand {
+    constructor(commands, label = "Çoklu İşlem") {
+        super(label);
+        this.commands = commands;
+    }
+    execute() { this.commands.forEach(cmd => cmd.execute()); }
+    undo() { [...this.commands].reverse().forEach(cmd => cmd.undo()); }
+    getState(when) {
+        return this.commands.map(cmd => cmd.getState?.(when));
+    }
+}
+
+// ==== Boyut Değişikliği Komutu ====
+class SizeCommand extends BaseCommand {
+    constructor(element, oldSize, newSize, label = "Boyut Değiştir") {
+        super(label);
+        this.element = element;
+        this.oldSize = oldSize;
+        this.newSize = newSize;
+    }
+    execute() { this._apply(this.newSize); }
+    undo() { this._apply(this.oldSize); }
+    _apply(sz) {
+        if (!sz) return;
+        const { left, top, width, height } = sz;
+        Object.assign(this.element.htmlObject.style, {
+            left: left + "px", top: top + "px",
+            width: width + "px", height: height + "px"
+        });
+    }
+    getState(when) { return when === "before" ? this.oldSize : this.newSize; }
+}
+
+// ==== Stil Değişikliği Komutu ====
+
+class StyleCommand extends BaseCommand {
+    constructor(element, oldStyles, newStyles, label="Stil Değişimi") {
+        super(label);
+        this.element = element;
+        this.oldStyles = oldStyles;
+        this.newStyles = newStyles;
+    }
+    execute() { Object.assign(this.element.htmlObject.style, this.newStyles); }
+    undo()    { Object.assign(this.element.htmlObject.style, this.oldStyles); }
+    getState(when) { return when === "before" ? this.oldStyles : this.newStyles; }
+}
+
+
+// ==== Taşıma Komutu ====
+class MoveCommand extends BaseCommand {
+    constructor(element, newParent, oldParent, oldNextSibling, label = "Taşı") {
+        super(label);
+        this.element = element;
+        this.newParent = newParent;
+        this.oldParent = oldParent;
+        this.oldNextSibling = oldNextSibling;
+    }
+    execute() {
+        // DOM'a ekle
+        this.newParent.htmlObject.appendChild(this.element.htmlObject);
+        if (this.element.parent) {
+            const idx = this.element.parent.children.indexOf(this.element);
+            if (idx > -1) this.element.parent.children.splice(idx, 1);
+        }
+        this.newParent.children.push(this.element);
+        this.element.parent = this.newParent;
+    }
+    undo() {
+        this.oldParent.htmlObject.insertBefore(this.element.htmlObject, this.oldNextSibling);
+        if (this.element.parent) {
+            const idx = this.element.parent.children.indexOf(this.element);
+            if (idx > -1) this.element.parent.children.splice(idx, 1);
+        }
+        this.oldParent.children.push(this.element);
+        this.element.parent = this.oldParent;
+    }
+    getState(when) {
+        return when === "before"
+            ? { parent: this.oldParent }
+            : { parent: this.newParent };
+    }
+}
+class ChildAddCommand extends BaseCommand {
+    constructor(parent, child, nextSibling = null) {
+        super("Çocuk Ekle");
+        this.parent = parent;
+        this.child = child;
+        this.nextSibling = nextSibling;
+    }
+    execute() {
+        this.parent._appendChildRaw(this.child, this.nextSibling);
+    }
+    undo() {
+        this.parent._removeChildRaw(this.child);
+    }
+    getState(when) {
+        return { parent: this.parent, child: this.child };
+    }
+}
+
+class ChildRemoveCommand extends BaseCommand {
+    constructor(parent, child) {
+        super("Çocuk Sil");
+        this.parent = parent;
+        this.child = child;
+        this.nextSibling = child.htmlObject.nextSibling;
+    }
+    execute() {
+        this.parent._removeChildRaw(this.child);
+    }
+    undo() {
+        this.parent._appendChildRaw(this.child, this.nextSibling);
+    }
+    getState(when) {
+        return { parent: this.parent, child: this.child };
+    }
+}
+// ==== Çocuk ekle/çıkar komutları (Opsiyonel) ====
+// Eklenebilir.
+
+// ==== HISTORY MANAGER (onChange destekli) ====
+class HistoryManager {
+    constructor() {
+        this.undoStack = [];
+        this.redoStack = [];
+        this.listeners = {};
+        this.onChange = null; // (action, cmd, oldVal, newVal)
+    }
+    execute(cmd) {
+        const prev = cmd.getState ? cmd.getState('before') : undefined;
+        cmd.execute();
+        const next = cmd.getState ? cmd.getState('after') : undefined;
+        this.undoStack.push(cmd);
+        this.redoStack = [];
+        this._notify('change', cmd);
+        if (this.onChange) this.onChange('execute', cmd, prev, next);
+    }
+    undo() {
+        if (!this.undoStack.length) return;
+        const cmd = this.undoStack.pop();
+        const prev = cmd.getState ? cmd.getState('after') : undefined;
+        cmd.undo();
+        const next = cmd.getState ? cmd.getState('before') : undefined;
+        this.redoStack.push(cmd);
+        this._notify('change', cmd);
+        if (this.onChange) this.onChange('undo', cmd, prev, next);
+    }
+    redo() {
+        if (!this.redoStack.length) return;
+        const cmd = this.redoStack.pop();
+        const prev = cmd.getState ? cmd.getState('before') : undefined;
+        cmd.execute();
+        const next = cmd.getState ? cmd.getState('after') : undefined;
+        this.undoStack.push(cmd);
+        this._notify('change', cmd);
+        if (this.onChange) this.onChange('redo', cmd, prev, next);
+    }
+    clear() {
+        this.undoStack = [];
+        this.redoStack = [];
+        this._notify('change', null);
+    }
+    on(event, cb) {
+        (this.listeners[event] = this.listeners[event] || []).push(cb);
+    }
+    _notify(event, cmd) {
+        (this.listeners[event] || []).forEach(cb =>
+            cb({ canUndo: this.undoStack.length > 0, canRedo: this.redoStack.length > 0, cmd })
+        );
+    }
+    getHistoryLabels() {
+        return this.undoStack.map(cmd => cmd.label || cmd.constructor.name);
+    }
+}
+
+
+    window.globs = {
     winprops: "0|window|self|document|name|location|customElements|history|navigation|locationbar|menubar|personalbar|scrollbars|statusbar|toolbar|status|closed|frames|length|top|opener|parent|frameElement|navigator|origin|external|screen|innerWidth|innerHeight|scrollX|pageXOffset|scrollY|pageYOffset|visualViewport|screenX|screenY|outerWidth|outerHeight|devicePixelRatio|clientInformation|screenLeft|screenTop|styleMedia|onsearch|isSecureContext|trustedTypes|performance|onappinstalled|onbeforeinstallprompt|crypto|indexedDB|sessionStorage|localStorage|onbeforexrselect|onabort|onbeforeinput|onbeforetoggle|onblur|oncancel|oncanplay|oncanplaythrough|onchange|onclick|onclose|oncontextlost|oncontextmenu|oncontextrestored|oncuechange|ondblclick|ondrag|ondragend|ondragenter|ondragleave|ondragover|ondragstart|ondrop|ondurationchange|onemptied|onended|onerror|onfocus|onformdata|oninput|oninvalid|onkeydown|onkeypress|onkeyup|onload|onloadeddata|onloadedmetadata|onloadstart|onmousedown|onmouseenter|onmouseleave|onmousemove|onmouseout|onmouseover|onmouseup|onmousewheel|onpause|onplay|onplaying|onprogress|onratechange|onreset|onresize|onscroll|onsecuritypolicyviolation|onseeked|onseeking|onselect|onslotchange|onstalled|onsubmit|onsuspend|ontimeupdate|ontoggle|onvolumechange|onwaiting|onwebkitanimationend|onwebkitanimationiteration|onwebkitanimationstart|onwebkittransitionend|onwheel|onauxclick|ongotpointercapture|onlostpointercapture|onpointerdown|onpointermove|onpointerrawupdate|onpointerup|onpointercancel|onpointerover|onpointerout|onpointerenter|onpointerleave|onselectstart|onselectionchange|onanimationend|onanimationiteration|onanimationstart|ontransitionrun|ontransitionstart|ontransitionend|ontransitioncancel|onafterprint|onbeforeprint|onbeforeunload|onhashchange|onlanguagechange|onmessage|onmessageerror|onoffline|ononline|onpagehide|onpageshow|onpopstate|onrejectionhandled|onstorage|onunhandledrejection|onunload|crossOriginIsolated|scheduler|alert|atob|blur|btoa|cancelAnimationFrame|cancelIdleCallback|captureEvents|clearInterval|clearTimeout|close|confirm|createImageBitmap|fetch|find|focus|getComputedStyle|getSelection|matchMedia|moveBy|moveTo|open|postMessage|print|prompt|queueMicrotask|releaseEvents|reportError|requestAnimationFrame|requestIdleCallback|resizeBy|resizeTo|scroll|scrollBy|scrollTo|setInterval|setTimeout|stop|structuredClone|webkitCancelAnimationFrame|webkitRequestAnimationFrame|chrome|fence|caches|cookieStore|ondevicemotion|ondeviceorientation|ondeviceorientationabsolute|launchQueue|sharedStorage|documentPictureInPicture|onbeforematch|getScreenDetails|queryLocalFonts|showDirectoryPicker|showOpenFilePicker|showSaveFilePicker|originAgentCluster|credentialless|speechSynthesis|oncontentvisibilityautostatechange|onscrollend|webkitRequestFileSystem|webkitResolveLocalFileSystemURL|JSCompiler_renameProperty",
     path: `${location.protocol}//${location.host}/www/cem/gridprj/`,
     events:
@@ -84,18 +270,44 @@ globs = {
         quotes: /(["][^"]+["])|(['][^']+['])/gm,
         email: /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
     },
-    resizeObserver: new ResizeObserver((entries) => {
+    resizeObserver : new ResizeObserver(entries => {
         for (const entry of entries) {
-            if (entry.borderBoxSize) {
-                const bBoxSize = Array.isArray(entry.borderBoxSize)
-                    ? entry.borderBoxSize[0]
-                    : entry.borderBoxSize;
-                entry.target.dispatchEvent(
-                    new CustomEvent("resize", {
-                        detail: { oldSize: entry.target._$oldsize || null, newSize: bBoxSize },
-                    })
-                );
-                entry.target._$oldsize = bBoxSize;
+            const t = entry.target.owner;
+            if (!t || !t.sizeHistory) continue; // Sadece sizeHistory açık olanlar için
+            const rect = entry.target.getBoundingClientRect();
+            const oldSize = entry.target._$oldsize || {
+                left: parseFloat(entry.target.style.left) || rect.left,
+                top: parseFloat(entry.target.style.top) || rect.top,
+                width: rect.width, height: rect.height
+            };
+            const newSize = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+            if (
+                oldSize.width !== newSize.width ||
+                oldSize.height !== newSize.height ||
+                oldSize.left !== newSize.left ||
+                oldSize.top !== newSize.top
+            ) {
+                t.history?.execute(new SizeCommand(t, oldSize, newSize));
+                entry.target._$oldsize = { ...newSize };
+            }
+        }
+    }),
+    styleObserver: new MutationObserver(mutations => {
+        for (const mutation of mutations) {
+            if (mutation.type === "attributes" && mutation.attributeName === "style") {
+                const target = mutation.target;
+                if (!target.owner || !target.owner._styleHistoryEnabled) continue; // Sadece styleHistory aktifse
+                const style = target.style;
+                const styleText = style.cssText;
+                const oldStyleText = target._$oldstyle || styleText;
+                if (oldStyleText !== styleText) {
+                    if (target.owner.history) {
+                        target.owner.history.execute(
+                            new StyleCommand(target.owner, oldStyleText, styleText)
+                        );
+                    }
+                    target._$oldstyle = styleText;
+                }
             }
         }
     }),
@@ -134,11 +346,10 @@ function extendsClass(...cls) {
             s = s.replace(/(constructor\s*\([^)]*\)\s*{)/, "$1super();");
         str += (i == 1 ? "(" : "") + s.replace(RegExp(arguments[i - 1].name + "({|\\s.*{)?"), arguments[i - 1].name + " extends " + arguments[i].name + " {").replaceAll("//super", "super") + (i == 1 ? ")" : "");
     }
-    console.log(str);
+   this.$parents= cls;
     return eval(str);
 }
 
-(function () {
 
     // Orijinal metotları saklayalım
     const origAddEventListener = Element.prototype.addEventListener;
@@ -1398,14 +1609,6 @@ Object.prototype.copy = function () {
     });
     defineProp.call(HTMLElement.prototype, "computedStyle", { get: function () { return getComputedStyle(this) } });
 
-
-
-})();
-
-
-
-
-(() => {
     window.AllClass = {
         byClass: {},
         byId: [],
@@ -1447,12 +1650,14 @@ Object.prototype.copy = function () {
 
     TClass = class TClass extends Object {
         #id;
+        #name;
         constructor() {
             super();
             this.#id = ++OID;
             var k = AllClass.byClass;
             var p, z = new Array();
             p = this.$parent;
+            
             z.unshift(p.constructor.name);
             while (p) {
                 if (p.$parent && p.$parent.constructor.name != "Object") {
@@ -1482,7 +1687,11 @@ Object.prototype.copy = function () {
             }
             return this.#id;
         }
-
+        get name() {
+            
+                return this.constructor.name;
+          
+        }
         get $parent() {
             return Object.getPrototypeOf(this);
         }
@@ -1505,6 +1714,12 @@ Object.prototype.copy = function () {
             removeFromNestedArr(AllClass.byClass, this);
         }
     }
+// ==== Komutların Temeli ====
+
+// ==== Seçim Yöneticisi (multi-drag için) ====
+
+ globs.selectionManager = new Set();
+globs.historyManager = new HistoryManager();
 
     let Telementstyles=false;
     /**
@@ -1519,40 +1734,67 @@ Object.prototype.copy = function () {
     Telement = class Telement extends extendsClass(TClass, EventTarget) {
         #dropIndicator = null;
         #dockingHandlers = null;
+        #styleobserver = null;
+            #dragState = {};
+        #dragHandlers = null;
+        #dropHandlers = null;
+        #touchHandlers = null;
         loaded = false;
 
-        /**
-         * @param {string|HTMLElement} tagOrEl - Tag adı (örn: 'div') veya doğrudan HTMLElement
-         * @param {Object} options
-         * @param {string}   [options.id]
-         * @param {string}   [options.className]
-         * @param {Object}   [options.style]
-         * @param {Object}   [options.attrs]
-         * @param {Object}   [options.status]
-         * @param {Object}   [options.events]
-         * @param {Array}    [options.children]
-         * @param {HTMLElement|Telement} [options.parent]
-         * @param {Tenum|Number|Object}  [options.resize_flags]
-         * @param {Boolean}  [options.useResizeHelper]
-         */
+/**
+ * @param {string|HTMLElement} tagOrEl - Tag adı (örn: 'div') veya doğrudan HTMLElement
+ * @param {Object} options
+ * @param {string}   [options.id]                   - Elemanın ID'si
+ * @param {string|Array<string>} [options.className] - CSS sınıf(lar)ı
+ * @param {Object}   [options.style]                - CSS stilleri (key-value)
+ * @param {Object}   [options.attrs]                - HTML attribute'ları (örn. {title: "...", "data-x": 1})
+ * @param {Object}   [options.status]               - Durum flag'ları (örn. {draggable:true, sizable:true})
+ * @param {Object}   [options.events]               - Event dinleyicileri (örn. {click: fn, mouseover: fn})
+ * @param {Array}    [options.children]             - Alt elemanlar (Telement, HTMLElement veya string)
+ * @param {HTMLElement|Telement} [options.parent]   - Otomatik eklenecek parent
+ * @param {Tenum|Number|Object}  [options.resize_flags] - Boyutlandırma (örn. Eborder.all)
+ * @param {Boolean}  [options.useResizeHelper]      - Yeniden boyutlandırmada kılavuz (helper) gösterilsin mi
+ * @param {Object}   [options.dragOptions]          - Sürükleme davranışı için gelişmiş seçenekler:
+ *   @param {string}   [options.dragOptions.handle]              - Sürüklemeyi başlatacak selector veya element (örn. '.panel-header')
+ *   @param {string}   [options.dragOptions.group]               - Sadece aynı grup elemanlar arasında sürükleme/droplama yapılabilir
+ *   @param {string}   [options.dragOptions.type]                - Elemanın tipi (örn. 'panel', 'widget') drop kabulünde filtre için
+ *   @param {boolean}  [options.dragOptions.revertIfNotDropped]  - Drop olmazsa eski yerine döndür
+ *   @param {string}   [options.dragOptions.dragClass]           - Sürükleme sırasında eklenecek CSS sınıfı (örn. 'dragging')
+ *   @param {HTMLElement} [options.dragOptions.customDragImage]  - Fareyle taşınacak özel görsel/HTML
+ *   @param {function} [options.dragOptions.dragStart]           - Sürükleme başlarken çağrılacak callback (fn(this, event, selectionManager))
+ *   @param {function} [options.dragOptions.dragEnd]             - Sürükleme bitince çağrılacak callback (fn(this, dropEffect, event))
+ * @param {Object}   [options.dropOptions]          - Drop/bırakma davranışı için gelişmiş seçenekler:
+ *   @param {Array<string>} [options.dropOptions.acceptTypes]    - Kabul edilen drag tipleri (örn. ['panel', 'card'])
+ *   @param {Array<string>} [options.dropOptions.acceptGroups]   - Kabul edilen drag grup isimleri
+ *   @param {string}   [options.dropOptions.hoverClass]          - Üzerine gelince eklenen CSS sınıfı (örn. 'droppable-hover')
+ *   @param {string}   [options.dropOptions.placeHolderClass]    - Placeholder için CSS sınıfı (örn. 'drop-placeholder')
+ *   @param {boolean}  [options.dropOptions.showPlaceHolder]     - Yer göstergesi (placeholder) gösterilsin mi
+ *   @param {function} [options.dropOptions.beforeDrop]          - Drop öncesi callback, false dönerse bırakma gerçekleşmez (fn(dragged, dropzone, event))
+ *   @param {function} [options.dropOptions.drop]                - Drop gerçekleşince çağrılır (fn(dragged, dropzone, event))
+ *   @param {function} [options.dropOptions.afterDrop]           - Drop sonrası callback (fn(dragged, dropzone, event))
+ *   @param {boolean}  [options.dropOptions.animDrop]            - Drop sonrası animasyon uygulansın mı
+ *   @param {string}   [options.dropOptions.animClass]           - Drop animasyon sınıfı (örn. 'anim-drop')
+ * @param {HistoryManager} [options.history]                    - Undo/redo yöneticisi (varsayılan: global historyManager)
+ * @param {boolean}   [options.visible]                      - Varsayılan olarak gösterilsin mi
+ * @param {Tenum|Number} [options.status]                     - Varsayılan durum (EelementStatus.visible, EelementStatus.hidden, EelementStatus.hidden)
+ * @param {Tenum|Number} [options.resize_flags]                - Varsayılan boyutlandırma (Eborder.all, Eborder.none, Eborder.all, Eborder.none, Eborder.none, Eborder.none, Eborder.none, Eborder.none)
+ * @param {boolean}   [options.sizeHistory]                   - Boyutlandırma durumu kaydedilsin mi
+ * @param {boolean}   [options.styleHistory]                  - Stil durumu kaydedilsin mi
+ * @param {boolean}   [options.childHistory]                  - Çocuk durumu kaydedilsin mi
+ * @param {Object}   [options.other]                        - Ozel seçenekler
+ */
+
         constructor(tagOrEl, options = {}) {
             super();
             this._eventList = new WeakMap();
             // ---- Options Destructuring ----
-            const {
-                id,
-                className,
-                style = {},
-                attrs = {},
-                status = EelementStatus.none,
-                events = {},
-                children = [],
-                parent = undefined,
-                resize_flags = Eborder.all,
-                useResizeHelper = false,
-                ...other
-            } = options;
-
+           
+ let {
+            id, className, style = {}, attrs = {},  status = EelementStatus.visible, events = {},
+            children = [], parent, visible = true, resize_flags = Eborder.all, useResizeHelper = false,
+            dragOptions = {}, dropOptions = {},  sizeHistory = false, styleHistory = false, childHistory = false,
+            history = globs.historyManager,...other
+        } = options;
             // ---- HTMLElement Oluştur/Al ----
             if (tagOrEl instanceof HTMLElement) {
                 if (tagOrEl.owner instanceof Telement) return tagOrEl.owner;
@@ -1566,61 +1808,54 @@ Object.prototype.copy = function () {
             // ---- Benzersiz ID Atama ----
             this.htmlObject.id = this.htmlObject.id || id || this.id;
             this.htmlObject.owner = this;
-            this.htmlObject.classList.add(className || this.constructor.name, "hidden");
-
-            // ---- Style/Attr Toplu Uygulama ----
-            Object.assign(this.htmlObject.style, style);
-            for (let [k, v] of Object.entries(attrs)) this.htmlObject.setAttribute(k, v);
-
-            // ---- Event Bağlama ----
-            for (let [event, handler] of Object.entries(events))
-                this.htmlObject.addEventListener(event, handler);
-
-            this.moveHandle = null;
-            this.customDragging = false;
-
+            
+            // ---- Sınıf ve Stil Atama ----
+             const defaultClasses = this.constructor.name;
+        let userClasses = Array.isArray(className) ? className : String(className || '').trim().split(/\s+/);
+         userClasses = userClasses.filter(Boolean); // boş olanları çıkar
+        this.htmlObject.classList.add(defaultClasses, ...userClasses);
+        
+          Object.assign(this.htmlObject.style, style);
+        for (const [k, v] of Object.entries(attrs)) this.htmlObject.setAttribute(k, v);
+        for (const [event, handler] of Object.entries(events)) this.bind(event, handler);
+        // --- Drag/Drop veGeçmiş Ayarları ---
+        this.dragOptions = Object.assign({
+            handle: null, group: null, type: "default", revertIfNotDropped: true,
+            dragClass: "dragging", customDragImage: null,
+        }, dragOptions);
+        this.dropOptions = Object.assign({
+            acceptTypes: ["default"], hoverClass: "droppable-hover",
+            placeHolderClass: "drop-placeholder", showPlaceHolder: true,
+        }, dropOptions);
             // ---- Children Yönetimi ----
             this.children = [];
             for (let child of children) this.appendChild(child);
-
             // ---- Parent Otomatik Ekleme ----
-            if (parent instanceof HTMLElement || parent instanceof Telement) { if (parent instanceof Telement) this.parent = parent; parent.appendChild(this.htmlObject); }
+           // if (parent instanceof HTMLElement || parent instanceof Telement) { if (parent instanceof Telement) this.parent = parent; parent.appendChild(this.htmlObject); }
+              if (parent) (parent instanceof Telement ? parent : new Telement(parent)).appendChild(this);
             // ---- Diğer Ayarlar ----
             this.useResizeHelper = useResizeHelper;
             this.#injectStyles();
+             this.history = history || globs.historyManager;
+        this.sizeHistory = !!sizeHistory;
+        this.styleHistory = !!styleHistory;
+        this.childHistory = !!childHistory;
+        if (this.sizeHistory && this.htmlObject) {
+            globs.resizeObserver.observe(this.htmlObject);
+        }
+        if(this.styleHistory) this._styleObserver = trackStyleChanges(this);
+        // --- Otomatik boyut değişimi takibi ---
+       
 
             // ---- Status & Resize Bağlama ----
             EelementStatus.bindTo('status', this);
             Eborder.bindTo('resize_flags', this);
             this.resize_flags = resize_flags;
-
+            this.status.onchange = (changes) => this.#handleStatusChange(changes);
             // ---- Status ilk atama ve onchange ----
             if (status instanceof Object) this.status.assign(status);
             else this.status = status;
-
-            let sChange = changes => {
-                if (changes.disable) {
-                    this.#toggleFeature('disable', true);
-                    ['lockable', 'sizable', 'movable', 'draggable', 'dockable', 'scrollable', 'selectable']
-                        .forEach(flag => this.#toggleFeature(flag, false));
-                    this.#disableDocking();
-                    this.#disableSizing();
-                    return;
-                }
-                if (changes.lockable) {
-                    this.#toggleFeature('lockable', changes.lockable);
-                    ['sizable', 'movable', 'draggable', 'dockable', 'scrollable', 'selectable']
-                        .forEach(flag => this.#toggleFeature(flag, false));
-                    this.#disableDocking();
-                    this.#disableSizing();
-                    return;
-                }
-                for (const [flag, value] of Object.entries(changes)) {
-                    this.#toggleFeature(flag, value);
-                }
-            };
-            if (status) sChange(status);
-            this.status.onchange = sChange;
+       
             this.defineProp("rect", () => {
                 let r = this.htmlObject.getBoundingClientRect();
                 return new Trect(r.left, r.top, r.right - r.left, r.bottom - r.top);
@@ -1632,6 +1867,223 @@ Object.prototype.copy = function () {
                     this.htmlObject.style.height = rect.height + "px";
                 });
         }
+ #toggleFeature(name, isOn) {
+        this.htmlObject.classList.toggle(name, isOn);
+        switch (name) {
+            case 'draggable': isOn ? this.#enableDrag() : this.#disableDrag(); break;
+            case 'dockable': isOn ? this.#enableDrop() : this.#disableDrop(); break;
+            case 'sizable': this.#enableSizing(isOn); break; // Tek fonksiyona birleştirildi
+            case 'visible': this.htmlObject.classList.toggle("hidden", !isOn); break;
+            case 'movable': DOM.makeMovable?.(this.htmlObject, this.dragOptions.handle, isOn); break;
+            case 'disable': this.htmlObject.classList.toggle('disabled', isOn); break;
+            case 'lockable': this.htmlObject.classList.toggle('locked', isOn); break;
+        }
+    }
+    
+    // --- Seçim ve Klavye Etkileşimleri ---
+    #handleSelection(e) {
+        if (e.ctrlKey || e.metaKey) {
+            this.htmlObject.classList.toggle('selected');
+            globs.selectionManager.has(this) ? globs.selectionManager.delete(this) : globs.selectionManager.add(this);
+        } else {
+            globs.selectionManager.forEach(el => el.htmlObject.classList.remove('selected'));
+            globs.selectionManager.clear();
+            globs.selectionManager.add(this);
+            this.htmlObject.classList.add('selected');
+        }
+    }
+    #handleKeyboard(e) {
+        if (e.key === 'Enter' && this.htmlObject === document.activeElement) {
+            this.htmlObject.classList.toggle('activated');
+        }
+    }
+    
+    // --- Gelişmiş Drag & Drop Mantığı ---
+    #enableDrag() {
+        if (this.#dragHandlers) return;
+        this.htmlObject.setAttribute('draggable', 'true');
+        const handle = this.dragOptions.handle ? this.htmlObject.querySelector(this.dragOptions.handle) : this.htmlObject;
+        this.#dragHandlers = {
+            dragstart: e => this.#onDragStart(e),
+            dragend: e => this.#onDragEnd(e),
+        };
+        handle.addEventListener('dragstart', this.#dragHandlers.dragstart);
+    }
+    
+    #disableDrag() {
+        if (!this.#dragHandlers) return;
+        this.htmlObject.setAttribute('draggable', 'false');
+        const handle = this.dragOptions.handle ? this.htmlObject.querySelector(this.dragOptions.handle) : this.htmlObject;
+        handle?.removeEventListener('dragstart', this.#dragHandlers.dragstart);
+        this.#dragHandlers = null;
+    }
+
+    #onDragStart(e) {
+        e.stopPropagation();
+        if (!globs.selectionManager.has(this)) this.#handleSelection(e);
+
+        const draggedIds = Array.from(globs.selectionManager).map(el => el.htmlObject.id);
+        e.dataTransfer.setData('application/json', JSON.stringify(draggedIds));
+        e.dataTransfer.effectAllowed = 'move';
+
+        globs.selectionManager.forEach(el => {
+            el.#dragState = {
+                originalParent: el.parent,
+                originalNextSibling: el.htmlObject.nextSibling,
+                isDropped: false
+            };
+            setTimeout(() => el.htmlObject.classList.add(el.dragOptions.dragClass), 0);
+        });
+
+        this.dragOptions.dragStart?.(this, e, globs.selectionManager);
+    }
+
+    #onDragEnd(e) {
+        globs.selectionManager.forEach(el => {
+            if (el.#dragState.isDropped === false && el.dragOptions.revertIfNotDropped) {
+                el.#dragState.originalParent?.htmlObject.insertBefore(el.htmlObject, el.#dragState.originalNextSibling);
+                el.parent = el.#dragState.originalParent;
+            }
+            el.htmlObject.classList.remove(el.dragOptions.dragClass);
+            el.#dragState = {};
+        });
+        
+        document.querySelectorAll('.drop-placeholder').forEach(p => p.remove());
+    }
+    
+    #enableDrop() {
+        if (this.#dropHandlers) return;
+        this.#dropHandlers = {
+            dragenter: e => this.#onDragEnter(e),
+            dragover: e => this.#onDragOver(e),
+            dragleave: e => this.#onDragLeave(e),
+            drop: e => this.#onDrop(e),
+        };
+        Object.entries(this.#dropHandlers).forEach(([evt, h]) => this.htmlObject.addEventListener(evt, h));
+    }
+
+    #disableDrop() {
+        if (!this.#dropHandlers) return;
+        Object.entries(this.#dropHandlers).forEach(([evt, h]) => this.htmlObject.removeEventListener(evt, h));
+        this.#dropHandlers = null;
+    }
+    
+    #isDragAcceptable(e) {
+        // Tip ve grup kontrolleri...
+        return true;
+    }
+
+    #onDragEnter(e) {
+        e.preventDefault(); e.stopPropagation();
+        if (!this.#isDragAcceptable(e)) return;
+        this.htmlObject.classList.add(this.dropOptions.hoverClass);
+        if (this.dropOptions.showPlaceHolder) this.#updatePlaceholder(e);
+    }
+
+    #onDragOver(e) {
+        e.preventDefault(); e.stopPropagation();
+        if (!this.#isDragAcceptable(e)) return;
+        e.dataTransfer.dropEffect = 'move';
+        if (this.dropOptions.showPlaceHolder) this.#updatePlaceholder(e);
+    }
+
+    #onDragLeave(e) {
+        e.preventDefault();
+        if (!this.htmlObject.contains(e.relatedTarget)) {
+            this.htmlObject.classList.remove(this.dropOptions.hoverClass);
+            this.htmlObject.querySelector(`.${this.dropOptions.placeHolderClass}`)?.remove();
+        }
+    }
+
+    #onDrop(e) {
+        e.preventDefault(); e.stopPropagation();
+        this.htmlObject.classList.remove(this.dropOptions.hoverClass);
+        
+        if (!this.#isDragAcceptable(e)) return;
+
+        const draggedIds = JSON.parse(e.dataTransfer.getData('application/json'));
+        
+        draggedIds.forEach(id => {
+            const draggedElement = document.getElementById(id)?.owner;
+            if (draggedElement) {
+                draggedElement.#dragState.isDropped = true;
+                const cmd = new MoveCommand(draggedElement, this, draggedElement.parent, draggedElement.htmlObject.nextSibling);
+                this.history.execute(cmd);
+            }
+        });
+        
+        this.htmlObject.querySelector(`.${this.dropOptions.placeHolderClass}`)?.remove();
+    }
+    
+    #updatePlaceholder(e) {
+        let placeholder = this.htmlObject.querySelector(`.${this.dropOptions.placeHolderClass}`);
+        if (!placeholder) {
+            placeholder = document.createElement('div');
+            placeholder.className = this.dropOptions.placeHolderClass;
+        }
+
+        const children = [...this.htmlObject.children].filter(c => !c.classList.contains(this.dropOptions.placeHolderClass) && !c.classList.contains(this.dragOptions.dragClass));
+        const closest = children.reduce((acc, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = e.clientY - box.top - box.height / 2;
+            return (offset < 0 && offset > acc.offset) ? { offset, element: child } : acc;
+        }, { offset: Number.NEGATIVE_INFINITY });
+
+        this.htmlObject.insertBefore(placeholder, closest.element || null);
+    }
+    
+    #enableSizing(isOn) {
+        DOM.makeResizable?.(this.htmlObject, isOn ? { handles: this.resize_flags, helper: this.useResizeHelper } : false);
+    }
+        #injectStyles() {
+            if (Telementstyles) return;
+          let textContent = /*`
+      .locked { pointer-events: none; }
+      .draggable { user-select: none; }
+      .movable { cursor: move; }
+      .scrollable { overflow: auto; }
+      .selectable { user-select: text; }
+      .hidden { display: none !important; }
+      .drop-indicator { position: absolute; width:50px; height:50px; border:2px dashed #888; pointer-events:none; }
+      .disable, .disabled { opacity: 0.5; pointer-events: none; }
+      .res-handle { position: absolute; background: transparent; }
+      .res-handle:hover { background: rgba(0,0,0,0.1); }
+      .res-top, .res-bottom { height: 6px; left: 0; right: 0; cursor: ns-resize; }
+      .res-top { top: -3px; }
+      .res-bottom { bottom: -3px; }
+      .res-left, .res-right { width: 6px; top: 0; bottom: 0; cursor: ew-resize; }
+      .res-left { left: -3px; }
+      .res-right { right: -3px; }
+    `*/
+     `.telement:focus { outline: 2px solid #0078d4; outline-offset: 1px; }
+            .dragging { opacity: 0.4; }
+            .droppable-hover { background-color: rgba(0, 120, 212, 0.05); }
+            .drop-placeholder { height: 6px; background: #0078d4; margin: 2px 0; border-radius: 3px; }
+            .selected { box-shadow: 0 0 0 1px white, 0 0 0 3px #0078d4; }
+            .disabled { opacity: 0.5; pointer-events: none; }
+            .locked { pointer-events: none; }
+            .hidden { display: none !important; }
+        `;
+           DOM.addStyle(textContent);
+           Telementstyles = true;
+        }
+         #handleStatusChange(changes) {
+        // disable veya lockable önceliklidir
+        if (changes.disable === true || changes.lockable === true) {
+            const flag = changes.disable ? 'disable' : 'lockable';
+            this.#toggleFeature(flag, true);
+            ['sizable', 'movable', 'draggable', 'dockable', 'scrollable', 'selectable'].forEach(s => {
+                if (this.status[s]) this.status[s] = false; // Diğerlerini kapat
+            });
+            return;
+        }
+
+        for (const [flag, value] of Object.entries(changes)) {
+            this.#toggleFeature(flag, value);
+        }
+    }
+        
+     
         clientRect() {
             const r = this.htmlObject.getBoundingClientRect();
             return new Trect(
@@ -1648,7 +2100,11 @@ Object.prototype.copy = function () {
             if (this.htmlObject._nextCss)
                 this.htmlObject.style.cssText = this.htmlObject._nextCss;
         }
-
+         isVisible() {
+            if (!this.visible) return false;
+            if (this.parent) return this.parent.isVisible();
+            return true;
+        }
         bind(event, handler, options = {}) {
             const wrappedHandler = (e) => {
                 const result = handler.call(this, e);
@@ -1678,36 +2134,49 @@ Object.prototype.copy = function () {
             });
             this._eventlist = null;
         }
-        appendChild(child) {
-            if (!(child instanceof Telement || child instanceof HTMLElement ||
-                typeof child === 'string' || typeof child === 'number')) {
-                throw new TypeError('Invalid child type');
-            }
-            if (child instanceof Telement) {
-                this.children.push(child);
-                if (child.parent) child.parent.removeChild(child);
-                child.parent = this;
-                if (this.htmlObject && child.htmlObject) {
-                    this.htmlObject.appendChild(child.htmlObject);
-                    child.htmlObject.owner = child;
-                }
-            } else if (child instanceof HTMLElement) {
-                this.htmlObject.appendChild(child);
-            } else if (typeof child === "string" || typeof child === "number") {
-                // Text node desteği
-                this.htmlObject.appendChild(document.createTextNode(child));
-            }
-        }
-        removeChild(child) {
-            if (child instanceof Telement) {
-                let idx = this.children.indexOf(child);
-                if (idx > -1) this.children.splice(idx, 1);
-                if (this.htmlObject && child.htmlObject)
-                    this.htmlObject.removeChild(child.htmlObject);
-            } else if (child instanceof HTMLElement) {
-                this.htmlObject.removeChild(child);
-            }
-        }
+      appendChild(child) {
+    if (!(child instanceof Telement)) {
+        // Normal DOM ekleme
+        this.htmlObject.appendChild(child);
+        return;
+    }
+    // Child history aktifse ekleme işlemini komut üzerinden yap
+    if (this.childHistory) {
+        const nextSibling = null; // veya özel sıralama
+        this.history.execute(new AddChildCommand(this, child, nextSibling));
+        return;
+    }
+    // Standart davranış: Önce eski parent'tan çıkar
+    if (child.parent) child.parent.removeChild(child);
+
+    this.children.push(child);
+    child.parent = this;
+
+    if (this.htmlObject && child.htmlObject) {
+        this.htmlObject.appendChild(child.htmlObject);
+        child.htmlObject.owner = child;
+    }
+}
+
+removeChild(child) {
+    if (!(child instanceof Telement)) {
+        this.htmlObject.removeChild(child);
+        return;
+    }
+    // Child history aktifse çıkarma işlemini komut üzerinden yap
+    if (this.childHistory) {
+        const nextSibling = child.htmlObject.nextSibling;
+        this.history.execute(new RemoveChildCommand(this, child, nextSibling));
+        return;
+    }
+    // Standart çıkarma
+    let idx = this.children.indexOf(child);
+    if (idx > -1) this.children.splice(idx, 1);
+    if (this.htmlObject && child.htmlObject)
+        this.htmlObject.removeChild(child.htmlObject);
+    child.parent = null;
+}
+
         body() {
             if (this.loaded) return;
             if (!this.htmlObject.parentElement) {
@@ -1725,7 +2194,7 @@ Object.prototype.copy = function () {
         destroy() {
             super.destroy();
             // 1. Event handler temizliği
-            if (this.#dockingHandlers) this.#disableDocking();
+            if (this.#dockingHandlers) this.#disableDrop();
             if (this.status) this.status.onchange = null;
 
             // 2. Children destroy (recursive)
@@ -1737,8 +2206,11 @@ Object.prototype.copy = function () {
             }
 
             // 3. Resize Observer ve diğer global kaynaklardan çık
-            if (globs?.resizeObserver && this.htmlObject?.tagName === 'DIV') {
+            if (this.sizeHistory) {
                 globs.resizeObserver.unobserve(this.htmlObject);
+            }
+            if(this.styleHistory) {
+                globs.styleObserver.unobserve(this.htmlObject);
             }
 
             // 4. DOM'dan kaldır
@@ -1759,120 +2231,13 @@ Object.prototype.copy = function () {
                 });
                 this.eventList = null;
             }
-            if (this.#dockingHandlers) this.#disableDocking();
-            if (this.status) this.status.onchange = null;
         }
-
-        #injectStyles() {
-            if (Telementstyles) return;
-            
-          let textContent = `
-      .locked { pointer-events: none; }
-      .draggable { user-select: none; }
-      .movable { cursor: move; }
-      .scrollable { overflow: auto; }
-      .selectable { user-select: text; }
-      .hidden { display: none !important; }
-      .drop-indicator { position: absolute; width:50px; height:50px; border:2px dashed #888; pointer-events:none; }
-      .disable, .disabled { opacity: 0.5; pointer-events: none; }
-      .res-handle { position: absolute; background: transparent; }
-      .res-handle:hover { background: rgba(0,0,0,0.1); }
-      .res-top, .res-bottom { height: 6px; left: 0; right: 0; cursor: ns-resize; }
-      .res-top { top: -3px; }
-      .res-bottom { bottom: -3px; }
-      .res-left, .res-right { width: 6px; top: 0; bottom: 0; cursor: ew-resize; }
-      .res-left { left: -3px; }
-      .res-right { right: -3px; }
-    `;
-           DOM.addStyle(textContent);
-           Telementstyles = true;
-        }
-        #toggleFeature(name, isOn) {
-            this.htmlObject.classList.toggle(name, isOn);
-            switch (name) {
-                case 'dockable':
-                    isOn ? this.#enableDocking() : this.#disableDocking();
-                    break;
-
-                case 'draggable':
-                    DOM.makeDraggable(this.htmlObject, this.moveHandle, isOn, this.customDragging);
-                    break;
-
-                case 'movable':
-                    DOM.makeMovable(this.htmlObject, this.moveHandle, isOn, this.movableX, this.movableY);
-                    break;
-                case 'sizable':
-                    isOn ? this.#enableSizing() : this.#disableSizing();
-                    break;
-                case 'visible':
-                    this.htmlObject.classList.toggle("hidden", !isOn);
-                    break;
+        html(content) {
+            if (typeof content === 'undefined') {
+                return this.htmlObject.innerHTML;
+            } else {
+                this.htmlObject.innerHTML = content;
             }
-        }
-        #enableDocking() {
-            if (this.#dockingHandlers) return;
-
-            this.#dockingHandlers = {
-                dragenter: e => this.#dragenter(e),
-                dragover: e => this.#dragover(e),
-                dragleave: e => this.#dragleave(e),
-                drop: e => this.#drop(e),
-            };
-            Object.entries(this.#dockingHandlers).forEach(([evt, handler]) => {
-                this.htmlObject.addEventListener(evt, handler);
-            });
-        }
-        #disableDocking() {
-            if (!this.#dockingHandlers) return;
-
-            Object.entries(this.#dockingHandlers).forEach(([evt, handler]) =>
-                this.htmlObject.removeEventListener(evt, handler)
-            );
-
-            this.#dockingHandlers = null;
-            this.#removeDropIndicator();
-            // classList.remove('dockable'); buradan kaldırılmalı çünkü toggle ile zaten kaldırıldı.
-        }
-        #dragenter(e) { e.preventDefault(); this.#showDropIndicator(e.clientX, e.clientY); }
-        #dragover(e) { e.preventDefault(); this.#moveDropIndicator(e.clientX, e.clientY); }
-        #dragleave(e) { e.preventDefault(); this.#removeDropIndicator(); }
-        #drop(e) {
-            e.preventDefault();
-            const id = e.dataTransfer.getData('text/plain');
-            const dragged = document.getElementById(id)?.owner;
-            if (dragged) this.appendChild(dragged);
-            this.#removeDropIndicator();
-        }
-
-        #showDropIndicator(x, y) {
-            if (!this.#dropIndicator) {
-                this.#dropIndicator = document.createElement('div');
-                this.#dropIndicator.className = 'drop-indicator';
-                document.body.appendChild(this.#dropIndicator);
-            }
-            Object.assign(this.#dropIndicator.style, { top: y + 'px', left: x + 'px' });
-            this.#dropIndicator.hidden = false;
-        }
-
-        #moveDropIndicator(x, y) {
-            if (this.#dropIndicator) {
-                this.#dropIndicator.style.top = y + 'px';
-                this.#dropIndicator.style.left = x + 'px';
-            }
-        }
-
-        #removeDropIndicator() {
-            if (this.#dropIndicator) this.#dropIndicator.hidden = true;
-        }
-
-        #enableSizing() {
-            this.htmlObject.classList.add('sizable');
-            DOM.makeResizable(this.htmlObject, this.resize_flags, this.useResizeHelper);
-        }
-
-        #disableSizing() {
-            this.htmlObject.classList.remove('sizable');
-            DOM.makeResizable(this.htmlObject, false);
         }
         addEvent(eventType, handler) {
             this.htmlObject.addEventListener(eventType, handler);
@@ -4063,7 +4428,7 @@ let _styleEl=null;
         document.removeEventListener('mouseup', DOM.handleDesignDragEnd);
     };
     DOM.makeResizable = function (el, flags, useHelper = false) {
-        // Temizlik
+       
         if (el._resizeHandles) { el._resizeHandles.forEach(h => h.remove()); delete el._resizeHandles; }
         if (el._resizeMouseMove) el.removeEventListener('mousemove', el._resizeMouseMove);
         if (el._resizeMouseDown) el.removeEventListener('mousedown', el._resizeMouseDown);
@@ -4158,7 +4523,7 @@ let _styleEl=null;
                 function drag(ev) {
                     const dx = ev.clientX - start.x, dy = ev.clientY - start.y;
                     let newW = start.width, newH = start.height, newL = start.left, newT = start.top;
-
+                    
                     // Sağ/alt genişletir
                     if (dir.includes('e')) newW = start.width + dx;
                     if (dir.includes('s')) newH = start.height + dy;
@@ -4885,15 +5250,7 @@ let _styleEl=null;
             if (customDragging) {
                 // Pointer-events kullanarak özelleştirilmiş sürükleme
                 let dragging = false, offsetX = 0, offsetY = 0;
-
-/*************  ✨ Windsurf Command ⭐  *************/
-        /**
-         * Pointerdown event listener to start dragging.
-         * @param {PointerEvent} e
-         * @listens pointerdown
-         * @private
-         */
-/*******  618f6b8d-8167-4061-917a-d84f09b5b65d  *******/                const pointerDown = (e) => {
+          const pointerDown = (e) => {
                     dragging = true;
                     offsetX = e.clientX - element.offsetLeft;
                     offsetY = e.clientY - element.offsetTop;
