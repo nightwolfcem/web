@@ -4508,6 +4508,8 @@ let _styleEl=null;
         function getResizeHandler(dir, el) {
             return function (e) {
                 e.preventDefault(); e.stopPropagation();
+                if (el._interaction) return;
+                el._interaction = 'resizing';
                 const parentRect = el.offsetParent ? el.offsetParent.getBoundingClientRect() : { left: 0, top: 0 };
                 const elRect = el.getBoundingClientRect();
                 const minW = 20, minH = 20;
@@ -4556,7 +4558,11 @@ let _styleEl=null;
                     }
                 }
                 document.addEventListener('mousemove', drag);
-                document.addEventListener('mouseup', () => document.removeEventListener('mousemove', drag), { once: true });
+                const up = () => {
+                    document.removeEventListener('mousemove', drag);
+                    el._interaction = null;
+                };
+                document.addEventListener('mouseup', up, { once: true });
             }
         }
 
@@ -5021,6 +5027,17 @@ let _styleEl=null;
 
         // Bu fonksiyon, pointerdown anında tetikleniyor
         const onPointerDown = e => {
+            const threshold = 7;
+            const rect = element.getBoundingClientRect();
+            const nearEdge = (
+                e.clientX - rect.left < threshold || rect.right - e.clientX < threshold ||
+                e.clientY - rect.top < threshold || rect.bottom - e.clientY < threshold
+            );
+            if ((element._resizeHandles && element._resizeHandles.includes(e.target)) || nearEdge) {
+                return; // resizing has priority
+            }
+            if (element._interaction) return;
+            element._interaction = 'moving';
 
             // e.preventDefault();
             //  e.stopPropagation();
@@ -5085,6 +5102,7 @@ let _styleEl=null;
                 handle.releasePointerCapture(ev.pointerId);
                 handle.removeEventListener('pointermove', onPointerMove);
                 handle.removeEventListener('pointerup', onPointerUp);
+                element._interaction = null;
             };
 
             handle.addEventListener('pointermove', onPointerMove);
@@ -5250,7 +5268,9 @@ let _styleEl=null;
             if (customDragging) {
                 // Pointer-events kullanarak özelleştirilmiş sürükleme
                 let dragging = false, offsetX = 0, offsetY = 0;
-          const pointerDown = (e) => {
+            const pointerDown = (e) => {
+                    if (element._interaction) return;
+                    element._interaction = 'dragging';
                     dragging = true;
                     offsetX = e.clientX - element.offsetLeft;
                     offsetY = e.clientY - element.offsetTop;
@@ -5268,6 +5288,7 @@ let _styleEl=null;
                     dragging = false;
                     target.releasePointerCapture(e.pointerId);
                     element.classList.remove('dragging');
+                    element._interaction = null;
                 };
 
                 target.addEventListener('pointerdown', pointerDown);
@@ -5284,10 +5305,15 @@ let _styleEl=null;
                 // Browser'ın kendi sürükleme davranışı (HTML5 drag-drop)
                 target.setAttribute('draggable', 'true');
                 const dragStart = e => {
+                    if (element._interaction) { e.preventDefault(); return; }
+                    element._interaction = 'dragging';
                     e.dataTransfer.setData('text/plain', element.id);
                     element.classList.add('dragging');
                 };
-                const dragEnd = () => element.classList.remove('dragging');
+                const dragEnd = () => {
+                    element.classList.remove('dragging');
+                    element._interaction = null;
+                };
 
                 target.addEventListener('dragstart', dragStart);
                 target.addEventListener('dragend', dragEnd);
