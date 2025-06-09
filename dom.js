@@ -1991,7 +1991,8 @@ globs.historyManager = new HistoryManager();
         e.preventDefault();
         if (!this.htmlObject.contains(e.relatedTarget)) {
             this.htmlObject.classList.remove(this.dropOptions.hoverClass);
-            this.htmlObject.querySelector(`.${this.dropOptions.placeHolderClass}`)?.remove();
+            DOM.dragPlaceHolder?.remove();
+            this.htmlObject.querySelectorAll('.dock-highlight').forEach(el => el.classList.remove('dock-highlight'));
         }
     }
 
@@ -2012,24 +2013,61 @@ globs.historyManager = new HistoryManager();
             }
         });
         
-        this.htmlObject.querySelector(`.${this.dropOptions.placeHolderClass}`)?.remove();
+        DOM.dragPlaceHolder?.remove();
+        this.htmlObject.querySelectorAll('.dock-highlight').forEach(el => el.classList.remove('dock-highlight'));
     }
     
     #updatePlaceholder(e) {
-        let placeholder = this.htmlObject.querySelector(`.${this.dropOptions.placeHolderClass}`);
-        if (!placeholder) {
-            placeholder = document.createElement('div');
-            placeholder.className = this.dropOptions.placeHolderClass;
+        if (!DOM.dragPlaceHolder) {
+            DOM.dragPlaceHolder = document.createElement('div');
+        }
+        const placeholder = DOM.dragPlaceHolder;
+        placeholder.className = this.dropOptions.placeHolderClass;
+
+        const children = [...this.htmlObject.children].filter(c => !c.classList.contains(this.dragOptions.dragClass) && c !== placeholder);
+        let target = children.find(c => c.contains(e.target)) || null;
+        if (!target) {
+            target = children.reduce((acc, ch) => {
+                const r = ch.getBoundingClientRect();
+                if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) return ch;
+                return acc;
+            }, null);
+        }
+        if (!target) {
+            placeholder.style.width = '100%';
+            placeholder.style.height = '6px';
+            placeholder.style.margin = '2px 0';
+            this.htmlObject.appendChild(placeholder);
+            return;
         }
 
-        const children = [...this.htmlObject.children].filter(c => !c.classList.contains(this.dropOptions.placeHolderClass) && !c.classList.contains(this.dragOptions.dragClass));
-        const closest = children.reduce((acc, child) => {
-            const box = child.getBoundingClientRect();
-            const offset = e.clientY - box.top - box.height / 2;
-            return (offset < 0 && offset > acc.offset) ? { offset, element: child } : acc;
-        }, { offset: Number.NEGATIVE_INFINITY });
+        const rect = target.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const inCenter = x > rect.width * 0.25 && x < rect.width * 0.75 && y > rect.height * 0.25 && y < rect.height * 0.75;
 
-        this.htmlObject.insertBefore(placeholder, closest.element || null);
+        if (inCenter && target.owner?.status?.dockable) {
+            placeholder.remove();
+            target.classList.add('dock-highlight');
+            return;
+        } else {
+            target.classList.remove('dock-highlight');
+        }
+
+        const horizontal = Math.abs(x - rect.width / 2) < Math.abs(y - rect.height / 2);
+        let before = false;
+        if (horizontal) {
+            placeholder.style.width = '100%';
+            placeholder.style.height = '6px';
+            placeholder.style.margin = '2px 0';
+            before = y < rect.height / 2;
+        } else {
+            placeholder.style.width = '6px';
+            placeholder.style.height = rect.height + 'px';
+            placeholder.style.margin = '0 2px';
+            before = x < rect.width / 2;
+        }
+        this.htmlObject.insertBefore(placeholder, before ? target : target.nextSibling);
     }
     
     #enableSizing(isOn) {
@@ -2058,7 +2096,8 @@ globs.historyManager = new HistoryManager();
      `.telement:focus { outline: 2px solid #0078d4; outline-offset: 1px; }
             .dragging { opacity: 0.4; }
             .droppable-hover { background-color: rgba(0, 120, 212, 0.05); }
-            .drop-placeholder { height: 6px; background: #0078d4; margin: 2px 0; border-radius: 3px; }
+            .drop-placeholder { background: #0078d4; border-radius: 3px; }
+            .dock-highlight { outline: 2px dashed #0078d4; }
             .selected { box-shadow: 0 0 0 1px white, 0 0 0 3px #0078d4; }
             .disabled { opacity: 0.5; pointer-events: none; }
             .locked { pointer-events: none; }
@@ -4130,6 +4169,7 @@ let _styleEl=null;
         DOM.scrollBox= new TabsoluteElement("DiV", "scrollBox"),
 
     DOM.designMode = false;
+    DOM.dragPlaceHolder = null;
     DOM.selectedElements = new Set();
     DOM.selectionRectangle = document.createElement('div');
     DOM.resizeHelpers = [];
