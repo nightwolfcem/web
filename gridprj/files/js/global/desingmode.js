@@ -45,12 +45,13 @@
    {name:"Move",svg:`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Uploaded to svgrepo.com"  viewBox="0 0 32 32" xml:space="preserve"><style type="text/css">	.puchipuchi_een{fill:#111918;}</style><path class="puchipuchi_een" d="M19.707,26.293c0.391,0.391,0.391,1.023,0,1.414l-3,3C16.512,30.902,16.256,31,16,31  s-0.512-0.098-0.707-0.293l-3-3c-0.391-0.391-0.391-1.023,0-1.414s1.023-0.391,1.414,0L15,27.586V23c0-0.552,0.448-1,1-1  s1,0.448,1,1v4.586l1.293-1.293C18.684,25.902,19.316,25.902,19.707,26.293z M16,11c-2.761,0-5,2.239-5,5s2.239,5,5,5s5-2.239,5-5  S18.761,11,16,11z M13.707,5.707L15,4.414V9c0,0.552,0.448,1,1,1s1-0.448,1-1V4.414l1.293,1.293c0.391,0.391,1.023,0.391,1.414,0  s0.391-1.023,0-1.414l-3-3C16.512,1.098,16.256,1,16,1s-0.512,0.098-0.707,0.293l-3,3c-0.391,0.391-0.391,1.023,0,1.414  S13.316,6.098,13.707,5.707z M30.707,15.293l-3-3c-0.391-0.391-1.023-0.391-1.414,0s-0.391,1.023,0,1.414L27.586,15H23  c-0.552,0-1,0.448-1,1s0.448,1,1,1h4.586l-1.293,1.293c-0.391,0.391-0.391,1.023,0,1.414s1.023,0.391,1.414,0l3-3  C30.902,16.512,31,16.256,31,16S30.902,15.488,30.707,15.293z M9,15H4.414l1.293-1.293c0.391-0.391,0.391-1.023,0-1.414  s-1.023-0.391-1.414,0l-3,3C1.098,15.488,1,15.744,1,16s0.098,0.512,0.293,0.707l3,3c0.391,0.391,1.023,0.391,1.414,0  s0.391-1.023,0-1.414L4.414,17H9c0.552,0,1-0.448,1-1S9.552,15,9,15z"/></svg>`},  
   {name:"Dragable",svg:`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Layer_1"  viewBox="0 0 32 32" enable-background="new 0 0 32 32" xml:space="preserve"><g>	<path fill="#808184" d="M0,1.5v29C0,31.327,0.673,32,1.5,32h29c0.827,0,1.5-0.673,1.5-1.5V13c0-0.276-0.224-0.5-0.5-0.5   S31,12.724,31,13v17.5c0,0.276-0.224,0.5-0.5,0.5h-29C1.224,31,1,30.776,1,30.5v-29C1,1.224,1.224,1,1.5,1H18   c0.276,0,0.5-0.224,0.5-0.5S18.276,0,18,0H1.5C0.673,0,0,0.673,0,1.5z"/>	<path fill="#808184" d="M32,0.5C32,0.224,31.776,0,31.5,0H23c-0.276,0-0.5,0.224-0.5,0.5S22.724,1,23,1h7.197L19.301,11.896   c-0.076,0.076-0.113,0.171-0.13,0.269C18.968,12.063,18.742,12,18.5,12h-5c-0.827,0-1.5,0.673-1.5,1.5v5c0,0.827,0.673,1.5,1.5,1.5   h5c0.827,0,1.5-0.673,1.5-1.5v-5c0-0.284-0.084-0.547-0.222-0.774c0.084-0.022,0.164-0.057,0.23-0.122L31,1.611V8   c0,0.276,0.224,0.5,0.5,0.5S32,8.276,32,8V0.5z M19,18.5c0,0.276-0.224,0.5-0.5,0.5h-5c-0.276,0-0.5-0.224-0.5-0.5v-5   c0-0.276,0.224-0.5,0.5-0.5h5c0.276,0,0.5,0.224,0.5,0.5V18.5z"/></g></svg>`},
 {name:"Dockable",svg:`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Layer_1"  viewBox="0 0 32 32" enable-background="new 0 0 32 32" xml:space="preserve"><g>	<path fill="#808184" d="M25.5,8h5C31.327,8,32,7.327,32,6.5v-5C32,0.673,31.327,0,30.5,0h-5C24.673,0,24,0.673,24,1.5v5   c0,0.24,0.062,0.464,0.163,0.665L13,19.258V12c0-0.276-0.224-0.5-0.5-0.5S12,11.724,12,12v8.5c0,0.276,0.224,0.5,0.5,0.5H20   c0.276,0,0.5-0.224,0.5-0.5S20.276,20,20,20h-6.324L24.88,7.862C25.07,7.949,25.278,8,25.5,8z M25,1.5C25,1.224,25.224,1,25.5,1h5   C30.776,1,31,1.224,31,1.5v5C31,6.776,30.776,7,30.5,7h-5C25.224,7,25,6.776,25,6.5V1.5z"/>	<path fill="#808184" d="M1.5,32h29c0.827,0,1.5-0.673,1.5-1.5V13c0-0.276-0.224-0.5-0.5-0.5S31,12.724,31,13v17.5   c0,0.276-0.224,0.5-0.5,0.5h-29C1.224,31,1,30.776,1,30.5v-29C1,1.224,1.224,1,1.5,1H19c0.276,0,0.5-0.224,0.5-0.5S19.276,0,19,0   H1.5C0.673,0,0,0.673,0,1.5v29C0,31.327,0.673,32,1.5,32z"/></g></svg>`},
+{name:"DragDots",svg:`<svg xmlns="http://www.w3.org/2000/svg" fill="#000000" width="800px" height="800px" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.375 3.67c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17zm0 8.66c0-.646-.56-1.17-1.25-1.17s-1.25.524-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17zm-1.25-5.5c.69 0 1.25.525 1.25 1.17 0 .645-.56 1.17-1.25 1.17S4.875 8.645 4.875 8c0-.645.56-1.17 1.25-1.17zm5-3.16c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17zm-1.25 7.49c.69 0 1.25.524 1.25 1.17 0 .645-.56 1.17-1.25 1.17s-1.25-.525-1.25-1.17c0-.646.56-1.17 1.25-1.17zM11.125 8c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17z"/></svg>`},
 {name:"Disable",svg:`<svg xmlns="http://www.w3.org/2000/svg"  viewBox="0 0 512 512">  <path fill="var(--ci-primary-color, #000000)" d="M368,128H144a128,128,0,0,0,0,256H368a128,128,0,0,0,0-256Zm0,224H144a96,96,0,0,1,0-192H368a96,96,0,0,1,0,192Z" class="ci-primary"/>  <path fill="var(--ci-primary-color, #000000)" d="M144,192a64,64,0,1,0,64,64A64.072,64.072,0,0,0,144,192Zm0,96a32,32,0,1,1,32-32A32.036,32.036,0,0,1,144,288Z" class="ci-primary"/></svg>`},
 {name:"Enable",svg:`<svg xmlns="http://www.w3.org/2000/svg"  viewBox="0 0 24 24" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M16.5455 6H7.45455C4.44545 6 2 8.69 2 12C2 15.31 4.44545 18 7.45455 18H16.5455C19.5545 18 22 15.31 22 12C22 8.69 19.5545 6 16.5455 6ZM16.4444 16H7.55556C5.59111 16 4 14.21 4 12C4 9.79 5.59111 8 7.55556 8H16.4444C18.4089 8 20 9.79 20 12C20 14.21 18.4089 16 16.4444 16ZM13 12C13 10.34 14.34 9 16 9C17.66 9 19 10.34 19 12C19 13.66 17.66 15 16 15C14.34 15 13 13.66 13 12Z" fill="#000000"/></svg>`},
-{name:"Desktop_Mobile",svg:`<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="200" height="200" fill="none" stroke="black" stroke-width="2"/><rect x="15" y="15" width="125" height="88" fill="#e0e0e0" stroke="#333" stroke-width="2"/><rect x="66" y="103" width="23" height="13" fill="#999"/><rect x="60" y="116" width="34" height="8" fill="#999"/><rect x="117" y="46" width="68" height="139" rx="8" ry="8" fill="#e0e0e0" stroke="#333" stroke-width="2"/><rect x="126" y="56" width="50" height="114" fill="#fff"/><circle cx="151" cy="179" r="4" fill="#333"/></svg>`},
+{name:"Desktop_Mobile",svg:`<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" fill="none" stroke="black" stroke-width="2"/><rect x="15" y="15" width="125" height="88" fill="#e0e0e0" stroke="#333" stroke-width="2"/><rect x="66" y="103" width="23" height="13" fill="#999"/><rect x="60" y="116" width="34" height="8" fill="#999"/><rect x="117" y="46" width="68" height="139" rx="8" ry="8" fill="#e0e0e0" stroke="#333" stroke-width="2"/><rect x="126" y="56" width="50" height="114" fill="#fff"/><circle cx="151" cy="179" r="4" fill="#333"/></svg>`},
 
 ];
-createEnumList("EelementStatus", "none,sizable,movable,draggable,dockable,scrollable,selectable,lockable,disable");
+
   // HTML element icon mapping
   const elementIcons = {
     html: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/></svg>`,
@@ -478,124 +479,10 @@ canDrop=function (parentTag, childTag) {
     }
   ];
 
-  class TtoolBox {
-    constructor(container, icons = defaultIcons) {
-      this.icons = icons;
-      this.container = typeof container === 'string' ? document.querySelector(container) : container;
-      if (!this.container) throw new Error('Toolbox container not found');
-      this._applyStyles();
-      this._renderToolbox();
-      this._renderTreePanel();
-    }
-
-    _applyStyles() {
-      if (document.getElementById('ttoolbox-styles')) return;
-      const style = document.createElement('style');
-      style.id = 'ttoolbox-styles';
-      style.textContent = `
-        /* Toolbox buttons */
-        .ttoolbox { display: flex; flex-direction: column; gap: 8px; }
-        .ttoolbox button { background: none; border: none; cursor: pointer; padding: 4px; transition: background 0.2s; }
-        .ttoolbox button:hover { background: rgba(0,0,0,0.1); border-radius: 4px; }
-        /* Tree panel */
-        .ttoolbox-panel { position: fixed; top: 0; right: 0; width: 300px; height: 100%;
-                         background: #ffffff; border-left: 1px solid #ddd; box-shadow: -2px 0 8px rgba(0,0,0,0.1);
-                         overflow: auto; padding: 12px; display: none; font-family: sans-serif; }
-        .ttoolbox-panel h3 { margin-top: 0; font-size: 1.1em; }
-
-        /* Tree styles */
-        .tree-node { display: flex; align-items: center; padding: 2px 4px; border-radius: 4px; }
-        .tree-node:hover { background: #f5f5f5; }
-        .tree-node .toggle { cursor: pointer; width: 16px; text-align: center; margin-right: 4px; user-select: none; color: #666; }
-        .tree-node .icon { width: 16px; height: 16px; margin-right: 6px; fill: none; stroke: currentColor; stroke-width: 2; }
-        .tree-node .label { flex: 1; color: #333; font-size: 0.9em; }
-        /* Indentation based on depth */
-        .tree-node { margin-left: calc(var(--depth) * 16px); }
-        /* Hide collapsed branches */
-        .collapsed { display: none; }
-      `;
-      document.head.appendChild(style);
-    }
-
-    _renderToolbox() {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'ttoolbox';
-      this.icons.forEach(icon => {
-        const btn = document.createElement('button');
-        btn.innerHTML = icon.svg;
-        btn.title = icon.name;
-        btn.setAttribute('aria-label', icon.name);
-        if (icon.name === 'HTML Element') btn.onclick = () => this._togglePanel();
-        wrapper.appendChild(btn);
-      });
-      this.container.appendChild(wrapper);
-    }
-
-    _renderTreePanel() {
-      this.panel = document.createElement('div');
-      this.panel.className = 'ttoolbox-panel';
-      this.panel.innerHTML = '<h3>HTML Element Tree</h3>';
-      const tree = this._buildTree(htmlTree, 0);
-      this.panel.appendChild(tree);
-      document.body.appendChild(this.panel);
-    }
-
-    _togglePanel() {
-      this.panel.style.display = this.panel.style.display === 'block' ? 'none' : 'block';
-    }
-
-    _buildTree(nodes, depth) {
-      const fragment = document.createDocumentFragment();
-      nodes.forEach(node => {
-        // Tree node
-        const nodeEl = document.createElement('div');
-        nodeEl.className = 'tree-node';
-        nodeEl.style.setProperty('--depth', depth);
-        // Toggle
-        let childContainer;
-        if (node.children && node.children.length) {
-          const toggle = document.createElement('span');
-          toggle.className = 'toggle';
-          toggle.textContent = '\u25B6'; // ▶
-          toggle.onclick = () => {
-            const expanded = toggle.textContent === '\u25BC';
-            toggle.textContent = expanded ? '\u25B6' : '\u25BC'; // ▼
-            childContainer.classList.toggle('collapsed');
-          };
-          nodeEl.appendChild(toggle);
-        } else {
-          const spacer = document.createElement('span');
-          spacer.className = 'toggle'; spacer.textContent = '';
-          nodeEl.appendChild(spacer);
-        }
-        // Icon
-        const iconSpan = document.createElement('span');
-        iconSpan.className = 'icon';
-        iconSpan.innerHTML = elementIcons[node.tag] || defaultIcons[0].svg;
-        nodeEl.appendChild(iconSpan);
-        // Label
-        const label = document.createElement('span');
-        label.className = 'label';
-        label.textContent = node.tag;
-        nodeEl.appendChild(label);
-        fragment.appendChild(nodeEl);
-        // Children
-        if (node.children && node.children.length) {
-          childContainer = document.createElement('div');
-          childContainer.className = 'collapsed';
-          childContainer.appendChild(this._buildTree(node.children, depth + 1));
-          fragment.appendChild(childContainer);
-        }
-      });
-      const wrapper = document.createElement('div');
-      wrapper.appendChild(fragment);
-      return wrapper;
-    }
-  }
-
+ 
   global.defaultIcons = defaultIcons;
   global.elementIcons = elementIcons;
-  global.TtoolBox = TtoolBox;
+ 
 })(window);
 
 TDragDropManager=class DragDropManager {
@@ -857,130 +744,6 @@ function decodeZIndexToPath(raw, segmentSize = 2) {
 // 2) TlayerNode
 // ———————————————
 
-class TlayerNode {
-  /**
-   * @param {TlayerNode|null} parent
-   * @param {TlayerEngine}   engine
-   * @param {HTMLElement|null} element    // null ise sanal katman; değilse gerçek elem.
-   * @param {{ isLayer?: boolean }} options
-   */
-  constructor(parent, engine, element = null, options = {}) {
-    this.parent   = parent;
-    this.engine   = engine;
-    this.isLayer  = options.isLayer !== false;  // default: true
-    this.children = [];
-    this.isHidden = false;
-
-    // Gerçek DOM elemanıysa tutuluyor:
-    this.element  = this.isLayer ? null : element;
-
-    // Sadece hiyerarşiyi kuruyoruz, DOM’a ekleme yok:
-    if (parent) parent.children.push(this);
-  }
-
-  // root’dan itibaren non-layer (element) index’lerini alır:
-  getPath() {
-    const path = [];
-    let node = this;
-    while (node.parent) {
-      // Sadece element’leri saymak istiyorsan:
-      const siblings = node.parent.children.filter(c => !c.isLayer);
-      path.unshift(siblings.indexOf(node));
-      node = node.parent;
-    }
-    return path;
-  }
-
-  // Aynı layer içi sıralama:
-  bringToFront()   { this._moveInParent(this.parent.children.length - 1); }
-  sendToBack()     { this._moveInParent(0); }
-  moveToIndex(i)   { this._moveInParent(i); }
-
-  // Farklı bir katmana taşıma:
-  moveTo(target) {
-    if (!(target instanceof TlayerNode)) return;
-    // Çıkar
-    const sibs = this.parent.children;
-    sibs.splice(sibs.indexOf(this), 1);
-    // Yeni parent
-    this.parent = target;
-    target.children.push(this);
-    // Z-index güncelle
-    this.engine.updateZIndices();
-  }
-
-  _moveInParent(newIdx) {
-    const sibs = this.parent.children;
-    const old  = sibs.indexOf(this);
-    if (old === -1) return;
-    sibs.splice(old, 1);
-    sibs.splice(newIdx, 0, this);
-    this.engine.updateZIndices();
-  }
-}
-
-
-// ———————————————
-// 3) TlayerEngine
-// ———————————————
-
-class TlayerEngine {
-  /**
-   * @param {HTMLElement} rootElement — z-index’lerin bağlanacağı konteyner (genelde body)
-   * @param {number}      segmentSize — path’in her segmenti kaç basamaklı kodlayacağınız
-   */
-  constructor(rootElement = document.body, segmentSize = 2) {
-    this.rootElement = rootElement;
-    this.segmentSize = segmentSize;
-    // Sanal root katmanı (hiçbir DOM elemanı yaratılmaz)
-    this.root        = new TlayerNode(null, this, null, { isLayer: true });
-  }
-
-  /** Sanal bir katman oluşturur */
-  createLayer(parent = this.root) {
-    return new TlayerNode(parent, this, null, { isLayer: true });
-  }
-
-  /** Varolan bir DOM elemanını katmana ekler */
-  createElement(parent = this.root, element) {
-    return new TlayerNode(parent, this, element, { isLayer: false });
-  }
-
-  /** DFS ile her element node’unu path’e göre encode edip style.zIndex’e yazar */
-  updateZIndices() {
-    const dfs = (node) => {
-      if (node.isHidden) return;
-      if (!node.isLayer) {
-        const path = node.getPath();
-        node.element.style.zIndex = encodePathToZIndex(path, this.segmentSize);
-      }
-      node.children.forEach(dfs);
-    };
-    dfs(this.root);
-  }
-}
-
-
-
-// 2) Katman isimlerini, oluşturma ve z-blok sırasına göre listele
-const layerNames = [
-  'backgroundLayer',
-  'contentLayer',
-  'widgetLayer',
-  'mainMenuLayer',
-  'dropdownLayer',
-  'tooltipLayer',
-  'contextMenuLayer',
-  'popupLayer',
-  'windowsLayer',
-  'overlayLayer',
-  'modalLayer',
-  'selectionLayer',
-  'dragPreviewLayer',
-  'notificationLayer',
-  'guideLayer',
-  'debugLayer'
-];
 
 
 // 3) Tek seferde hepsini defineLayer ile oluştur
@@ -990,147 +753,731 @@ const layerNames = [
 layerEngine.updateZIndices();*/
 document.addEventListener('DOMContentLoaded', () => {
 
-  (function(){
-    let currentMode='cursor';
-    window.currentMode = currentMode;
-    const modes=['cursor','dragdrop','transform','paint','lock'];
-    const editor=document.createElement('div');
-    editor.id='editor';
-    Object.assign(editor.style,{display:'grid',gridTemplateColumns:'50px 1fr',height:'100vh'});
-    const toolbox=document.createElement('div');
-    toolbox.id='toolbox';
-    Object.assign(toolbox.style,{display:'flex',flexDirection:'column',background:'#eee'});
-    modes.forEach(m=>{
-      const btn=document.createElement('button');
-      btn.id=m+'Btn';
-      btn.textContent=m;
-      btn.addEventListener('click',()=>{
-        currentMode=m;
-        window.currentMode = currentMode;
-        toolbox.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
-        btn.classList.add('active');
-      });
-      toolbox.appendChild(btn);
-    });
-    const canvas=document.createElement('div');
-    canvas.id='canvas';
-    Object.assign(canvas.style,{position:'relative',background:'#fff'});
-    editor.appendChild(toolbox);
-    editor.appendChild(canvas);
-    document.body.appendChild(editor);
-  })();
-  
-  (function(){
-    const canvas = document.getElementById('canvas');
-    const menu=document.createElement('table');
-    menu.className='Tmenu';
-    document.body.appendChild(menu);
-    document.addEventListener('contextmenu',e=>{
-      e.preventDefault();
-      const sel=window.selectedElement;
-      menu.innerHTML='';
-      ['Cut','Copy','Paste','Delete','Duplicate','Lock/Unlock','Bring to Front','Send to Back']
-        .forEach(text=>{
-          const tr=menu.insertRow();
-          const td=tr.insertCell();
-          const span=document.createElement('span');
-          span.textContent=text;
-          span.addEventListener('click',()=>applyAction(text,sel));
-          td.appendChild(span);
-        });
-      menu.style.opacity='1';
-      menu.style.left=e.pageX+'px';
-      menu.style.top=e.pageY+'px';
-      document.addEventListener('click',()=>menu.style.opacity='0',{once:true});
-    });
-    function applyAction(action,el){
-      if(!el) return;
-      switch(action){
-        case'Cut':copy(el);el.remove();break;
-        case'Copy':copy(el);break;
-        case'Paste':paste();break;
-        case'Delete':el.remove();break;
-        case'Duplicate':duplicate(el);break;
-        case'Lock/Unlock':toggleLock(el);break;
-        case'Bring to Front':bringToFront(el);break;
-        case'Send to Back':sendToBack(el);break;
-      }
-    }
-    let clipboard=null, maxZ=1;
-    function copy(el){clipboard=el.cloneNode(true);}
-    function paste(){
-      if(clipboard){
-        const clone=clipboard.cloneNode(true);
-        clone.style.position='absolute';
-        clone.style.left='10px';
-        clone.style.top='10px';
-        canvas.appendChild(clone);
-        initElement(clone);
-      }
-    }
-    function duplicate(el){
-      const clone=el.cloneNode(true);
-      clone.style.position='absolute';
-      clone.style.left=parseInt(el.style.left||0)+10+'px';
-      clone.style.top=parseInt(el.style.top||0)+10+'px';
-      canvas.appendChild(clone);
-      initElement(clone);
-    }
-    function toggleLock(el){el.dataset.locked=el.dataset.locked==='true'?'false':'true';}
-    function bringToFront(el){el.style.zIndex=++maxZ;}
-    function sendToBack(el){el.style.zIndex=0;}
-  })();
-  
-  (function(){
-    const canvas = document.getElementById('canvas');
-    const panel=document.createElement('div');
-    panel.id='inlinePanel';
-    Object.assign(panel.style,{position:'absolute',display:'none'});
-    ['Rotate','Lock','Layer Up','Layer Down'].forEach(text=>{
-      const b=document.createElement('button');
-      b.textContent=text;
-      b.addEventListener('click',()=>handleInline(text,window.selectedElement));
-      panel.appendChild(b);
-    });
-    document.body.appendChild(panel);
-    const handles=['nw','ne','sw','se'].map(pos=>{
-      const h=document.createElement('div');
-      h.className='resizeHandle';
-      h.dataset.pos=pos;
-      Object.assign(h.style,{position:'absolute',width:'8px',height:'8px',background:'#000',display:'none',cursor:pos+'-resize'});
-      document.body.appendChild(h);
-      return h;
-    });
-    document.addEventListener('click',e=>{
-      if(window.currentMode!=='cursor') return;
-      const el=e.target.closest('.selectable');
-      if(!el) return;
-      window.selectedElement=el;
-      showInline(el);
-    });
-    function showInline(el){
-      const rect=el.getBoundingClientRect();
-      panel.style.left=rect.left+'px';
-      panel.style.top=rect.top-30+'px';
-      panel.style.display='flex';
-      handles.forEach(h=>{
-        const p=h.dataset.pos;
-        const x=p[1]==='w'?rect.left-4:rect.right-4;
-        const y=p[0]==='s'?rect.bottom-4:rect.top-4;
-        h.style.left=x+'px';
-        h.style.top=y+'px';
-        h.style.display='block';
-      });
-    }
-    let maxZ=1;
-    function handleInline(action,el){
-      if(!el) return;
-      switch(action){
-        case 'Rotate':el.style.transform=el.style.transform?'':'rotate(45deg)';break;
-        case 'Lock':el.dataset.locked=el.dataset.locked==='true'?'false':'true';break;
-        case 'Layer Up':el.style.zIndex=++maxZ;break;
-        case 'Layer Down':el.style.zIndex=0;break;
-      }
-    }
-  })();
+
 })
+// Temel ToolWindow Sınıfı
+class TToolWindow extends Telement {
+    constructor(options = {}) {
+        const {
+            title = 'Tool Window',
+            dockable = true,
+            floatable = true,
+            resizable = true,
+            initialDockState = 'docked',
+            container = null,
+            width = 300,
+            height = 400,
+            ...otherOptions
+        } = options;
+
+        super('div', {
+            className: 'tool-window',
+            style: {
+                display: 'flex',
+                flexDirection: 'column',
+                backgroundColor: '#f5f5f5',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+                overflow: 'hidden',
+                width: width + 'px',
+                height: height + 'px',
+                position: 'absolute'
+            },
+            ...otherOptions
+        });
+
+        this.title = title;
+        this.dockable = dockable;
+        this.floatable = floatable;
+        this.resizable = resizable;
+        this.dockState = initialDockState; // 'docked', 'floating', 'hidden'
+        this.container = container;
+        this.dragOffset = { x: 0, y: 0 };
+        this.resizeStart = { width: 0, height: 0 };
+        this.minSize = { width: 150, height: 100 };
+
+        // Bileşenleri oluştur
+        this.header = this.#createHeader();
+        this.content = new Telement('div', {
+            className: 'tool-window-content',
+            style: {
+                flex: '1',
+                overflow: 'auto',
+                padding: '8px'
+            }
+        });
+
+        this.appendChild(this.header);
+        this.appendChild(this.content);
+
+        // Durum ayarla
+        this.#setInitialState();
+        this.#setupEvents();
+    }
+
+    #createHeader() {
+        const header = new Telement('div', {
+            className: 'tool-window-header',
+            style: {
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '6px 10px',
+                backgroundColor: '#e0e0e0',
+                borderBottom: '1px solid #ddd',
+                cursor: 'move',
+                userSelect: 'none'
+            }
+        });
+        
+        this.titleElement = new Telement('span', {
+            text: this.title,
+            style: {
+                fontWeight: 'bold'
+            }
+        });
+
+        this.controls = new Telement('div', {
+            className: 'tool-window-controls',
+            style: {
+                display: 'flex',
+                gap: '6px'
+            }
+        });
+
+        if (this.dockable) {
+            this.dockButton = new Telement('button', {
+                className: 'tool-window-dock-btn',
+                html: '📌',
+                attrs: { title: 'Dock/Undock' },
+                style: {
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                }
+            });
+            this.controls.appendChild(this.dockButton);
+        }
+
+        this.closeButton = new Telement('button', {
+            className: 'tool-window-close-btn',
+            html: '✕',
+            attrs: { title: 'Close' },
+            style: {
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '14px'
+            }
+        });
+        this.controls.appendChild(this.closeButton);
+
+        header.appendChild(this.titleElement);
+        header.appendChild(this.controls);
+
+        return header;
+    }
+
+    #setInitialState() {
+        if (this.dockState === 'docked' && this.container) {
+            this.#dockToContainer();
+        } else if (this.dockState === 'floating') {
+            this.#floatWindow();
+        } else {
+            this.hide();
+        }
+    }
+
+    #setupEvents() {
+        // Başlık çubuğundan sürükleme
+        this.header.htmlObject.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;
+            
+            const rect = this.htmlObject.getBoundingClientRect();
+            this.dragOffset = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+
+            const onMouseMove = (moveEvent) => {
+                if (this.dockState === 'floating') {
+                    this.css({
+                        left: (moveEvent.clientX - this.dragOffset.x) + 'px',
+                        top: (moveEvent.clientY - this.dragOffset.y) + 'px'
+                    });
+                }
+            };
+
+            const onMouseUp = () => {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                
+                // Eğer bir dock alanına yakınsa, dock et
+                if (this.dockable) {
+                    this.#checkDockProximity();
+                }
+            };
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+
+        // Dock/Undock butonu
+        if (this.dockButton) {
+            this.dockButton.htmlObject.addEventListener('click', () => this.toggleDock());
+        }
+
+        // Kapat butonu
+        this.closeButton.htmlObject.addEventListener('click', () => this.hide());
+
+        // Boyutlandırma
+        if (this.resizable) {
+            this.#setupResizing();
+        }
+    }
+
+    #setupResizing() {
+        const resizeHandle = new Telement('div', {
+            className: 'tool-window-resize-handle',
+            style: {
+                position: 'absolute',
+                right: '0',
+                bottom: '0',
+                width: '12px',
+                height: '12px',
+                cursor: 'nwse-resize',
+                backgroundColor: '#ccc'
+            }
+        });
+        this.appendChild(resizeHandle);
+
+        resizeHandle.htmlObject.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            if (e.button !== 0) return;
+
+            const rect = this.htmlObject.getBoundingClientRect();
+            this.resizeStart = {
+                width: rect.width,
+                height: rect.height,
+                x: e.clientX,
+                y: e.clientY
+            };
+
+            const onMouseMove = (moveEvent) => {
+                const newWidth = this.resizeStart.width + (moveEvent.clientX - this.resizeStart.x);
+                const newHeight = this.resizeStart.height + (moveEvent.clientY - this.resizeStart.y);
+                
+                this.css({
+                    width: Math.max(this.minSize.width, newWidth) + 'px',
+                    height: Math.max(this.minSize.height, newHeight) + 'px'
+                });
+            };
+
+            const onMouseUp = () => {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            };
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+    }
+
+    #dockToContainer() {
+        if (!this.container) return;
+        
+        this.dockState = 'docked';
+        this.container.appendChild(this);
+        this.css({
+            position: 'relative',
+            left: 'auto',
+            top: 'auto',
+            width: '100%',
+            height: '100%'
+        });
+        
+        if (this.dockButton) {
+            this.dockButton.htmlObject.textContent = '📌';
+        }
+    }
+
+    #floatWindow() {
+        this.dockState = 'floating';
+        document.body.appendChild(this.htmlObject);
+        
+        // Varsayılan pozisyon
+        if (!this.htmlObject.style.left || !this.htmlObject.style.top) {
+            this.css({
+                left: '100px',
+                top: '100px'
+            });
+        }
+        
+        if (this.dockButton) {
+            this.dockButton.htmlObject.textContent = '📋';
+        }
+    }
+
+    #checkDockProximity() {
+        if (!this.dockable || !this.container) return;
+        
+        const windowRect = this.htmlObject.getBoundingClientRect();
+        const containerRect = this.container.htmlObject.getBoundingClientRect();
+        
+        // Eğer pencerenin çoğu konteynerin içindeyse, dock et
+        if (windowRect.left > containerRect.left - 50 && 
+            windowRect.right < containerRect.right + 50 &&
+            windowRect.top > containerRect.top - 50 &&
+            windowRect.bottom < containerRect.bottom + 50) {
+            this.dock();
+        }
+    }
+
+    toggleDock() {
+        if (this.dockState === 'docked') {
+            this.float();
+        } else {
+            this.dock();
+        }
+    }
+
+    dock() {
+        if (this.dockable && this.container) {
+            this.#dockToContainer();
+        }
+    }
+
+    float() {
+        if (this.floatable) {
+            this.#floatWindow();
+        }
+    }
+
+    show() {
+        this.dockState = this.container ? 'docked' : 'floating';
+        this.htmlObject.style.display = 'flex';
+        this.#setInitialState();
+    }
+
+    hide() {
+        this.dockState = 'hidden';
+        this.htmlObject.style.display = 'none';
+    }
+
+    setTitle(title) {
+        this.title = title;
+        this.titleElement.html(title);
+    }
+
+    setContent(content) {
+        this.content.html('');
+        if (content instanceof HTMLElement || content instanceof Telement) {
+            this.content.appendChild(content);
+        } else {
+            this.content.html(content);
+        }
+    }
+
+    setContainer(container) {
+        this.container = container;
+        if (this.dockState === 'docked') {
+            this.#dockToContainer();
+        }
+    }
+}
+
+class TToolBox extends TToolWindow {
+    constructor(options = {}) {
+        const {
+            orientation = 'horizontal',
+            buttonSize = 32,
+            buttonMargin = 2,
+            groups = [],
+            tools = [],
+            ...windowOptions
+        } = options;
+
+        super({
+            title: 'Toolbox',
+            width: orientation === 'horizontal' ? 
+                  (buttonSize + buttonMargin * 2) * 8 : 
+                  (buttonSize + buttonMargin * 2) * 2 + 20,
+            height: orientation === 'vertical' ? 
+                   (buttonSize + buttonMargin * 2) * 8 : 
+                   (buttonSize + buttonMargin * 2) * 2 + 20,
+            ...windowOptions
+        });
+
+        this.orientation = orientation;
+        this.buttonSize = buttonSize;
+        this.buttonMargin = buttonMargin;
+        this.tools = {};
+        this.groups = {};
+        this.activeTool = null;
+
+        this.toolboxContent = new Telement('div', {
+            className: 'toolbox-content',
+            style: {
+                display: 'flex',
+                flexDirection: orientation === 'horizontal' ? 'row' : 'column',
+                flexWrap: 'wrap',
+                gap: buttonMargin + 'px',
+                padding: '8px',
+                justifyContent: 'flex-start'
+            }
+        });
+        this.setContent(this.toolboxContent);
+
+        // Grupları oluştur
+        groups.forEach(group => this.#createGroup(group));
+        
+        // Araçları ekle
+        tools.forEach(tool => this.addTool(tool));
+
+        // Varsayılan olarak görünür yap
+        this.show();
+    }
+
+    #createGroup(group) {
+        this.groups[group.name] = {
+            ...group,
+            tools: [],
+            element: new Telement('div', {
+                className: 'tool-group',
+                style: {
+                    display: 'flex',
+                    flexDirection: this.orientation === 'horizontal' ? 'row' : 'column',
+                    gap: this.buttonMargin + 'px',
+                    marginBottom: '8px'
+                }
+            })
+        };
+        this.toolboxContent.appendChild(this.groups[group.name].element);
+    }
+
+    addTool(toolOptions) {
+        const tool = new TToolBoxButton({
+            ...toolOptions,
+            parent: this.groups[toolOptions.group]?.element || this.toolboxContent,
+            size: this.buttonSize,
+            margin: this.buttonMargin
+        });
+
+        this.tools[toolOptions.name] = tool;
+
+        if (toolOptions.group) {
+            if (!this.groups[toolOptions.group]) {
+                this.#createGroup({ name: toolOptions.group });
+            }
+            this.groups[toolOptions.group].tools.push(tool);
+        }
+
+        // Tool seçim olayını dinle
+        tool.htmlObject.addEventListener('click', () => {
+            if (toolOptions.type === 'toggle') {
+                this.setActiveTool(toolOptions.name);
+            }
+        });
+
+        return tool;
+    }
+
+    setActiveTool(toolName) {
+        if (this.activeTool === toolName) return;
+        
+        // Önceki aktif aracı pasif yap
+        if (this.activeTool && this.tools[this.activeTool]) {
+            this.tools[this.activeTool].setActive(false);
+        }
+        
+        // Yeni aracı aktif yap
+        if (toolName && this.tools[toolName]) {
+            this.tools[toolName].setActive(true);
+            this.activeTool = toolName;
+            this.dispatchEvent(new CustomEvent('toolChanged', { detail: toolName }));
+        } else {
+            this.activeTool = null;
+        }
+    }
+
+    getTool(name) {
+        return this.tools[name];
+    }
+
+    setOrientation(orientation) {
+        if (this.orientation === orientation) return;
+        
+        this.orientation = orientation;
+        this.toolboxContent.css({
+            flexDirection: orientation === 'horizontal' ? 'row' : 'column'
+        });
+        
+        Object.values(this.groups).forEach(group => {
+            group.element.css({
+                flexDirection: orientation === 'horizontal' ? 'row' : 'column'
+            });
+        });
+    }
+  
+}
+
+class TToolBoxButton extends Telement {
+    constructor(options = {}) {
+        const {
+            name,
+            icon,
+            label,
+            type = 'action', // 'action' veya 'toggle'
+            group = null,
+            size = 32,
+            margin = 2,
+            active = false,
+            ...otherOptions
+        } = options;
+
+        super('button', {
+            className: 'toolbox-button',
+            attrs: {
+                'data-tool': name,
+                'data-type': type,
+                'data-group': group
+            },
+            style: {
+                width: size + 'px',
+                height: size + 'px',
+                margin: margin + 'px',
+                padding: '0',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                backgroundColor: active ? '#e0e0e0' : '#fff',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                overflow: 'hidden'
+            },
+            ...otherOptions
+        });
+
+    
+        this.type = type;
+        this.group = group;
+        this.active = active;
+        this.icon = icon || this.#getDefaultIcon(name);
+        this.label = label || name;
+       
+        this.#setupButton();
+    }
+
+    #getDefaultIcon(name) {
+        const found = defaultIcons.find(icon => icon.name.toLowerCase() === name.toLowerCase());
+        return found?.svg || '';
+    }
+
+    #setupButton() {
+        // İkon ekle
+        if (this.icon) {
+            this.htmlObject.innerHTML = this.icon;
+        } else {
+            this.htmlObject.textContent = this.label.substring(0, 2);
+        }
+
+        // Tooltip ekle
+        this.htmlObject.title = this.label;
+
+        // Aktif durum stilini ayarla
+        if (this.active) {
+            this.htmlObject.style.backgroundColor = '#e0e0e0';
+            this.htmlObject.style.borderColor = '#aaa';
+        }
+
+        // Hover efektleri
+        this.htmlObject.addEventListener('mouseenter', () => {
+            this.htmlObject.style.backgroundColor = this.active ? '#d0d0d0' : '#f0f0f0';
+        });
+        
+        this.htmlObject.addEventListener('mouseleave', () => {
+            this.htmlObject.style.backgroundColor = this.active ? '#e0e0e0' : '#fff';
+        });
+    }
+
+    setActive(state) {
+        this.active = state;
+        if (state) {
+            this.htmlObject.style.backgroundColor = '#e0e0e0';
+            this.htmlObject.style.borderColor = '#aaa';
+        } else {
+            this.htmlObject.style.backgroundColor = '#fff';
+            this.htmlObject.style.borderColor = '#ddd';
+        }
+    }
+
+    toggle() {
+        this.setActive(!this.active);
+    }  
+  
+}
+
+// Dock konteyner sınıfı
+class TDockContainer extends Telement {
+    constructor(options = {}) {
+        super('div', {
+            className: 'dock-container',
+            style: {
+                position: 'relative',
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                backgroundColor: '#f0f0f0',
+                border: '1px dashed #ccc',
+                overflow: 'hidden'
+            },
+            ...options
+        });
+
+        this.dockZones = {
+            top: this.#createDockZone('top'),
+            right: this.#createDockZone('right'),
+            bottom: this.#createDockZone('bottom'),
+            left: this.#createDockZone('left'),
+            center: this.#createDockZone('center', true)
+        };
+        
+        this.#setupLayout();
+    }
+
+    #createDockZone(position, isCenter = false) {
+        const zone = new Telement('div', {
+            className: `dock-zone ${position}`,
+            style: {
+                display: 'flex',
+                flexDirection: position === 'left' || position === 'right' ? 'column' : 'row',
+                flex: isCenter ? '1' : '0 0 auto',
+                minWidth: '50px',
+                minHeight: '50px',
+                backgroundColor: 'rgba(200, 200, 255, 0.1)',
+                border: isCenter ? 'none' : '1px dashed rgba(0,0,0,0.2)',
+                position: 'relative'
+            }
+        });
+
+        if (!isCenter) {
+            zone.htmlObject.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                zone.htmlObject.style.backgroundColor = 'rgba(200, 200, 255, 0.3)';
+            });
+            
+            zone.htmlObject.addEventListener('dragleave', () => {
+                zone.htmlObject.style.backgroundColor = 'rgba(200, 200, 255, 0.1)';
+            });
+            
+            zone.htmlObject.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.htmlObject.style.backgroundColor = 'rgba(200, 200, 255, 0.1)';
+                
+                const toolWindowId = e.dataTransfer.getData('text/plain');
+                const toolWindow = document.getElementById(toolWindowId)?.owner;
+                if (toolWindow) {
+                    this.dockWindow(toolWindow, position);
+                }
+            });
+        }
+
+        this.appendChild(zone);
+        return zone;
+    }
+
+    #setupLayout() {
+        // Ana layout
+        const mainRow = new Telement('div', {
+            style: {
+                display: 'flex',
+                flex: '1',
+                overflow: 'hidden'
+            }
+        });
+
+        // Sol, orta ve sağ sütunlar
+        const leftCol = new Telement('div', {
+            style: {
+                display: 'flex',
+                flexDirection: 'column',
+                flex: '0 0 auto'
+            }
+        });
+        leftCol.appendChild(this.dockZones.left);
+
+        const centerCol = new Telement('div', {
+            style: {
+                display: 'flex',
+                flexDirection: 'column',
+                flex: '1',
+                minWidth: '0',
+                minHeight: '0'
+            }
+        });
+        centerCol.appendChild(this.dockZones.top);
+        centerCol.appendChild(this.dockZones.center);
+        centerCol.appendChild(this.dockZones.bottom);
+
+        const rightCol = new Telement('div', {
+            style: {
+                display: 'flex',
+                flexDirection: 'column',
+                flex: '0 0 auto'
+            }
+        });
+        rightCol.appendChild(this.dockZones.right);
+
+        mainRow.appendChild(leftCol);
+        mainRow.appendChild(centerCol);
+        mainRow.appendChild(rightCol);
+
+        this.htmlObject.innerHTML = '';
+        this.appendChild(mainRow);
+    }
+
+    dockWindow(window, position = 'center') {
+        if (!(window instanceof TToolWindow)) return;
+        
+        window.dockState = 'docked';
+        window.container = this.dockZones[position];
+        this.dockZones[position].appendChild(window);
+        
+        // Dock bölgesine uygun boyutlandırma
+        if (position === 'left' || position === 'right') {
+            window.css({
+                width: '200px',
+                height: '100%'
+            });
+        } else if (position === 'top' || position === 'bottom') {
+            window.css({
+                width: '100%',
+                height: '150px'
+            });
+        } else {
+            window.css({
+                width: '100%',
+                height: '100%'
+            });
+        }
+    }
+
+    addWindow(window, position = 'center') {
+        if (!(window instanceof TToolWindow)) {
+            window = new TToolWindow({
+                title: window.title || 'Tool Window',
+                content: window.content || '',
+                ...window
+            });
+        }
+        
+        this.dockWindow(window, position);
+        return window;
+    }
+}
+
