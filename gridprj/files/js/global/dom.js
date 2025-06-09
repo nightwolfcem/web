@@ -4433,207 +4433,101 @@ let _styleEl=null;
         document.removeEventListener('mousemove', DOM.handleDesignDrag);
         document.removeEventListener('mouseup', DOM.handleDesignDragEnd);
     };
-    DOM.makeResizable = function (el, options) {
-    
-        if (el._resizeHandles) { el._resizeHandles.forEach(h => h.remove()); delete el._resizeHandles; }
-        if (el._resizeMouseMove) el.removeEventListener('mousemove', el._resizeMouseMove);
-        if (el._resizeMouseDown) el.removeEventListener('mousedown', el._resizeMouseDown);
-        el.style.cursor = '';
-        if (!options) return;
-       let {flags,useHelper} = options;
-        // --- Direction meta tablosu ---
-        // handle'ı ortalamak için offsetX/offsetY kullanıyoruz
-        const SIZE_KOSE = 12, SIZE_KENAR = 12, KENAR_DIST = 2; // px
-        const handlesMeta = [
-            // Köşe helper'lar (merkezi tam köşe olacak şekilde offset)
-            {
-                dir: 'nw', flag: Eborder.leftTop, cursor: 'nw-resize',
-                style: {
-                    width: SIZE_KOSE + 'px', height: SIZE_KOSE + 'px',
-                    left: (-SIZE_KOSE / 2) + 'px', top: (-SIZE_KOSE / 2) + 'px'
-                }
-            },
-            {
-                dir: 'ne', flag: Eborder.rightTop, cursor: 'ne-resize',
-                style: {
-                    width: SIZE_KOSE + 'px', height: SIZE_KOSE + 'px',
-                    right: (-SIZE_KOSE / 2) + 'px', top: (-SIZE_KOSE / 2) + 'px'
-                }
-            },
-            {
-                dir: 'sw', flag: Eborder.leftBottom, cursor: 'sw-resize',
-                style: {
-                    width: SIZE_KOSE + 'px', height: SIZE_KOSE + 'px',
-                    left: (-SIZE_KOSE / 2) + 'px', bottom: (-SIZE_KOSE / 2) + 'px'
-                }
-            },
-            {
-                dir: 'se', flag: Eborder.rightBottom, cursor: 'se-resize',
-                style: {
-                    width: SIZE_KOSE + 'px', height: SIZE_KOSE + 'px',
-                    right: (-SIZE_KOSE / 2) + 'px', bottom: (-SIZE_KOSE / 2) + 'px'
-                }
-            },
-            // Kenar helper'lar (uzun kenar ortasında, ortalanmış)
-            {
-                dir: 'n', flag: Eborder.top, cursor: 'ns-resize',
-                style: {
-                    width: SIZE_KENAR + 'px', height: SIZE_KENAR + 'px',
-                    left: 'calc(50% - ' + (SIZE_KENAR / 2) + 'px)', top: (-SIZE_KENAR / 2 - KENAR_DIST) + 'px'
-                }
-            },
-            {
-                dir: 's', flag: Eborder.bottom, cursor: 'ns-resize',
-                style: {
-                    width: SIZE_KENAR + 'px', height: SIZE_KENAR + 'px',
-                    left: 'calc(50% - ' + (SIZE_KENAR / 2) + 'px)', bottom: (-SIZE_KENAR / 2 - KENAR_DIST) + 'px'
-                }
-            },
-            {
-                dir: 'w', flag: Eborder.left, cursor: 'ew-resize',
-                style: {
-                    width: SIZE_KENAR + 'px', height: SIZE_KENAR + 'px',
-                    top: 'calc(50% - ' + (SIZE_KENAR / 2) + 'px)', left: (-SIZE_KENAR / 2 - KENAR_DIST) + 'px'
-                }
-            },
-            {
-                dir: 'e', flag: Eborder.right, cursor: 'ew-resize',
-                style: {
-                    width: SIZE_KENAR + 'px', height: SIZE_KENAR + 'px',
-                    top: 'calc(50% - ' + (SIZE_KENAR / 2) + 'px)', right: (-SIZE_KENAR / 2 - KENAR_DIST) + 'px'
-                }
-            }
-        ];
+    const INTERACTION_STATE = new WeakMap(); 
+DOM.makeResizable = function (el, options) {
+    // Önce eski eventleri temizle
+    (el._eventList || []).filter(e =>
+        (e.event === 'mousemove' || e.event === 'mousedown') && e.listener && e.listener._isResizeHandler
+    ).forEach(e => el.removeEventListener(e.event, e.listener));
+    // (Helper handle'lar varsa, onları da kaldır)
 
-        // flags testi (all'da her zaman true)
-        function has(flag) {
-            return ((flags & flag) === flag) || (flags === Eborder.all && flag !== 0);
-        }
+    el.style.cursor = '';
+    if (!options) return;
 
-        // ---- RESIZE HANDLER ---- 
-        function getResizeHandler(dir, el) {
-            return function (e) {
-                e.preventDefault(); e.stopPropagation();
-                if (el._interaction) return;
-                el._interaction = 'resizing';
-                const parentRect = el.offsetParent ? el.offsetParent.getBoundingClientRect() : { left: 0, top: 0 };
-                const elRect = el.getBoundingClientRect();
-                const minW = 20, minH = 20;
-                const start = {
-                    x: e.clientX, y: e.clientY,
-                    left: elRect.left + window.pageXOffset,
-                    top: elRect.top + window.pageYOffset,
-                    width: elRect.width,
-                    height: elRect.height,
-                    parentLeft: parentRect.left + window.pageXOffset,
-                    parentTop: parentRect.top + window.pageYOffset,
-                };
-                function drag(ev) {
-                    const dx = ev.clientX - start.x, dy = ev.clientY - start.y;
-                    let newW = start.width, newH = start.height, newL = start.left, newT = start.top;
-                    
-                    // Sağ/alt genişletir
-                    if (dir.includes('e')) newW = start.width + dx;
-                    if (dir.includes('s')) newH = start.height + dy;
+    let { flags, useHelper } = options;
 
-                    // Sol ya da üstten küçültülürse -- 
-                    if (dir.includes('w')) {
-                        newW = start.width - dx;
-                        if (newW > minW) {
-                            newL = start.left + dx;
-                        } else {
-                            newL = start.left + (start.width - minW);
-                            newW = minW;
-                        }
-                    }
-                    if (dir.includes('n')) {
-                        newH = start.height - dy;
-                        if (newH > minH) {
-                            newT = start.top + dy;
-                        } else {
-                            newT = start.top + (start.height - minH);
-                            newH = minH;
-                        }
-                    }
-
-                    if (newW > 0) el.style.width = newW + 'px';
-                    if (newH > 0) el.style.height = newH + 'px';
-                    if (dir.includes('w') || dir.includes('n')) {
-                        el.style.left = (newL - start.parentLeft) + 'px';
-                        el.style.top = (newT - start.parentTop) + 'px';
-                    }
-                }
-                   document.addEventListener('mousemove', drag);
-                const up = () => {
-                    document.removeEventListener('mousemove', drag);
-                    el._interaction = null;
-                };
-                document.addEventListener('mouseup', up, { once: true });
-            }
-        }
-        // ---- HELPER'LI MOD ----
-        if (useHelper) {
-            el._resizeHandles = [];
-            handlesMeta.forEach(meta => {
-                if (has(meta.flag)) {
-                    const handle = document.createElement('div');
-                    handle.className = 'res-handle res-' + meta.dir;
-                    Object.assign(handle.style, meta.style);
-                    handle.style.position = "absolute";
-                    handle.style.cursor = meta.cursor;
-                    handle.addEventListener('mousedown', getResizeHandler(meta.dir, el), true);
-                    el.appendChild(handle);
-                    el._resizeHandles.push(handle);
-                }
-            });
-            // helpersız edge resize OLMASIN!
-            return;
-        }
-
-        // ---- HELPERSIZ MOD ----
-        function hit(x, y, w, h) {
-            const th = 7;
-            // Köşe flagları (önce)
-            if (has(Eborder.leftTop) && x < th && y < th) return 'nw';
-            if (has(Eborder.rightTop) && x > w - th && y < th) return 'ne';
-            if (has(Eborder.leftBottom) && x < th && y > h - th) return 'sw';
-            if (has(Eborder.rightBottom) && x > w - th && y > h - th) return 'se';
-            // Kenar flagları
-            if (has(Eborder.top) && y < th) return 'n';
-            if (has(Eborder.bottom) && y > h - th) return 's';
-            if (has(Eborder.left) && x < th) return 'w';
-            if (has(Eborder.right) && x > w - th) return 'e';
-            return '';
-        }
-        el._resizeMouseMove = function (e) {
-            const rect = el.getBoundingClientRect();
-            const dir = hit(
-                e.clientX - rect.left,
-                e.clientY - rect.top,
-                rect.width,
-                rect.height
-            );
-            el.style.cursor = dir
-                ? (handlesMeta.find(h => h.dir === dir) || {}).cursor || (dir + '-resize')
-                : '';
-        };
-
-        el._resizeMouseDown = function (e) {
-            const rect = el.getBoundingClientRect();
-            const dir = hit(
-                e.clientX - rect.left,
-                e.clientY - rect.top,
-                rect.width,
-                rect.height
-            );
-            if (!dir) return;
-            getResizeHandler(dir, el)(e);
-        };
-
-        el.addEventListener('mousemove', el._resizeMouseMove);
-        el.addEventListener('mousedown', el._resizeMouseDown);
-
+    function has(flag) {
+        return ((flags & flag) === flag) || (flags === Eborder.all && flag !== 0);
     }
+
+    function hit(x, y, w, h) {
+        const th = 7;
+        if (has(Eborder.leftTop) && x < th && y < th) return 'nw';
+        if (has(Eborder.rightTop) && x > w - th && y < th) return 'ne';
+        if (has(Eborder.leftBottom) && x < th && y > h - th) return 'sw';
+        if (has(Eborder.rightBottom) && x > w - th && y > h - th) return 'se';
+        if (has(Eborder.top) && y < th) return 'n';
+        if (has(Eborder.bottom) && y > h - th) return 's';
+        if (has(Eborder.left) && x < th) return 'w';
+        if (has(Eborder.right) && x > w - th) return 'e';
+        return '';
+    }
+
+    const mouseMoveHandler = function (e) {
+        const rect = el.getBoundingClientRect();
+        const dir = hit(
+            e.clientX - rect.left,
+            e.clientY - rect.top,
+            rect.width,
+            rect.height
+        );
+        el.style.cursor = dir
+            ? (dir + '-resize')
+            : '';
+    };
+    mouseMoveHandler._isResizeHandler = true;
+
+    const mouseDownHandler = function (e) {
+        const rect = el.getBoundingClientRect();
+        const dir = hit(
+            e.clientX - rect.left,
+            e.clientY - rect.top,
+            rect.width,
+            rect.height
+        );
+        if (!dir) return;
+
+        if (INTERACTION_STATE.get(el)) return;
+        INTERACTION_STATE.set(el, 'resizing');
+
+        const minW = 20, minH = 20;
+        const start = {
+            x: e.clientX, y: e.clientY,
+            left: el.offsetLeft,
+            top: el.offsetTop,
+            width: rect.width,
+            height: rect.height,
+        };
+        function drag(ev) {
+            const dx = ev.clientX - start.x, dy = ev.clientY - start.y;
+            let newW = start.width, newH = start.height, newL = start.left, newT = start.top;
+            if (dir.includes('e')) newW = start.width + dx;
+            if (dir.includes('s')) newH = start.height + dy;
+            if (dir.includes('w')) {
+                newW = start.width - dx;
+                newL = start.left + dx;
+            }
+            if (dir.includes('n')) {
+                newH = start.height - dy;
+                newT = start.top + dy;
+            }
+            if (newW > minW) { el.style.width = newW + 'px'; if (dir.includes('w')) el.style.left = newL + 'px'; }
+            if (newH > minH) { el.style.height = newH + 'px'; if (dir.includes('n')) el.style.top = newT + 'px'; }
+        }
+        function up() {
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', up);
+            INTERACTION_STATE.delete(el);
+        }
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', up);
+    };
+    mouseDownHandler._isResizeHandler = true;
+
+    el.addEventListener('mousemove', mouseMoveHandler);
+    el.addEventListener('mousedown', mouseDownHandler);
+};
+
     // Modify existing makeMovable to respect designMode
 
 
@@ -5028,102 +4922,96 @@ let _styleEl=null;
         }
     };
 
-    DOM.makeMovable = function (element, handle = null, movableRect = null, xable = true, yable = true) {
-        handle = handle || element;
+   DOM.makeMovable = function (element, handle = null, movableRect = null, xable = true, yable = true) {
+    handle = handle || element;
 
-        // Bu fonksiyon, pointerdown anında tetikleniyor
-        const onPointerDown = e => {
-            const threshold = 7;
-            const rect = element.getBoundingClientRect();
-            const nearEdge = (
-                e.clientX - rect.left < threshold || rect.right - e.clientX < threshold ||
-                e.clientY - rect.top < threshold || rect.bottom - e.clientY < threshold
-            );
-            if ((element._resizeHandles && element._resizeHandles.includes(e.target)) || nearEdge) {
-                return; // resizing has priority
+    // Eski handler varsa temizle
+    const entry = (handle._eventList || []).find(e =>
+        e.event === 'pointerdown' && e.listener && e.listener._isMovableHandler
+    );
+    if (entry) handle.removeEventListener('pointerdown', entry.listener);
+
+    // Yeni handler
+    const onPointerDown = e => {
+        const threshold = 7;
+        const rect = element.getBoundingClientRect();
+        const nearEdge = (
+            e.clientX - rect.left < threshold || rect.right - e.clientX < threshold ||
+            e.clientY - rect.top < threshold || rect.bottom - e.clientY < threshold
+        );
+        if ((element._resizeHandles && element._resizeHandles.includes(e.target)) || nearEdge) {
+            return; // resizing has priority
+        }
+        if (INTERACTION_STATE.get(element)) return;
+        INTERACTION_STATE.set(element, 'moving');
+
+        handle.setPointerCapture(e.pointerId);
+
+        const container = movableRect instanceof Element
+            ? movableRect
+            : (element.offsetParent || document.documentElement);
+
+        const scrollLeft = container.scrollLeft;
+        const scrollTop = container.scrollTop;
+
+        const startPageX = e.pageX;
+        const startPageY = e.pageY;
+
+        const startLeft = parseInt(getComputedStyle(element).left, 10) || element.offsetLeft;
+        const startTop = parseInt(getComputedStyle(element).top, 10) || element.offsetTop;
+
+        let boundRect = null;
+        if (movableRect === true) boundRect = new DOMRect(0, 0, 1e7, 1e7);
+        else if (movableRect instanceof Element) {
+            const r = movableRect.getBoundingClientRect();
+            boundRect = new DOMRect(r.left + scrollLeft, r.top + scrollTop, r.width, r.height);
+        } else if (movableRect instanceof DOMRect) {
+            boundRect = movableRect;
+        }
+
+        const onPointerMove = ev => {
+            const curPageX = ev.pageX;
+            const curPageY = ev.pageY;
+            let dx = curPageX - startPageX;
+            let dy = curPageY - startPageY;
+            let newLeft = startLeft + dx;
+            let newTop = startTop + dy;
+
+            if (xable && boundRect) {
+                const minX = boundRect.x;
+                const maxX = boundRect.x + boundRect.width - element.offsetWidth;
+                newLeft = Math.min(Math.max(minX, newLeft), maxX);
             }
-            if (element._interaction) return;
-            element._interaction = 'moving';
-
-            // e.preventDefault();
-            //  e.stopPropagation();
-            handle.setPointerCapture(e.pointerId);
-
-            // Hangi konteynere göre pozisyonlanıyor?
-            const container = movableRect instanceof Element
-                ? movableRect
-                : (element.offsetParent || document.documentElement);
-
-            // Kaydırma ofsetleri
-            const scrollLeft = container.scrollLeft;
-            const scrollTop = container.scrollTop;
-
-            // Global başlangıç koordinatları
-            const startPageX = e.pageX;
-            const startPageY = e.pageY;
-
-            // Elemanın mevcut sol/üst değeri (px cinsinden)
-            const startLeft = parseInt(getComputedStyle(element).left, 10) || element.offsetLeft;
-            const startTop = parseInt(getComputedStyle(element).top, 10) || element.offsetTop;
-
-            // Sınır rect’i: eğer direkt bir DOMRect objesi istiyorsanız:
-            let boundRect = null;
-            if (movableRect === true) boundRect = new DOMRect(0, 0, 1e7, 1e7);
-            else if (movableRect instanceof Element) {
-                const r = movableRect.getBoundingClientRect();
-                boundRect = new DOMRect(r.left + scrollLeft, r.top + scrollTop, r.width, r.height);
-            } else if (movableRect instanceof DOMRect) {
-                boundRect = movableRect;
+            if (yable && boundRect) {
+                const minY = boundRect.y;
+                const maxY = boundRect.y + boundRect.height - element.offsetHeight;
+                newTop = Math.min(Math.max(minY, newTop), maxY);
             }
 
-            const onPointerMove = ev => {
-                // Global yeni koordinatlar
-                const curPageX = ev.pageX;
-                const curPageY = ev.pageY;
+            element.style.left = `${newLeft}px`;
+            element.style.top = `${newTop}px`;
 
-                let dx = curPageX - startPageX;
-                let dy = curPageY - startPageY;
-                let newLeft = startLeft + dx;
-                let newTop = startTop + dy;
-
-                if (xable && boundRect) {
-                    // sınır içinde kal
-                    const minX = boundRect.x;
-                    const maxX = boundRect.x + boundRect.width - element.offsetWidth;
-                    newLeft = Math.min(Math.max(minX, newLeft), maxX);
-                }
-                if (yable && boundRect) {
-                    const minY = boundRect.y;
-                    const maxY = boundRect.y + boundRect.height - element.offsetHeight;
-                    newTop = Math.min(Math.max(minY, newTop), maxY);
-                }
-
-                element.style.left = `${newLeft}px`;
-                element.style.top = `${newTop}px`;
-
-                ev.stopPropagation();
-            };
-
-             const cleanup = (pid) => {
-                handle.releasePointerCapture(pid);
-                handle.removeEventListener('pointermove', onPointerMove);
-                handle.removeEventListener('pointerup', onPointerUp);
-                if (element._moveCleanup === cleanup) delete element._moveCleanup;
-                element._interaction = null;
-            };
-
-            const onPointerUp = ev => cleanup(ev.pointerId);
-            element._moveCleanup = cleanup.bind(null, e.pointerId);
-            handle.addEventListener('pointermove', onPointerMove);
-            handle.addEventListener('pointerup', onPointerUp, { once: true });
+            ev.stopPropagation();
         };
 
-        if (movableRect === false) {
-            handle.removeEventListener('pointerdown', onPointerDown);
-        } else {
-            handle.addEventListener('pointerdown', onPointerDown);
-        }
+        const cleanup = (pid) => {
+            handle.releasePointerCapture(pid);
+            handle.removeEventListener('pointermove', onPointerMove);
+            handle.removeEventListener('pointerup', onPointerUp);
+            INTERACTION_STATE.delete(element);
+        };
+
+        const onPointerUp = ev => cleanup(ev.pointerId);
+        handle.addEventListener('pointermove', onPointerMove);
+        handle.addEventListener('pointerup', onPointerUp, { once: true });
     };
+    onPointerDown._isMovableHandler = true;
+
+    if (movableRect !== false) {
+        handle.addEventListener('pointerdown', onPointerDown);
+    }
+};
+
 
 
 
@@ -5270,81 +5158,74 @@ let _styleEl=null;
 
 
 
-    DOM.makeDraggable = function (element, handle = null, enable = true, customDragging = false) {
-        const target = handle || element;
+   DOM.makeDraggable = function (element, handle = null, enable = true, customDragging = false) {
+    const target = handle || element;
 
-        if (enable) {
-                  if (customDragging) {
-                // Pointer-events kullanarak özelleştirilmiş sürükleme
-                let dragging = false, offsetX = 0, offsetY = 0;
-            const pointerDown = (e) => {
-                    if (element._moveCleanup) element._moveCleanup();
-                    if (element._interaction) return;
-                    element._interaction = 'dragging';
-                    dragging = true;
-                    offsetX = e.clientX - element.offsetLeft;
-                    offsetY = e.clientY - element.offsetTop;
-                    target.setPointerCapture(e.pointerId);
-                    element.classList.add('dragging');
-                };
-                const pointerMove = (e) => {
-                    if (!dragging) return;
-                    element.style.left = (e.clientX - offsetX) + 'px';
-                    element.style.top = (e.clientY - offsetY) + 'px';
-                };
+    // Önce eski eventleri temizle
+    (target._eventList || []).filter(e =>
+        (
+            // Custom
+            ((e.event === 'pointerdown' || e.event === 'pointermove' || e.event === 'pointerup') && e.listener && e.listener._isCustomDraggableHandler)
+        ) ||
+        (
+            // Native
+            ((e.event === 'dragstart' || e.event === 'dragend') && e.listener && e.listener._isNativeDraggableHandler)
+        )
+    ).forEach(e => target.removeEventListener(e.event, e.listener));
+    target.removeAttribute('draggable');
 
-                 const pointerUp = (e) => {
-                    dragging = false;
-                    target.releasePointerCapture(e.pointerId);
-                    element.classList.remove('dragging');
-                    element._interaction = null;
-                };
+    if (!enable) return;
 
-                target.addEventListener('pointerdown', pointerDown);
-                target.addEventListener('pointermove', pointerMove);
-                target.addEventListener('pointerup', pointerUp);
+    if (customDragging) {
+        let dragging = false, offsetX = 0, offsetY = 0;
 
-                target._pointerCleanup = () => {
-                    target.removeEventListener('pointerdown', pointerDown);
-                    target.removeEventListener('pointermove', pointerMove);
-                    target.removeEventListener('pointerup', pointerUp);
-                };
+        const pointerDown = (e) => {
+            if (INTERACTION_STATE.get(element)) return;
+            INTERACTION_STATE.set(element, 'dragging');
+            dragging = true;
+            offsetX = e.clientX - element.offsetLeft;
+            offsetY = e.clientY - element.offsetTop;
+            target.setPointerCapture(e.pointerId);
+            element.classList.add('dragging');
+        };
+        const pointerMove = (e) => {
+            if (!dragging) return;
+            element.style.left = (e.clientX - offsetX) + 'px';
+            element.style.top = (e.clientY - offsetY) + 'px';
+        };
+        const pointerUp = (e) => {
+            dragging = false;
+            target.releasePointerCapture(e.pointerId);
+            element.classList.remove('dragging');
+            INTERACTION_STATE.delete(element);
+        };
 
-            } else {
-                // Browser'ın kendi sürükleme davranışı (HTML5 drag-drop)
-                target.setAttribute('draggable', 'true');
-                    const dragStart = e => {
-                    if (element._interaction) { e.preventDefault(); return; }
-                    element._interaction = 'dragging';
-                    e.dataTransfer.setData('text/plain', element.id);
-                    element.classList.add('dragging');
-                };
-                const dragEnd = () => {
-                    element.classList.remove('dragging');
-                    element._interaction = null;
-                };
-                target.addEventListener('dragstart', dragStart);
-                target.addEventListener('dragend', dragEnd);
+        pointerDown._isCustomDraggableHandler = true;
+        pointerMove._isCustomDraggableHandler = true;
+        pointerUp._isCustomDraggableHandler = true;
 
-                target._htmlDragCleanup = () => {
-                    target.removeEventListener('dragstart', dragStart);
-                    target.removeEventListener('dragend', dragEnd);
-                };
-            }
+        target.addEventListener('pointerdown', pointerDown);
+        target.addEventListener('pointermove', pointerMove);
+        target.addEventListener('pointerup', pointerUp);
+    } else {
+        target.setAttribute('draggable', 'true');
+        const dragStart = e => {
+            if (INTERACTION_STATE.get(element)) { e.preventDefault(); return; }
+            INTERACTION_STATE.set(element, 'dragging');
+            e.dataTransfer.setData('text/plain', element.id || '');
+            element.classList.add('dragging');
+        };
+        const dragEnd = () => {
+            element.classList.remove('dragging');
+            INTERACTION_STATE.delete(element);
+        };
+        dragStart._isNativeDraggableHandler = true;
+        dragEnd._isNativeDraggableHandler = true;
 
-        } else {
-            // Temizleme işlemi
-            if (target._pointerCleanup) {
-                target._pointerCleanup();
-                delete target._pointerCleanup;
-            }
-            if (target._htmlDragCleanup) {
-                target._htmlDragCleanup();
-                delete target._htmlDragCleanup;
-                target.removeAttribute('draggable');
-            }
-        }
-    };
+        target.addEventListener('dragstart', dragStart);
+        target.addEventListener('dragend', dragEnd);
+    }
+};
 
 })();
 
