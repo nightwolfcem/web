@@ -2020,11 +2020,24 @@ globs.historyManager = new HistoryManager();
     #updatePlaceholder(e) {
         if (!DOM.dragPlaceHolder) {
             DOM.dragPlaceHolder = document.createElement('div');
+            Object.assign(DOM.dragPlaceHolder.style, {
+                position: 'absolute',
+                pointerEvents: 'none'
+            });
         }
         const placeholder = DOM.dragPlaceHolder;
         placeholder.className = this.dropOptions.placeHolderClass;
 
         const children = [...this.htmlObject.children].filter(c => !c.classList.contains(this.dragOptions.dragClass) && c !== placeholder);
+
+        if (children.length === 0) {
+            placeholder.remove();
+            this.htmlObject.classList.add('dock-highlight');
+            return;
+        } else {
+            this.htmlObject.classList.remove('dock-highlight');
+        }
+
         let target = children.find(c => c.contains(e.target)) || null;
         if (!target) {
             target = children.reduce((acc, ch) => {
@@ -2034,10 +2047,7 @@ globs.historyManager = new HistoryManager();
             }, null);
         }
         if (!target) {
-            placeholder.style.width = '100%';
-            placeholder.style.height = '6px';
-            placeholder.style.margin = '2px 0';
-            this.htmlObject.appendChild(placeholder);
+            placeholder.remove();
             return;
         }
 
@@ -2057,17 +2067,26 @@ globs.historyManager = new HistoryManager();
         const horizontal = Math.abs(x - rect.width / 2) < Math.abs(y - rect.height / 2);
         let before = false;
         if (horizontal) {
+            placeholder.style.border = 'none';
+            placeholder.style.borderTop = '2px dashed #0078d4';
+            placeholder.style.left = '0px';
             placeholder.style.width = '100%';
-            placeholder.style.height = '6px';
-            placeholder.style.margin = '2px 0';
+            placeholder.style.height = '0px';
+            placeholder.style.top = (target.offsetTop + (y < rect.height / 2 ? 0 : target.offsetHeight)) + 'px';
             before = y < rect.height / 2;
         } else {
-            placeholder.style.width = '6px';
+            placeholder.style.border = 'none';
+            placeholder.style.borderLeft = '2px dashed #0078d4';
+            placeholder.style.top = target.offsetTop + 'px';
             placeholder.style.height = rect.height + 'px';
-            placeholder.style.margin = '0 2px';
+            placeholder.style.width = '0px';
+            placeholder.style.left = (target.offsetLeft + (x < rect.width / 2 ? 0 : target.offsetWidth)) + 'px';
             before = x < rect.width / 2;
         }
-        this.htmlObject.insertBefore(placeholder, before ? target : target.nextSibling);
+        if (getComputedStyle(this.htmlObject).position === 'static') {
+            this.htmlObject.style.position = 'relative';
+        }
+        this.htmlObject.appendChild(placeholder);
     }
     
     #enableSizing(isOn) {
@@ -2096,7 +2115,12 @@ globs.historyManager = new HistoryManager();
      `.telement:focus { outline: 2px solid #0078d4; outline-offset: 1px; }
             .dragging { opacity: 0.4; }
             .droppable-hover { background-color: rgba(0, 120, 212, 0.05); }
-            .drop-placeholder { background: #0078d4; border-radius: 3px; }
+            .drop-placeholder {
+                position: absolute;
+                pointer-events: none;
+                background: none;
+                border: 2px dashed #0078d4;
+            }
             .dock-highlight { outline: 2px dashed #0078d4; }
             .selected { box-shadow: 0 0 0 1px white, 0 0 0 3px #0078d4; }
             .disabled { opacity: 0.5; pointer-events: none; }
