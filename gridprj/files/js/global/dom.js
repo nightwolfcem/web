@@ -62,312 +62,431 @@ function getDeviceInfo() {
 const deviceInfo = getDeviceInfo();
 var OID = 0;
 (() => {
-   
-  class BaseCommand {
-    constructor(label = "") { this.label = label; }
-    execute() {}
-    undo() {}
-    getState(when) { return undefined; }
-}
 
-// ==== Batch (Çoklu İşlem) Komutu ====
-class BatchCommand extends BaseCommand {
-    constructor(commands, label = "Çoklu İşlem") {
-        super(label);
-        this.commands = commands;
+    class BaseCommand {
+        constructor(label = "") { this.label = label; }
+        execute() { }
+        undo() { }
+        getState(when) { return undefined; }
     }
-    execute() { this.commands.forEach(cmd => cmd.execute()); }
-    undo() { [...this.commands].reverse().forEach(cmd => cmd.undo()); }
-    getState(when) {
-        return this.commands.map(cmd => cmd.getState?.(when));
-    }
-}
 
-// ==== Boyut Değişikliği Komutu ====
-class SizeCommand extends BaseCommand {
-    constructor(element, oldSize, newSize, label = "Boyut Değiştir") {
-        super(label);
-        this.element = element;
-        this.oldSize = oldSize;
-        this.newSize = newSize;
-    }
-    execute() { this._apply(this.newSize); }
-    undo() { this._apply(this.oldSize); }
-    _apply(sz) {
-        if (!sz) return;
-        const { left, top, width, height } = sz;
-        Object.assign(this.element.htmlObject.style, {
-            left: left + "px", top: top + "px",
-            width: width + "px", height: height + "px"
-        });
-    }
-    getState(when) { return when === "before" ? this.oldSize : this.newSize; }
-}
-
-// ==== Stil Değişikliği Komutu ====
-
-class StyleCommand extends BaseCommand {
-    constructor(element, oldStyles, newStyles, label="Stil Değişimi") {
-        super(label);
-        this.element = element;
-        this.oldStyles = oldStyles;
-        this.newStyles = newStyles;
-    }
-    execute() { Object.assign(this.element.htmlObject.style, this.newStyles); }
-    undo()    { Object.assign(this.element.htmlObject.style, this.oldStyles); }
-    getState(when) { return when === "before" ? this.oldStyles : this.newStyles; }
-}
-
-
-// ==== Taşıma Komutu ====
-class MoveCommand extends BaseCommand {
-    constructor(element, newParent, oldParent, oldNextSibling, label = "Taşı") {
-        super(label);
-        this.element = element;
-        this.newParent = newParent;
-        this.oldParent = oldParent;
-        this.oldNextSibling = oldNextSibling;
-    }
-    execute() {
-        // DOM'a ekle
-        this.newParent.htmlObject.appendChild(this.element.htmlObject);
-        if (this.element.parent) {
-            const idx = this.element.parent.children.indexOf(this.element);
-            if (idx > -1) this.element.parent.children.splice(idx, 1);
+    // ==== Batch (Çoklu İşlem) Komutu ====
+    class BatchCommand extends BaseCommand {
+        constructor(commands, label = "Çoklu İşlem") {
+            super(label);
+            this.commands = commands;
         }
-        this.newParent.children.push(this.element);
-        this.element.parent = this.newParent;
-    }
-    undo() {
-        this.oldParent.htmlObject.insertBefore(this.element.htmlObject, this.oldNextSibling);
-        if (this.element.parent) {
-            const idx = this.element.parent.children.indexOf(this.element);
-            if (idx > -1) this.element.parent.children.splice(idx, 1);
+        execute() { this.commands.forEach(cmd => cmd.execute()); }
+        undo() { [...this.commands].reverse().forEach(cmd => cmd.undo()); }
+        getState(when) {
+            return this.commands.map(cmd => cmd.getState?.(when));
         }
-        this.oldParent.children.push(this.element);
-        this.element.parent = this.oldParent;
     }
-    getState(when) {
-        return when === "before"
-            ? { parent: this.oldParent }
-            : { parent: this.newParent };
-    }
-}
-class ChildAddCommand extends BaseCommand {
-    constructor(parent, child, nextSibling = null) {
-        super("Çocuk Ekle");
-        this.parent = parent;
-        this.child = child;
-        this.nextSibling = nextSibling;
-    }
-    execute() {
-        this.parent._appendChildRaw(this.child, this.nextSibling);
-    }
-    undo() {
-        this.parent._removeChildRaw(this.child);
-    }
-    getState(when) {
-        return { parent: this.parent, child: this.child };
-    }
-}
 
-class ChildRemoveCommand extends BaseCommand {
-    constructor(parent, child) {
-        super("Çocuk Sil");
-        this.parent = parent;
-        this.child = child;
-        this.nextSibling = child.htmlObject.nextSibling;
+    // ==== Boyut Değişikliği Komutu ====
+    class SizeCommand extends BaseCommand {
+        constructor(element, oldSize, newSize, label = "Boyut Değiştir") {
+            super(label);
+            this.element = element;
+            this.oldSize = oldSize;
+            this.newSize = newSize;
+        }
+        execute() { this._apply(this.newSize); }
+        undo() { this._apply(this.oldSize); }
+        _apply(sz) {
+            if (!sz) return;
+            const { left, top, width, height } = sz;
+            Object.assign(this.element.htmlObject.style, {
+                left: left + "px", top: top + "px",
+                width: width + "px", height: height + "px"
+            });
+        }
+        getState(when) { return when === "before" ? this.oldSize : this.newSize; }
     }
-    execute() {
-        this.parent._removeChildRaw(this.child);
-    }
-    undo() {
-        this.parent._appendChildRaw(this.child, this.nextSibling);
-    }
-    getState(when) {
-        return { parent: this.parent, child: this.child };
-    }
-}
-// ==== Çocuk ekle/çıkar komutları (Opsiyonel) ====
-// Eklenebilir.
 
-// ==== HISTORY MANAGER (onChange destekli) ====
-class HistoryManager {
-    constructor() {
-        this.undoStack = [];
-        this.redoStack = [];
-        this.listeners = {};
-        this.onChange = null; // (action, cmd, oldVal, newVal)
+    // ==== Stil Değişikliği Komutu ====
+
+    class StyleCommand extends BaseCommand {
+        constructor(element, oldStyles, newStyles, label = "Stil Değişimi") {
+            super(label);
+            this.element = element;
+            this.oldStyles = oldStyles;
+            this.newStyles = newStyles;
+        }
+        execute() { Object.assign(this.element.htmlObject.style, this.newStyles); }
+        undo() { Object.assign(this.element.htmlObject.style, this.oldStyles); }
+        getState(when) { return when === "before" ? this.oldStyles : this.newStyles; }
     }
-    execute(cmd) {
-        const prev = cmd.getState ? cmd.getState('before') : undefined;
-        cmd.execute();
-        const next = cmd.getState ? cmd.getState('after') : undefined;
-        this.undoStack.push(cmd);
-        this.redoStack = [];
-        this._notify('change', cmd);
-        if (this.onChange) this.onChange('execute', cmd, prev, next);
+
+
+    // ==== Taşıma Komutu ====
+    // Mevcut MoveCommand sınıfını bununla değiştirin.
+    class MoveCommand extends BaseCommand {
+        constructor(element, newParent, oldParent, oldNextSibling, newNextSibling = null, label = "Taşı") {
+            super(label);
+            this.element = element;
+            this.newParent = newParent;
+            this.oldParent = oldParent;
+            this.oldNextSibling = oldNextSibling; // Bu bir Telement nesnesi veya null olmalı
+            this.newNextSibling = newNextSibling; // Bu da bir Telement nesnesi veya null olmalı
+        }
+
+        execute() {
+            // Hedef HTML elemanını al (eğer varsa)
+            const newNextNode = this.newNextSibling ? this.newNextSibling.htmlObject : null;
+
+            // 1. DOM'da taşı
+            this.newParent.htmlObject.insertBefore(this.element.htmlObject, newNextNode);
+
+            // 2. Eski parent'ın `children` dizisinden kaldır
+            if (this.element.parent && this.element.parent.children) {
+                const idx = this.element.parent.children.indexOf(this.element);
+                if (idx > -1) {
+                    this.element.parent.children.splice(idx, 1);
+                }
+            }
+
+            // 3. Yeni parent'ın `children` dizisine doğru konuma ekle
+            if (this.newNextSibling) {
+                const idx = this.newParent.children.indexOf(this.newNextSibling);
+                if (idx > -1) {
+                    this.newParent.children.splice(idx, 0, this.element);
+                } else { // Eğer sibling bulunamazsa sona ekle (fallback)
+                    this.newParent.children.push(this.element);
+                }
+            } else {
+                this.newParent.children.push(this.element);
+            }
+
+            // 4. Öğenin parent referansını güncelle
+            this.element.parent = this.newParent;
+        }
+
+        undo() {
+            // Geri alma işlemi için de hedef HTML elemanını al
+            const oldNextNode = this.oldNextSibling ? this.oldNextSibling.htmlObject : null;
+
+            // 1. DOM'da eski yerine taşı
+            this.oldParent.htmlObject.insertBefore(this.element.htmlObject, oldNextNode);
+
+            // 2. Yeni parent'ın `children` dizisinden kaldır
+            if (this.element.parent && this.element.parent.children) {
+                const idx = this.element.parent.children.indexOf(this.element);
+                if (idx > -1) {
+                    this.element.parent.children.splice(idx, 1);
+                }
+            }
+
+            // 3. Eski parent'ın `children` dizisine geri ekle
+            if (this.oldNextSibling) {
+                const idx = this.oldParent.children.indexOf(this.oldNextSibling);
+                if (idx > -1) {
+                    this.oldParent.children.splice(idx, 0, this.element);
+                } else {
+                    this.oldParent.children.push(this.element);
+                }
+            } else {
+                this.oldParent.children.push(this.element);
+            }
+
+            // 4. Parent referansını eski haline getir
+            this.element.parent = this.oldParent;
+        }
+
+        getState(when) {
+            return when === "before"
+                ? { parent: this.oldParent, nextSibling: this.oldNextSibling }
+                : { parent: this.newParent, nextSibling: this.newNextSibling };
+        }
     }
-    undo() {
-        if (!this.undoStack.length) return;
-        const cmd = this.undoStack.pop();
-        const prev = cmd.getState ? cmd.getState('after') : undefined;
-        cmd.undo();
-        const next = cmd.getState ? cmd.getState('before') : undefined;
-        this.redoStack.push(cmd);
-        this._notify('change', cmd);
-        if (this.onChange) this.onChange('undo', cmd, prev, next);
+    class ChildAddCommand extends BaseCommand {
+        constructor(parent, child, nextSibling = null) {
+            super("Çocuk Ekle");
+            this.parent = parent;
+            this.child = child;
+            this.nextSibling = nextSibling;
+        }
+        execute() {
+            this.parent._appendChildRaw(this.child, this.nextSibling);
+        }
+        undo() {
+            this.parent._removeChildRaw(this.child);
+        }
+        getState(when) {
+            return { parent: this.parent, child: this.child };
+        }
     }
-    redo() {
-        if (!this.redoStack.length) return;
-        const cmd = this.redoStack.pop();
-        const prev = cmd.getState ? cmd.getState('before') : undefined;
-        cmd.execute();
-        const next = cmd.getState ? cmd.getState('after') : undefined;
-        this.undoStack.push(cmd);
-        this._notify('change', cmd);
-        if (this.onChange) this.onChange('redo', cmd, prev, next);
+
+    class ChildRemoveCommand extends BaseCommand {
+        constructor(parent, child) {
+            super("Çocuk Sil");
+            this.parent = parent;
+            this.child = child;
+            this.nextSibling = child.htmlObject.nextSibling;
+        }
+        execute() {
+            this.parent._removeChildRaw(this.child);
+        }
+        undo() {
+            this.parent._appendChildRaw(this.child, this.nextSibling);
+        }
+        getState(when) {
+            return { parent: this.parent, child: this.child };
+        }
     }
-    clear() {
-        this.undoStack = [];
-        this.redoStack = [];
-        this._notify('change', null);
+    // ==== Çocuk ekle/çıkar komutları (Opsiyonel) ====
+    // Eklenebilir.
+
+    // ==== HISTORY MANAGER (onChange destekli) ====
+    class HistoryManager {
+        constructor() {
+            this.undoStack = [];
+            this.redoStack = [];
+            this.listeners = {};
+            this.onChange = null; // (action, cmd, oldVal, newVal)
+        }
+        execute(cmd) {
+            const prev = cmd.getState ? cmd.getState('before') : undefined;
+            cmd.execute();
+            const next = cmd.getState ? cmd.getState('after') : undefined;
+            this.undoStack.push(cmd);
+            this.redoStack = [];
+            this._notify('change', cmd);
+            if (this.onChange) this.onChange('execute', cmd, prev, next);
+        }
+        undo() {
+            if (!this.undoStack.length) return;
+            const cmd = this.undoStack.pop();
+            const prev = cmd.getState ? cmd.getState('after') : undefined;
+            cmd.undo();
+            const next = cmd.getState ? cmd.getState('before') : undefined;
+            this.redoStack.push(cmd);
+            this._notify('change', cmd);
+            if (this.onChange) this.onChange('undo', cmd, prev, next);
+        }
+        redo() {
+            if (!this.redoStack.length) return;
+            const cmd = this.redoStack.pop();
+            const prev = cmd.getState ? cmd.getState('before') : undefined;
+            cmd.execute();
+            const next = cmd.getState ? cmd.getState('after') : undefined;
+            this.undoStack.push(cmd);
+            this._notify('change', cmd);
+            if (this.onChange) this.onChange('redo', cmd, prev, next);
+        }
+        clear() {
+            this.undoStack = [];
+            this.redoStack = [];
+            this._notify('change', null);
+        }
+        on(event, cb) {
+            (this.listeners[event] = this.listeners[event] || []).push(cb);
+        }
+        _notify(event, cmd) {
+            (this.listeners[event] || []).forEach(cb =>
+                cb({ canUndo: this.undoStack.length > 0, canRedo: this.redoStack.length > 0, cmd })
+            );
+        }
+        getHistoryLabels() {
+            return this.undoStack.map(cmd => cmd.label || cmd.constructor.name);
+        }
     }
-    on(event, cb) {
-        (this.listeners[event] = this.listeners[event] || []).push(cb);
-    }
-    _notify(event, cmd) {
-        (this.listeners[event] || []).forEach(cb =>
-            cb({ canUndo: this.undoStack.length > 0, canRedo: this.redoStack.length > 0, cmd })
-        );
-    }
-    getHistoryLabels() {
-        return this.undoStack.map(cmd => cmd.label || cmd.constructor.name);
-    }
-}
 
 
     window.globs = {
-    winprops: "0|window|self|document|name|location|customElements|history|navigation|locationbar|menubar|personalbar|scrollbars|statusbar|toolbar|status|closed|frames|length|top|opener|parent|frameElement|navigator|origin|external|screen|innerWidth|innerHeight|scrollX|pageXOffset|scrollY|pageYOffset|visualViewport|screenX|screenY|outerWidth|outerHeight|devicePixelRatio|clientInformation|screenLeft|screenTop|styleMedia|onsearch|isSecureContext|trustedTypes|performance|onappinstalled|onbeforeinstallprompt|crypto|indexedDB|sessionStorage|localStorage|onbeforexrselect|onabort|onbeforeinput|onbeforetoggle|onblur|oncancel|oncanplay|oncanplaythrough|onchange|onclick|onclose|oncontextlost|oncontextmenu|oncontextrestored|oncuechange|ondblclick|ondrag|ondragend|ondragenter|ondragleave|ondragover|ondragstart|ondrop|ondurationchange|onemptied|onended|onerror|onfocus|onformdata|oninput|oninvalid|onkeydown|onkeypress|onkeyup|onload|onloadeddata|onloadedmetadata|onloadstart|onmousedown|onmouseenter|onmouseleave|onmousemove|onmouseout|onmouseover|onmouseup|onmousewheel|onpause|onplay|onplaying|onprogress|onratechange|onreset|onresize|onscroll|onsecuritypolicyviolation|onseeked|onseeking|onselect|onslotchange|onstalled|onsubmit|onsuspend|ontimeupdate|ontoggle|onvolumechange|onwaiting|onwebkitanimationend|onwebkitanimationiteration|onwebkitanimationstart|onwebkittransitionend|onwheel|onauxclick|ongotpointercapture|onlostpointercapture|onpointerdown|onpointermove|onpointerrawupdate|onpointerup|onpointercancel|onpointerover|onpointerout|onpointerenter|onpointerleave|onselectstart|onselectionchange|onanimationend|onanimationiteration|onanimationstart|ontransitionrun|ontransitionstart|ontransitionend|ontransitioncancel|onafterprint|onbeforeprint|onbeforeunload|onhashchange|onlanguagechange|onmessage|onmessageerror|onoffline|ononline|onpagehide|onpageshow|onpopstate|onrejectionhandled|onstorage|onunhandledrejection|onunload|crossOriginIsolated|scheduler|alert|atob|blur|btoa|cancelAnimationFrame|cancelIdleCallback|captureEvents|clearInterval|clearTimeout|close|confirm|createImageBitmap|fetch|find|focus|getComputedStyle|getSelection|matchMedia|moveBy|moveTo|open|postMessage|print|prompt|queueMicrotask|releaseEvents|reportError|requestAnimationFrame|requestIdleCallback|resizeBy|resizeTo|scroll|scrollBy|scrollTo|setInterval|setTimeout|stop|structuredClone|webkitCancelAnimationFrame|webkitRequestAnimationFrame|chrome|fence|caches|cookieStore|ondevicemotion|ondeviceorientation|ondeviceorientationabsolute|launchQueue|sharedStorage|documentPictureInPicture|onbeforematch|getScreenDetails|queryLocalFonts|showDirectoryPicker|showOpenFilePicker|showSaveFilePicker|originAgentCluster|credentialless|speechSynthesis|oncontentvisibilityautostatechange|onscrollend|webkitRequestFileSystem|webkitResolveLocalFileSystemURL|JSCompiler_renameProperty",
-    path: `${location.protocol}//${location.host}/www/cem/gridprj/`,
-    events:
-        "abort|afterprint|animationend|animationiteration|animationstart|beforeprint|beforeunload|blur|canplay|canplaythrough|change|click|contextmenu|copy|cut|dblclick|drag|dragend|dragenter|dragleave|dragover|dragstart|drop|durationchange|ended|error|focus|focusin|focusout|fullscreenchange|fullscreenerror|hashchange|input|invalid|keydown|keypress|keyup|load|loadeddata|loadedmetadata|loadstart|message|mousedown|mouseenter|mouseleave|mousemove|mouseover|mouseout|mouseup|mousewheel|offline|online|open|pagehide|pageshow|paste|pause|play|playing|popstate|progress|ratechange|resize|reset|scroll|search|seeked|seeking|select|show|stalled|storage|submit|suspend|timeupdate|toggle|touchcancel|touchend|touchmove|touchstart|transitionend|unload|volumechange|waiting|wheel",
-    lengthUnits: {
-        centimeters: "cm",
-        millimeters: "mm",
-        quarter_millimeters: "Q",
-        inches: "in",
-        picas: "pc",
-        points: "pt",
-        pixels: "px",
-    },
-    testMode: false,
-    reg_exps: {
-        class: /(class.[^}]*)}/gm,
-        function: /(function .[^}]*)}/gm,
-        var: 3,
-        object: 4,
-        quotes: /(["][^"]+["])|(['][^']+['])/gm,
-        email: /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
-    },
-    resizeObserver : new ResizeObserver(entries => {
-        for (const entry of entries) {
-            const t = entry.target.owner;
-            if (!t || !t.sizeHistory) continue; // Sadece sizeHistory açık olanlar için
-            const rect = entry.target.getBoundingClientRect();
-            const oldSize = entry.target._$oldsize || {
-                left: parseFloat(entry.target.style.left) || rect.left,
-                top: parseFloat(entry.target.style.top) || rect.top,
-                width: rect.width, height: rect.height
-            };
-            const newSize = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
-            if (
-                oldSize.width !== newSize.width ||
-                oldSize.height !== newSize.height ||
-                oldSize.left !== newSize.left ||
-                oldSize.top !== newSize.top
-            ) {
-                t.history?.execute(new SizeCommand(t, oldSize, newSize));
-                entry.target._$oldsize = { ...newSize };
-            }
-        }
-    }),
-    styleObserver: new MutationObserver(mutations => {
-        for (const mutation of mutations) {
-            if (mutation.type === "attributes" && mutation.attributeName === "style") {
-                const target = mutation.target;
-                if (!target.owner || !target.owner._styleHistoryEnabled) continue; // Sadece styleHistory aktifse
-                const style = target.style;
-                const styleText = style.cssText;
-                const oldStyleText = target._$oldstyle || styleText;
-                if (oldStyleText !== styleText) {
-                    if (target.owner.history) {
-                        target.owner.history.execute(
-                            new StyleCommand(target.owner, oldStyleText, styleText)
-                        );
-                    }
-                    target._$oldstyle = styleText;
+        winprops: "0|window|self|document|name|location|customElements|history|navigation|locationbar|menubar|personalbar|scrollbars|statusbar|toolbar|status|closed|frames|length|top|opener|parent|frameElement|navigator|origin|external|screen|innerWidth|innerHeight|scrollX|pageXOffset|scrollY|pageYOffset|visualViewport|screenX|screenY|outerWidth|outerHeight|devicePixelRatio|clientInformation|screenLeft|screenTop|styleMedia|onsearch|isSecureContext|trustedTypes|performance|onappinstalled|onbeforeinstallprompt|crypto|indexedDB|sessionStorage|localStorage|onbeforexrselect|onabort|onbeforeinput|onbeforetoggle|onblur|oncancel|oncanplay|oncanplaythrough|onchange|onclick|onclose|oncontextlost|oncontextmenu|oncontextrestored|oncuechange|ondblclick|ondrag|ondragend|ondragenter|ondragleave|ondragover|ondragstart|ondrop|ondurationchange|onemptied|onended|onerror|onfocus|onformdata|oninput|oninvalid|onkeydown|onkeypress|onkeyup|onload|onloadeddata|onloadedmetadata|onloadstart|onmousedown|onmouseenter|onmouseleave|onmousemove|onmouseout|onmouseover|onmouseup|onmousewheel|onpause|onplay|onplaying|onprogress|onratechange|onreset|onresize|onscroll|onsecuritypolicyviolation|onseeked|onseeking|onselect|onslotchange|onstalled|onsubmit|onsuspend|ontimeupdate|ontoggle|onvolumechange|onwaiting|onwebkitanimationend|onwebkitanimationiteration|onwebkitanimationstart|onwebkittransitionend|onwheel|onauxclick|ongotpointercapture|onlostpointercapture|onpointerdown|onpointermove|onpointerrawupdate|onpointerup|onpointercancel|onpointerover|onpointerout|onpointerenter|onpointerleave|onselectstart|onselectionchange|onanimationend|onanimationiteration|onanimationstart|ontransitionrun|ontransitionstart|ontransitionend|ontransitioncancel|onafterprint|onbeforeprint|onbeforeunload|onhashchange|onlanguagechange|onmessage|onmessageerror|onoffline|ononline|onpagehide|onpageshow|onpopstate|onrejectionhandled|onstorage|onunhandledrejection|onunload|crossOriginIsolated|scheduler|alert|atob|blur|btoa|cancelAnimationFrame|cancelIdleCallback|captureEvents|clearInterval|clearTimeout|close|confirm|createImageBitmap|fetch|find|focus|getComputedStyle|getSelection|matchMedia|moveBy|moveTo|open|postMessage|print|prompt|queueMicrotask|releaseEvents|reportError|requestAnimationFrame|requestIdleCallback|resizeBy|resizeTo|scroll|scrollBy|scrollTo|setInterval|setTimeout|stop|structuredClone|webkitCancelAnimationFrame|webkitRequestAnimationFrame|chrome|fence|caches|cookieStore|ondevicemotion|ondeviceorientation|ondeviceorientationabsolute|launchQueue|sharedStorage|documentPictureInPicture|onbeforematch|getScreenDetails|queryLocalFonts|showDirectoryPicker|showOpenFilePicker|showSaveFilePicker|originAgentCluster|credentialless|speechSynthesis|oncontentvisibilityautostatechange|onscrollend|webkitRequestFileSystem|webkitResolveLocalFileSystemURL|JSCompiler_renameProperty",
+        path: `${location.protocol}//${location.host}/www/cem/gridprj/`,
+        events:
+            "abort|afterprint|animationend|animationiteration|animationstart|beforeprint|beforeunload|blur|canplay|canplaythrough|change|click|contextmenu|copy|cut|dblclick|drag|dragend|dragenter|dragleave|dragover|dragstart|drop|durationchange|ended|error|focus|focusin|focusout|fullscreenchange|fullscreenerror|hashchange|input|invalid|keydown|keypress|keyup|load|loadeddata|loadedmetadata|loadstart|message|mousedown|mouseenter|mouseleave|mousemove|mouseover|mouseout|mouseup|mousewheel|offline|online|open|pagehide|pageshow|paste|pause|play|playing|popstate|progress|ratechange|resize|reset|scroll|search|seeked|seeking|select|show|stalled|storage|submit|suspend|timeupdate|toggle|touchcancel|touchend|touchmove|touchstart|transitionend|unload|volumechange|waiting|wheel",
+        lengthUnits: {
+            centimeters: "cm",
+            millimeters: "mm",
+            quarter_millimeters: "Q",
+            inches: "in",
+            picas: "pc",
+            points: "pt",
+            pixels: "px",
+        },
+        testMode: false,
+        reg_exps: {
+            class: /(class.[^}]*)}/gm,
+            function: /(function .[^}]*)}/gm,
+            var: 3,
+            object: 4,
+            quotes: /(["][^"]+["])|(['][^']+['])/gm,
+            email: /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
+        },
+        resizeObserver: new ResizeObserver(entries => {
+            for (const entry of entries) {
+                const t = entry.target.owner;
+                if (!t || !t.sizeHistory) continue; // Sadece sizeHistory açık olanlar için
+                const rect = entry.target.getBoundingClientRect();
+                const oldSize = entry.target._$oldsize || {
+                    left: parseFloat(entry.target.style.left) || rect.left,
+                    top: parseFloat(entry.target.style.top) || rect.top,
+                    width: rect.width, height: rect.height
+                };
+                const newSize = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+                if (
+                    oldSize.width !== newSize.width ||
+                    oldSize.height !== newSize.height ||
+                    oldSize.left !== newSize.left ||
+                    oldSize.top !== newSize.top
+                ) {
+                    t.history?.execute(new SizeCommand(t, oldSize, newSize));
+                    entry.target._$oldsize = { ...newSize };
                 }
             }
-        }
-    }),
-    lengthUnitConvert(inputValue, inputUnit, outputUnit) {
-        const intocm = (v, reverse = false) => (reverse ? v / 2.54 : v * 2.54);
-        const mmtocm = (v, reverse = false) => (reverse ? v * 10 : v / 10);
-        const Qtocm = (v, reverse = false) => (reverse ? v * 40 : v / 40);
-        const pctocm = (v, reverse = false) =>
-            reverse ? (v * 6) / 2.54 : (v / 6) * 2.54;
-        const pttocm = (v, reverse = false) =>
-            reverse ? (v * 72) / 2.54 : (v / 72) * 2.54;
-        const pxtocm = (v, reverse = false) =>
-            reverse ? (v * 96) / 2.54 : (v / 96) * 2.54;
+        }),
+        styleObserver: new MutationObserver(mutations => {
+            for (const mutation of mutations) {
+                if (mutation.type === "attributes" && mutation.attributeName === "style") {
+                    const target = mutation.target;
+                    if (!target.owner || !target.owner._styleHistoryEnabled) continue; // Sadece styleHistory aktifse
+                    const style = target.style;
+                    const styleText = style.cssText;
+                    const oldStyleText = target._$oldstyle || styleText;
+                    if (oldStyleText !== styleText) {
+                        if (target.owner.history) {
+                            target.owner.history.execute(
+                                new StyleCommand(target.owner, oldStyleText, styleText)
+                            );
+                        }
+                        target._$oldstyle = styleText;
+                    }
+                }
+            }
+        }),
+        lengthUnitConvert(inputValue, inputUnit, outputUnit) {
+            const intocm = (v, reverse = false) => (reverse ? v / 2.54 : v * 2.54);
+            const mmtocm = (v, reverse = false) => (reverse ? v * 10 : v / 10);
+            const Qtocm = (v, reverse = false) => (reverse ? v * 40 : v / 40);
+            const pctocm = (v, reverse = false) =>
+                reverse ? (v * 6) / 2.54 : (v / 6) * 2.54;
+            const pttocm = (v, reverse = false) =>
+                reverse ? (v * 72) / 2.54 : (v / 72) * 2.54;
+            const pxtocm = (v, reverse = false) =>
+                reverse ? (v * 96) / 2.54 : (v / 96) * 2.54;
 
-        let val = typeof inputValue === "string"
-            ? parseFloat(inputValue)
-            : inputValue;
-        let unit =
-            typeof inputValue === "string"
-                ? inputValue.match(/[^\d.,\s]+/)[0]
-                : inputUnit;
-        if (unit !== "cm") {
-            val = eval(`${unit}tocm(${val})`);
+            let val = typeof inputValue === "string"
+                ? parseFloat(inputValue)
+                : inputValue;
+            let unit =
+                typeof inputValue === "string"
+                    ? inputValue.match(/[^\d.,\s]+/)[0]
+                    : inputUnit;
+            if (unit !== "cm") {
+                val = eval(`${unit}tocm(${val})`);
+            }
+            if (outputUnit !== "cm") {
+                val = eval(`${outputUnit}tocm(${val}, true)`);
+            }
+            return val;
+        },
+    };
+   
+    function extendsClass(...mixins) {
+        // 1) Mevcut kodunla NewClass gövdesini üretip eval et
+        let s, i, str = "";
+        for (i = mixins.length - 1; i > 0; i--) {
+            s = (arguments[i - 1] + "");
+            if (!/constructor\s*\([^)]*\)\s*{\s*[^}]*\bsuper\b[^();]*/.test(s))
+                s = s.replace(/(constructor\s*\([^)]*\)\s*{)/, "$1super();");
+            str += (i == 1 ? "(" : "") + s.replace(RegExp(arguments[i - 1].name + "({|\\s.*{)?"), arguments[i - 1].name + " extends " + arguments[i].name + " {").replaceAll("//super", "super") + (i == 1 ? ")" : "");
+
         }
-        if (outputUnit !== "cm") {
-            val = eval(`${outputUnit}tocm(${val}, true)`);
+        const NewClass = eval(str);
+
+        // 2) Wrapper sınıf
+        const __Wrapped = class extends NewClass {
+            constructor(...args) {
+                super(...args);
+
+                // --- $parents inşa ediliyor ---
+                const parents = [];
+                // 2.1) En alt sınıf (D)
+                const Self = this.constructor;
+                parents.push(Self);
+                let inArray = function (name, array) {
+                    let t;
+                    for (let i = 0; i < array.length; i++) {
+                        if (typeof array[i] === 'array') {
+                            t = inArray(name, array[i]);
+                            if (t)
+                                return true;
+                        }
+                        else
+                            if (array[i].name === name) {
+                                return true;
+                            }
+                    }
+                    return false;
+                }
+                // 2.2) Gerçek prototip zinciri (C, B, …)
+                let proto = Object.getPrototypeOf(Self.prototype);
+                while (proto && proto.constructor !== Object) {
+                    const Ctor = proto.constructor;
+                    if (!(parents.includes(Ctor) || mixins.includes(Ctor) || inArray(Ctor.name, mixins) || Ctor === __Wrapped)) {
+                        parents.push(Ctor);
+                    }
+                    proto = Object.getPrototypeOf(proto);
+                }
+
+                // 2.3) Mixins dizisi (tek bir alt dizi)
+                //     Burada yalnızca mixins argümanlarını koyuyoruz
+                parents.push(mixins);
+
+                this.$parents = parents;
+            }
+        };
+
+        // 3) instanceof patch’i: önce native, sonra $parents’a bak
+        function patchHasInstance(C) {
+            Object.defineProperty(C, Symbol.hasInstance, {
+                value(inst) {
+                    // (a) native instanceof
+                    if (Function.prototype[Symbol.hasInstance].call(this, inst)) {
+                        return true;
+                    }
+                    // (b) güvenli $parents kontrolü
+                    const pArr = inst?.$parents;
+                    if (!Array.isArray(pArr)) return false;
+                    return pArr.some(entry =>
+                        entry === C
+                        || (Array.isArray(entry) && entry.includes(C))
+                    );
+                },
+                configurable: true
+            });
         }
-        return val;
-    },
-};
-function extendsClass(...cls) {
-    let i, s, str = "";
-    for (i = arguments.length - 1; i > 0; i--) {
-        s = (arguments[i - 1] + "");
-        if (!/constructor\s*\([^)]*\)\s*{\s*[^}]*\bsuper\b[^();]*/.test(s))
-            s = s.replace(/(constructor\s*\([^)]*\)\s*{)/, "$1super();");
-        str += (i == 1 ? "(" : "") + s.replace(RegExp(arguments[i - 1].name + "({|\\s.*{)?"), arguments[i - 1].name + " extends " + arguments[i].name + " {").replaceAll("//super", "super") + (i == 1 ? ")" : "");
+
+        // Mixin’ler ve Wrapped üzerinde patch
+        [...mixins, __Wrapped].forEach(patchHasInstance);
+
+        return __Wrapped;
     }
-   this.$parents= cls;
-    return eval(str);
-}
+
+
+
 
 
     // Orijinal metotları saklayalım
     const origAddEventListener = Element.prototype.addEventListener;
     const origRemoveEventListener = Element.prototype.removeEventListener;
 
-    // addEventListener override: her elementin kendi _eventList'ine ekleme yapacak
+    // addEventListener override: her elementin kendi eventList'ine ekleme yapacak
     Element.prototype.addEventListener = function (type, listener, options) {
         origAddEventListener.call(this, type, listener, options);
-        // Eğer element üzerinde _eventList yoksa, non-enumerable olarak tanımlayalım
-        if (!this.hasOwnProperty('_eventList')) {
-            Object.defineProperty(this, '_eventList', {
+        // Eğer element üzerinde eventList yoksa, non-enumerable olarak tanımlayalım
+        if (!this.hasOwnProperty('eventList')) {
+            Object.defineProperty(this, 'eventList', {
                 value: [],
                 writable: true,
                 configurable: true,
                 enumerable: false
             });
         }
-        this._eventList.push({
+        this.eventList.push({
             event: type,
             listener: listener,
             listenerStr: listener.toString(),
@@ -375,27 +494,20 @@ function extendsClass(...cls) {
         });
     };
 
-    // removeEventListener override: kaldırılan event bilgisini _eventList'ten silelim
+    // removeEventListener override: kaldırılan event bilgisini eventList'ten silelim
     Element.prototype.removeEventListener = function (type, listener, options) {
         origRemoveEventListener.call(this, type, listener, options);
-        if (this._eventList && Array.isArray(this._eventList)) {
-            for (let i = this._eventList.length - 1; i >= 0; i--) {
-                const binding = this._eventList[i];
+        if (this.eventList && Array.isArray(this.eventList)) {
+            for (let i = this.eventList.length - 1; i >= 0; i--) {
+                const binding = this.eventList[i];
                 if (binding.event === type && binding.listener === listener) {
-                    this._eventList.splice(i, 1);
+                    this.eventList.splice(i, 1);
                 }
             }
         }
     };
 
     // HTMLElement.prototype üzerinde "eventList" adında bir getter tanımlayalım
-    Object.defineProperty(HTMLElement.prototype, "eventList", {
-        get: function () {
-            return this._eventList || [];
-        },
-        configurable: true,
-        enumerable: false
-    });
 
     Function.prototype.toEventFunc = function (obj, ...args) {
         const method = this;
@@ -421,7 +533,7 @@ function extendsClass(...cls) {
         }
         // Wrapper'ı elemente ekliyoruz.
         elem.addEventListener(eventName, wrapper, false);
-        // Elementin eventList (ya da _eventList) üzerinden binding kaydına ek argümanları (args) ekliyoruz.
+        // Elementin eventList (ya da eventList) üzerinden binding kaydına ek argümanları (args) ekliyoruz.
         const bindings = elem.eventList[elem.eventList.length - 1];
         if (bindings) {
             bindings.objId = objId;
@@ -434,7 +546,7 @@ function extendsClass(...cls) {
     Function.prototype.unBindEvent = function (elem, eventName) {
         const method = this;
         const methodStr = method.toString();
-        const bindings = elem.eventList; // _eventList üzerinden binding bilgilerini alıyoruz.
+        const bindings = elem.eventList; // eventList üzerinden binding bilgilerini alıyoruz.
         if (!bindings) return;
 
         // İlgili binding kaydını arıyoruz.
@@ -449,158 +561,116 @@ function extendsClass(...cls) {
     };
 
     // Recursive Deep Copy with Constructor Preservation
-    Object.prototype.copy = function () {
-    const visited = new WeakMap();
-    let id = -1;
-    let oo;
-    let thisid = this.id || -1;
     const SKIP_KEYS = [
         "parent", "owner", "parentNode", "parentElement",
-        "__proto__", "prototype","style","computedStyleMap"
+        "__proto__", "prototype", "style", "computedStyleMap",
     ];
 
-    function deepCopy(obj) {
-        if (obj === null || typeof obj !== 'object') return obj;
-        if (visited.has(obj)) return visited.get(obj);
+    function deepCopy(root, skipKeys) {
+        const seen = new WeakMap();               // { orijinal → klon }
+        const rootId = root && root.id != null ? root.id : -1;
+        let rootClone;
 
-        let result;
-        if (obj instanceof Trect) {
-            console.log(obj);
-        }
-        if (obj instanceof Text) {
-            result = document.createTextNode(obj.nodeValue);
-        } else if (obj instanceof Comment) {
-            result = document.createComment(obj.nodeValue);
-        } else if (obj instanceof Element) {
-            result = document.createElement(obj.tagName);
-            [...obj.attributes].forEach(attr => {
-                if (attr.name.toLowerCase() !== "style") {
-                    result.setAttribute(attr.name, attr.value);
+        function cloneAny(obj) {
+            /* 0) İlkel tip veya null */
+            if (obj === null || typeof obj !== "object") return obj;
+
+            /* 1) Daha önce kopyalandı mı? */
+            if (seen.has(obj)) return seen.get(obj);
+
+            /* 2) DOM düğümleri — nodeType ile kesin teşhis ------------ */
+            switch (obj.nodeType) {
+                case Node.TEXT_NODE: {                 // 3
+                    const out = document.createTextNode(obj.nodeValue ?? "");
+                    seen.set(obj, out);
+                    return out;
                 }
-            });
+                case Node.COMMENT_NODE: {              // 8
+                    const out = document.createComment(obj.nodeValue ?? "");
+                    seen.set(obj, out);
+                    return out;
+                }
+                case Node.ELEMENT_NODE: {              // 1  (Element + türevleri)
+                    const el = document.createElement(obj.tagName);
+                    seen.set(obj, el);                   // erken kayıt
 
-            if (obj.style.cssText) {
-                result.style.cssText = obj.style.cssText;
+                    /* Attributes (style hariç) */
+                    Array.from(obj.attributes || []).forEach(attr => {
+                        if (attr.name.toLowerCase() !== "style") {
+                            el.setAttribute(attr.name, attr.value);
+                        }
+                    });
+                    if (obj.style?.cssText) el.style.cssText = obj.style.cssText;
+
+                    /* “yalnız-metin” elementler */
+                    if (!obj.childNodes.length) el.textContent = obj.textContent ?? "";
+
+                    /* eventList taşı */
+                    obj.eventList?.forEach(evt => {
+                        const src = evt.methodStr ?? evt.listenerStr;
+                        const fn = new Function(`return (${src})`)();
+
+                        if (evt.methodStr) {               // kendi bindToEvent API'niz
+                            const target =
+                                evt.objId === -1 ? null
+                                    : evt.objId === rootId ? rootClone
+                                        : getObjectById(evt.objId);
+                            fn.bindToEvent(el, evt.event, target, ...evt.args);
+                        } else {
+                            el.addEventListener(evt.event, fn, evt.options);
+                        }
+                    });
+
+                    /* çocukları kopyala */
+                    obj.childNodes.forEach(node => el.appendChild(cloneAny(node)));
+                    return el;
+                }
             }
 
-            if (obj.childNodes.length === 0) {
-                result.textContent = obj.textContent;
+            /* 3) Özel copy()  —— YALNIZ DOM DIŞI nesnelerde */
+            if (
+                typeof obj.copy === "function" &&
+                obj.copy !== Object.prototype.copy &&
+                !("nodeType" in obj)                     // DOM değilse
+            ) {
+                seen.set(obj, {});                       // yer tutucu ile döngü kır
+                const out = obj.copy();
+                seen.set(obj, out);
+                return out;
             }
-            const events = obj.eventList;
-            events?.forEach(evt => {
-                if (evt.methodStr) {
-                    const method = new Function(`return (${evt.methodStr})`)();
-                    method.bindToEvent(result, evt.event, evt.objId == -1 ? null : evt.objId == thisid ? oo : getObjectById(evt.objId), ...evt.args);
-                } else {
-                    const method = new Function(`return (${evt.listenerStr})`)();
-                    result.addEventListener(evt.event, method, evt.options);
-                }
+
+            /* 4) Dizi */
+            if (Array.isArray(obj)) {
+                const arr = [];
+                seen.set(obj, arr);
+                obj.forEach((item, i) => arr[i] = cloneAny(item));
+                return arr;
+            }
+
+            /* 5) Düz / kullanıcı nesnesi */
+            const Ctor = typeof obj.constructor === "function" ? obj.constructor : Object;
+            const out = new Ctor();
+            seen.set(obj, out);
+            if (out.id != null) rootClone = out;
+
+            Object.keys(obj).forEach(k => {
+                if (SKIP_KEYS.includes(k) || skipKeys?.includes(k)) return;
+                out[k] = cloneAny(obj[k]);
             });
-            [...obj.childNodes].forEach(child => {
-                result.appendChild(deepCopy(child));
-            });
-            visited.set(obj, result); // Bunu da Element için ekle!
-        } else if (Array.isArray(obj)) {
-            result = [];
-            visited.set(obj, result);
-            obj.forEach((item, i) => {
-                result[i] = deepCopy(item);
-            });
-        } else {
-            const ctor = obj.constructor && typeof obj.constructor === 'function' ? obj.constructor : Object;
-            result = new ctor();
-            if (result.id) oo = result;
-            visited.set(obj, result);
-            Object.keys(obj).forEach(key => {
-                if (
-                    SKIP_KEYS.includes(key) ||
-                    (result instanceof Telement && key === "id")
-                ) return;
-                result[key] = deepCopy(obj[key]);
-            });
+            return out;
         }
 
-        return result;
+        return cloneAny(root);
     }
 
-    return deepCopy(this);
-};
-Object.prototype.copy = function () {
-    const visited = new WeakMap();
-    let oo;
-    let thisid = this.id || -1;
-    const SKIP_KEYS = [
-        "parent", "owner", "parentNode", "parentElement",
-        "__proto__", "prototype","style","computedStyleMap"
-    ];
-    function deepCopy(obj) {
-        if (obj === null || typeof obj !== 'object') return obj;
-        if (visited.has(obj)) return visited.get(obj);
+    /*  —— prototipe ekle ——  (gerekmezse silin) */
+    Object.defineProperty(Object.prototype, 'copy', {
+        value: function (skipKeys) { return deepCopy(this, skipKeys); },
+        writable: false,
+        configurable: false,
+        enumerable: false
+    });
 
-        // Eğer objenin kendi copy fonksiyonu varsa onu kullan
-        if (typeof obj.copy === 'function' && obj.copy !== Object.prototype.copy) {
-            // recursive çağrıları önlemek için önce WeakMap'e ekle
-            const fake = {};
-            visited.set(obj, fake);
-            const real = obj.copy();
-            visited.set(obj, real);
-            return real;
-        }
-
-        let result;
-
-        // (Aşağıya önceki deep copy kurallarını ekle)
-        if (Array.isArray(obj)) {
-            result = [];
-            visited.set(obj, result);
-            obj.forEach((item, i) => {
-                result[i] = deepCopy(item);
-            });
-        } else if (obj instanceof Element) {
-            result = document.createElement(obj.tagName);
-            [...obj.attributes].forEach(attr => {
-                if (attr.name.toLowerCase() !== "style") {
-                    result.setAttribute(attr.name, attr.value);
-                }
-            });
-
-            if (obj.style.cssText) {
-                result.style.cssText = obj.style.cssText;
-            }
-
-            if (obj.childNodes.length === 0) {
-                result.textContent = obj.textContent;
-            }
-            const events = obj.eventList;
-            events?.forEach(evt => {
-                if (evt.methodStr) {
-                    const method = new Function(`return (${evt.methodStr})`)();
-                    method.bindToEvent(result, evt.event, evt.objId == -1 ? null : evt.objId == thisid ? oo : getObjectById(evt.objId), ...evt.args);
-                } else {
-                    const method = new Function(`return (${evt.listenerStr})`)();
-                    result.addEventListener(evt.event, method, evt.options);
-                }
-            });
-            [...obj.childNodes].forEach(child => {
-                result.appendChild(deepCopy(child));
-            });
-            visited.set(obj, result); // Bunu da Element için ekle!
-        }else {
-            const ctor = obj.constructor && typeof obj.constructor === 'function' ? obj.constructor : Object;
-            result = new ctor();
-            visited.set(obj, result);
-            Object.keys(obj).forEach(key => {
-                if (
-                    SKIP_KEYS.includes(key) ||
-                    (result instanceof Telement && key === "id")
-                ) return;
-                result[key] = deepCopy(obj[key]);
-            });
-        }
-        return result;
-    }
-    return deepCopy(this);
-};
 
     // Recursive Serialize (Object -> String)
     Object.prototype.toStr = function () {
@@ -1208,12 +1278,12 @@ Object.prototype.copy = function () {
             for (let n in s) {
                 if (s.hasOwnProperty(n) && typeof s[n] == "number") {
                     defineProp.call(x, n, function (k) {
-                        var a = 1 << k-1;
+                        var a = 1 << k - 1;
                         return Boolean((p == 0 && x.value == 0) || (x.value & a) != 0)
                     }.bind(x, p),
                         function (v, k) {
                             ov = x.value;
-                            var a = 1 << v-1;
+                            var a = 1 << v - 1;
                             if (k)
                                 x.value |= a
                             else
@@ -1256,7 +1326,7 @@ Object.prototype.copy = function () {
     createEnumList("Ealign", "none,left,right,top,bottom,center,middle,client,inner, outer offset");
     createEnumList("EwindowStatus", "none,show,showmodal,hide,active,minizime,maximize");
     createEnumList("EcaptionButton", "none,close,maximize,minizime,restore,help");
-    createEnumList("EelementStatus", "none,sizable,movable,draggable,dockable,scrollable,selectable,lockable,disable,visible");
+    createEnumList("EelementStatus", "none,sizable,movable,draggable,insideDrag,dockable,scrollable,selectable,lockable,disable,visible");
     createEnumList("Eborder", {
         none: 0,
         left: 1,
@@ -1562,51 +1632,29 @@ Object.prototype.copy = function () {
         this.rect = Ealign.alignToRect([0, 0, innerWidth, innerHeight], this.offsetWidth ? this.offsetWidth : this.computedStyle.offsetWidth, this.offsetHeight ? this.offsetHeight : this.computedStyle.offsetHeight, align);
     };
 
-
+    const EVENT_LIST = Symbol('eventList');
     Object.defineProperty(HTMLElement.prototype, 'eventList', {
-        get: function () {
-            if (!Object.prototype.hasOwnProperty.call(this, "_eventList")) {
-                Object.defineProperty(this, "_eventList", {
-                    value: [],
-                    writable: true,
-                    configurable: true,
-                    enumerable: false // _eventList gizli olsun
-                });
-            }
-            return this._eventList;
+        get() {
+            if (!this[EVENT_LIST]) this[EVENT_LIST] = [];
+            return this[EVENT_LIST];
         },
-        set: function (val) {
-            Object.defineProperty(this, "_eventList", {
-                value: val,
-                writable: true,
-                configurable: true,
-                enumerable: false // _eventList gizli olsun
-            });
+        set(val) {
+            this[EVENT_LIST] = Array.isArray(val) ? val : [val];
         },
-        enumerable: true // eventList açıkça görünür
+        enumerable: false           // zaten sembol; yine de saklamak isterseniz
     });
+
     Object.defineProperty(document, 'eventList', {
-        get: function () {
-            if (!Object.prototype.hasOwnProperty.call(this, "_eventList")) {
-                Object.defineProperty(this, "_eventList", {
-                    value: [],
-                    writable: true,
-                    configurable: true,
-                    enumerable: false // _eventList gizli olsun
-                });
-            }
-            return this._eventList;
+        get() {
+            if (!this[EVENT_LIST]) this[EVENT_LIST] = [];
+            return this[EVENT_LIST];
         },
-        set: function (val) {
-            Object.defineProperty(this, "_eventList", {
-                value: val,
-                writable: true,
-                configurable: true,
-                enumerable: false // _eventList gizli olsun
-            });
+        set(val) {
+            this[EVENT_LIST] = Array.isArray(val) ? val : [val];
         },
-        enumerable: true // eventList açıkça görünür
+        enumerable: false           // zaten sembol; yine de saklamak isterseniz
     });
+
     defineProp.call(HTMLElement.prototype, "computedStyle", { get: function () { return getComputedStyle(this) } });
 
     window.AllClass = {
@@ -1657,7 +1705,7 @@ Object.prototype.copy = function () {
             var k = AllClass.byClass;
             var p, z = new Array();
             p = this.$parent;
-            
+
             z.unshift(p.constructor.name);
             while (p) {
                 if (p.$parent && p.$parent.constructor.name != "Object") {
@@ -1688,13 +1736,14 @@ Object.prototype.copy = function () {
             return this.#id;
         }
         get name() {
-            
-                return this.constructor.name;
-          
+
+            return this.constructor.name;
+
         }
         get $parent() {
             return Object.getPrototypeOf(this);
         }
+
         destroy() {
             // AllClass.byId’dan kaldır
             if (AllClass.byId[this.id])
@@ -1714,14 +1763,14 @@ Object.prototype.copy = function () {
             removeFromNestedArr(AllClass.byClass, this);
         }
     }
-// ==== Komutların Temeli ====
+    // ==== Komutların Temeli ====
 
-// ==== Seçim Yöneticisi (multi-drag için) ====
+    // ==== Seçim Yöneticisi (multi-drag için) ====
 
- globs.selectionManager = new Set();
-globs.historyManager = new HistoryManager();
+    globs.selectionManager = new Set();
 
-    let Telementstyles=false;
+
+    let Telementstyles = false;
     /**
     * Gelişmiş Temel Telement Sınıfı
     * - Alt sınıflar için kolay genişletme
@@ -1734,652 +1783,695 @@ globs.historyManager = new HistoryManager();
     Telement = class Telement extends extendsClass(TClass, EventTarget) {
         #dropIndicator = null;
         #dockingHandlers = null;
-        #styleobserver = null;
-            #dragState = {};
         #dragHandlers = null;
         #dropHandlers = null;
+        #dragHandle = null;
+        #moveHandle = null;
+        #hybridDrag = null;
+        #initOpts = null;
+        #initialKeys = null;
+        #_lastDropTarget = null;
         #touchHandlers = null;
+        #dragState = {};
+        #handleSelectionBound = null;
         loaded = false;
 
-/**
- * @param {string|HTMLElement} tagOrEl - Tag adı (örn: 'div') veya doğrudan HTMLElement
- * @param {Object} options
- * @param {string}   [options.id]                   - Elemanın ID'si
- * @param {string|Array<string>} [options.className] - CSS sınıf(lar)ı
- * @param {Object}   [options.style]                - CSS stilleri (key-value)
- * @param {Object}   [options.attrs]                - HTML attribute'ları (örn. {title: "...", "data-x": 1})
- * @param {Object}   [options.status]               - Durum flag'ları (örn. {draggable:true, sizable:true})
- * @param {Object}   [options.events]               - Event dinleyicileri (örn. {click: fn, mouseover: fn})
- * @param {Array}    [options.children]             - Alt elemanlar (Telement, HTMLElement veya string)
- * @param {HTMLElement|Telement} [options.parent]   - Otomatik eklenecek parent
- * @param {Tenum|Number|Object}  [options.resize_flags] - Boyutlandırma (örn. Eborder.all)
- * @param {Boolean}  [options.useResizeHelper]      - Yeniden boyutlandırmada kılavuz (helper) gösterilsin mi
- * @param {Object}   [options.dragOptions]          - Sürükleme davranışı için gelişmiş seçenekler:
- *   @param {string}   [options.dragOptions.handle]              - Sürüklemeyi başlatacak selector veya element (örn. '.panel-header')
- *   @param {string}   [options.dragOptions.group]               - Sadece aynı grup elemanlar arasında sürükleme/droplama yapılabilir
- *   @param {string}   [options.dragOptions.type]                - Elemanın tipi (örn. 'panel', 'widget') drop kabulünde filtre için
- *   @param {boolean}  [options.dragOptions.revertIfNotDropped]  - Drop olmazsa eski yerine döndür
- *   @param {string}   [options.dragOptions.dragClass]           - Sürükleme sırasında eklenecek CSS sınıfı (örn. 'dragging')
- *   @param {HTMLElement} [options.dragOptions.customDragImage]  - Fareyle taşınacak özel görsel/HTML
- *   @param {function} [options.dragOptions.dragStart]           - Sürükleme başlarken çağrılacak callback (fn(this, event, selectionManager))
- *   @param {function} [options.dragOptions.dragEnd]             - Sürükleme bitince çağrılacak callback (fn(this, dropEffect, event))
- * @param {Object}   [options.dropOptions]          - Drop/bırakma davranışı için gelişmiş seçenekler:
- *   @param {Array<string>} [options.dropOptions.acceptTypes]    - Kabul edilen drag tipleri (örn. ['panel', 'card'])
- *   @param {Array<string>} [options.dropOptions.acceptGroups]   - Kabul edilen drag grup isimleri
- *   @param {string}   [options.dropOptions.hoverClass]          - Üzerine gelince eklenen CSS sınıfı (örn. 'droppable-hover')
- *   @param {string}   [options.dropOptions.placeHolderClass]    - Placeholder için CSS sınıfı (örn. 'drop-placeholder')
- *   @param {boolean}  [options.dropOptions.showPlaceHolder]     - Yer göstergesi (placeholder) gösterilsin mi
- *   @param {function} [options.dropOptions.beforeDrop]          - Drop öncesi callback, false dönerse bırakma gerçekleşmez (fn(dragged, dropzone, event))
- *   @param {function} [options.dropOptions.drop]                - Drop gerçekleşince çağrılır (fn(dragged, dropzone, event))
- *   @param {function} [options.dropOptions.afterDrop]           - Drop sonrası callback (fn(dragged, dropzone, event))
- *   @param {boolean}  [options.dropOptions.animDrop]            - Drop sonrası animasyon uygulansın mı
- *   @param {string}   [options.dropOptions.animClass]           - Drop animasyon sınıfı (örn. 'anim-drop')
- * @param {HistoryManager} [options.history]                    - Undo/redo yöneticisi (varsayılan: global historyManager)
- * @param {boolean}   [options.visible]                      - Varsayılan olarak gösterilsin mi
- * @param {Tenum|Number} [options.status]                     - Varsayılan durum (EelementStatus.visible, EelementStatus.hidden, EelementStatus.hidden)
- * @param {Tenum|Number} [options.resize_flags]                - Varsayılan boyutlandırma (Eborder.all, Eborder.none, Eborder.all, Eborder.none, Eborder.none, Eborder.none, Eborder.none, Eborder.none)
- * @param {boolean}   [options.sizeHistory]                   - Boyutlandırma durumu kaydedilsin mi
- * @param {boolean}   [options.styleHistory]                  - Stil durumu kaydedilsin mi
- * @param {boolean}   [options.childHistory]                  - Çocuk durumu kaydedilsin mi
- * @param {Object}   [options.other]                        - Ozel seçenekler
- */
+        constructor(tagOrEl, opts = {}) {
+            const safeCloneOptions = (src) => {
+                if (src === null || typeof src !== "object") return src;
+                if (Array.isArray(src)) return src.map(safeCloneOptions);
+                if (src instanceof HTMLElement) return src.id ? `#${src.id}` : null;
+                if (typeof src === "function") return undefined;
 
-        constructor(tagOrEl, options = {}) {
+                const clone = {};
+                for (const key in src) {
+                    if (src.hasOwnProperty(key)) {
+                        const val = safeCloneOptions(src[key]);
+                        if (val !== undefined) clone[key] = val;
+                    }
+                }
+                return clone;
+            };
+
             super();
-            this._eventList = new WeakMap();
-            // ---- Options Destructuring ----
-           
- let {
-            id, className, style = {}, attrs = {},  status = EelementStatus.visible, events = {},
-            children = [], parent, visible = true, resize_flags = Eborder.all, useResizeHelper = false,
-            dragOptions = {}, dropOptions = {},  sizeHistory = false, styleHistory = false, childHistory = false,
-            history = globs.historyManager,...other
-        } = options;
-            // ---- HTMLElement Oluştur/Al ----
-            if (tagOrEl instanceof HTMLElement) {
-                if (tagOrEl.owner instanceof Telement) return tagOrEl.owner;
-                this.htmlObject = tagOrEl;
-            } else if (typeof tagOrEl === 'string') {
-                this.htmlObject = document.createElement(tagOrEl);
-            } else {
-                this.htmlObject = document.createElement('div');
-            }
+      
 
-            // ---- Benzersiz ID Atama ----
-            this.htmlObject.id = this.htmlObject.id || id || this.id;
-            this.htmlObject.owner = this;
+            // HTML Element oluşturma
+            const html = (tagOrEl instanceof HTMLElement)
+                ? tagOrEl
+                : document.createElement(typeof tagOrEl === 'string' ? tagOrEl : 'div');
+            this.htmlObject = html;
+            html.owner = this;
+
+            // Yardımcı fonksiyonlar
+
+
+            // Opsiyonları ayıkla
+            let {
+                id, className, style = {}, attrs = {}, events = {},
+                parent, children = [],
+                status = EelementStatus.visible,
+                resize_flags = Eborder.all,
+                useResizeHelper = false,
+                dragOptions = {}, moveOptions = {}, dropOptions = {},historyOptions={},
+                ...other
+            } = opts;
+
+            // HTML nitelikleri
+            html.id = html.id || id || this.id;
+            const clsDef = this.constructor.name;
+            let clsUsr = Array.isArray(className) ? className : String(className || '').trim().split(/\s+/);
+            html.classList.add(clsDef, ...clsUsr.filter(Boolean));
+            Object.assign(html.style, style);
+            Object.entries(attrs).forEach(([k, v]) => html.setAttribute(k, v));
+            Object.entries(events).forEach(([e, h]) => html.addEventListener(e, h));
+
+            // Drag/Move/Drop ayarları
+            this.moveOptions = Object.assign({ handle: null, bound: true }, moveOptions);
+            this.dragOptions = Object.assign({
+                handle: null, group: null, type: 'default',
+                revertIfNotDropped: true, dragClass: 'dragging'
+            }, dragOptions);
+            this.dropOptions = Object.assign({
+                acceptTypes: ['default'], hoverClass: 'droppable-hover',
+                placeHolderClass: 'drop-placeholder', showPlaceHolder: true
+            }, dropOptions);
             
-            // ---- Sınıf ve Stil Atama ----
-             const defaultClasses = this.constructor.name;
-        let userClasses = Array.isArray(className) ? className : String(className || '').trim().split(/\s+/);
-         userClasses = userClasses.filter(Boolean); // boş olanları çıkar
-        this.htmlObject.classList.add(defaultClasses, ...userClasses);
-        
-          Object.assign(this.htmlObject.style, style);
-        for (const [k, v] of Object.entries(attrs)) this.htmlObject.setAttribute(k, v);
-        for (const [event, handler] of Object.entries(events)) this.bind(event, handler);
-        // --- Drag/Drop veGeçmiş Ayarları ---
-        this.dragOptions = Object.assign({
-            handle: null, group: null, type: "default", revertIfNotDropped: true,
-            dragClass: "dragging", customDragImage: null,
-        }, dragOptions);
-        this.dropOptions = Object.assign({
-            acceptTypes: ["default"], hoverClass: "droppable-hover",
-            placeHolderClass: "drop-placeholder", showPlaceHolder: true,
-        }, dropOptions);
-            // ---- Children Yönetimi ----
-            this.children = [];
-            for (let child of children) this.appendChild(child);
-            // ---- Parent Otomatik Ekleme ----
-           // if (parent instanceof HTMLElement || parent instanceof Telement) { if (parent instanceof Telement) this.parent = parent; parent.appendChild(this.htmlObject); }
-              if (parent) (parent instanceof Telement ?  parent.appendChild(this): parent.appendChild(this.htmlObject));
-            // ---- Diğer Ayarlar ----
-            this.useResizeHelper = useResizeHelper;
-            this.#injectStyles();
-             this.history = history || globs.historyManager;
-        this.sizeHistory = !!sizeHistory;
-        this.styleHistory = !!styleHistory;
-        this.childHistory = !!childHistory;
-        if (this.sizeHistory && this.htmlObject) {
-            globs.resizeObserver.observe(this.htmlObject);
-        }
-        if(this.styleHistory) this._styleObserver = trackStyleChanges(this);
-        // --- Otomatik boyut değişimi takibi ---
-       
+            const resolveHandle = h => {
+                if (!h) return null;
+                if (h instanceof HTMLElement) return h;
+                if (typeof h === 'string') return html.querySelector(h) || null;
+                return null;
+            };
+            Object.defineProperty(this.dragOptions, 'handle', {
+                enumerable: true,
+                get: () => this.#dragHandle,
+                set: v => { this.#dragHandle = resolveHandle(v) ?? this.htmlObject; }
+            });
 
-            // ---- Status & Resize Bağlama ----
+            // Move Handle getter/setter
+            Object.defineProperty(this.moveOptions, 'handle', {
+                enumerable: true,
+                get: () => this.#moveHandle,
+                set: v => { this.#moveHandle = resolveHandle(v) ?? this.htmlObject; }
+            });
+            this.#moveHandle = moveOptions.handle;
+            this.#dragHandle = dragOptions.handle;
+            // Dinamik getter/setter'lar
+            const thisRef = this;
+            Object.defineProperty(this.dragOptions, 'handle', {
+                enumerable: true,
+                get() { return thisRef.#dragHandle || html; },
+                set(v) {
+                    thisRef.#dragHandle = resolveHandle(v) ?? html;
+                    thisRef.#updateHybridFlag();
+                    thisRef.#refreshDragListeners();
+                }
+            });
+
+            Object.defineProperty(this.moveOptions, 'handle', {
+                enumerable: true,
+                get() { return thisRef.#moveHandle || html; },
+                set(v) {
+                    thisRef.#moveHandle = resolveHandle(v) ?? html;
+                    thisRef.#updateHybridFlag();
+                    if (thisRef.status.movable) thisRef.#toggleFeature('movable', true);
+                }
+            });
+
+            // Tarihçe ve diğer ayarlar
+
+            const defaultHist = { trackStyle:false, trackResize:false, trackChildren:false, trackAttr:false, trackEvents:false };
+    this.historyOptions = { ...defaultHist, ...historyOptions };
+               
+            // Çocuk elemanlar ve ebeveyn
+            this.children = [];
+            children.forEach(ch => this.appendChild(ch));
+            if (parent) (parent instanceof Telement ? parent.appendChild(this) : parent.appendChild(html));
+
+            // Enum bağlamaları
             EelementStatus.bindTo('status', this);
             Eborder.bindTo('resize_flags', this);
             this.resize_flags = resize_flags;
-            this.status.onchange = (changes) => this.#handleStatusChange(changes);
-            // ---- Status ilk atama ve onchange ----
             if (status instanceof Object) this.status.assign(status);
             else this.status = status;
-       
-            this.defineProp("rect", () => {
-                let r = this.htmlObject.getBoundingClientRect();
-                return new Trect(r.left, r.top, r.right - r.left, r.bottom - r.top);
-            },
-                (rect) => {
-                    this.htmlObject.style.left = rect.left + "px";
-                    this.htmlObject.style.top = rect.top + "px";
-                    this.htmlObject.style.width = rect.width + "px";
-                    this.htmlObject.style.height = rect.height + "px";
-                });
-        }
- #toggleFeature(name, isOn) {
-        this.htmlObject.classList.toggle(name, isOn);
-        switch (name) {
-            case 'draggable': isOn ? this.#enableDrag() : this.#disableDrag(); break;
-            case 'dockable': isOn ? this.#enableDrop() : this.#disableDrop(); break;
-            case 'sizable': this.#enableSizing(isOn); break; // Tek fonksiyona birleştirildi
-            case 'visible': this.htmlObject.classList.toggle("hidden", !isOn); break;
-            case 'movable': DOM.makeMovable?.(this.htmlObject, this.dragOptions.handle, isOn); break;
-            case 'disable': this.htmlObject.classList.toggle('disabled', isOn); break;
-            case 'lockable': this.htmlObject.classList.toggle('locked', isOn); break;
-        }
-    }
-    
-    // --- Seçim ve Klavye Etkileşimleri ---
-    #handleSelection(e) {
-        if (e.ctrlKey || e.metaKey) {
-            this.htmlObject.classList.toggle('selected');
-            globs.selectionManager.has(this) ? globs.selectionManager.delete(this) : globs.selectionManager.add(this);
-        } else {
-            globs.selectionManager.forEach(el => el.htmlObject.classList.remove('selected'));
-            globs.selectionManager.clear();
-            globs.selectionManager.add(this);
-            this.htmlObject.classList.add('selected');
-        }
-    }
-    #handleKeyboard(e) {
-        if (e.key === 'Enter' && this.htmlObject === document.activeElement) {
-            this.htmlObject.classList.toggle('activated');
-        }
-    }
-    
-    // --- Gelişmiş Drag & Drop Mantığı ---
-    #enableDrag() {
-        if (this.#dragHandlers) return;
-        this.htmlObject.setAttribute('draggable', 'true');
-        const handle = this.dragOptions.handle ? this.htmlObject.querySelector(this.dragOptions.handle) : this.htmlObject;
-          this.#dragHandlers = {
-            dragstart: e => this.#onDragStart(e),
-            dragend: e => this.#onDragEnd(e),
-        };
-        handle.addEventListener('dragstart', this.#dragHandlers.dragstart);
-        handle.addEventListener('dragend', this.#dragHandlers.dragend);
-    }
+            this.status.onchange = ch => this.#handleStatusChange(ch);
 
-    #disableDrag() {
-        if (!this.#dragHandlers) return;
-        this.htmlObject.setAttribute('draggable', 'false');
-        const handle = this.dragOptions.handle ? this.htmlObject.querySelector(this.dragOptions.handle) : this.htmlObject;
-        handle?.removeEventListener('dragstart', this.#dragHandlers.dragstart);
-        handle?.removeEventListener('dragend', this.#dragHandlers.dragend);
-        this.#dragHandlers = null;
-    }
+            // Rect özelliği
+            this.defineProp('rect',
+                () => new Trect(...Object.values(html.getBoundingClientRect())),
+                rc => Object.assign(html.style, {
+                    left: `${rc.left}px`, top: `${rc.top}px`,
+                    width: `${rc.width}px`, height: `${rc.height}px`
+                })
+            );
 
-    #onDragStart(e) {
-        e.stopPropagation();
-        if (this.htmlObject._moveCleanup) this.htmlObject._moveCleanup();
-        if (this.htmlObject._interaction) return;
-        this.htmlObject._interaction = 'dragging';
-        if (!globs.selectionManager.has(this)) this.#handleSelection(e);
-
-        const draggedIds = Array.from(globs.selectionManager).map(el => el.htmlObject.id);
-        e.dataTransfer.setData('application/json', JSON.stringify(draggedIds));
-        e.dataTransfer.effectAllowed = 'move';
-
-        globs.selectionManager.forEach(el => {
-            el.#dragState = {
-                originalParent: el.parent,
-                originalNextSibling: el.htmlObject.nextSibling,
-                isDropped: false
-            };
-            setTimeout(() => el.htmlObject.classList.add(el.dragOptions.dragClass), 0);
-        });
-
-        this.dragOptions.dragStart?.(this, e, globs.selectionManager);
-    }
-
-  #onDragEnd(e) {
-        globs.selectionManager.forEach(el => {
-            if (el.#dragState.isDropped === false && el.dragOptions.revertIfNotDropped) {
-                el.#dragState.originalParent?.htmlObject.insertBefore(el.htmlObject, el.#dragState.originalNextSibling);
-                el.parent = el.#dragState.originalParent;
+            // Başlangıç işlemleri
+            this.#injectStyles();
+            if (this.sizeHistory) globs.resizeObserver.observe(html);
+            if (this.styleHistory) this._styleObserver = trackStyleChanges(this);
+            if (this.status.selectable) {
+                this.htmlObject.classList.add('selectable');
+                this.#handleSelectionBound = e => this.#handleSelection(e);
+                this.htmlObject.addEventListener('click', this.#handleSelectionBound);
             }
-            el.htmlObject.classList.remove(el.dragOptions.dragClass);
-            el.#dragState = {};
-        });
 
-        document.querySelectorAll('.drop-placeholder').forEach(p => p.remove());
-        this.htmlObject._interaction = null;
-    }
-    
-    #enableDrop() {
-        if (this.#dropHandlers) return;
-        this.#dropHandlers = {
-            dragenter: e => this.#onDragEnter(e),
-            dragover: e => this.#onDragOver(e),
-            dragleave: e => this.#onDragLeave(e),
-            drop: e => this.#onDrop(e),
-        };
-        Object.entries(this.#dropHandlers).forEach(([evt, h]) => this.htmlObject.addEventListener(evt, h));
-    }
-
-    #disableDrop() {
-        if (!this.#dropHandlers) return;
-        Object.entries(this.#dropHandlers).forEach(([evt, h]) => this.htmlObject.removeEventListener(evt, h));
-        this.#dropHandlers = null;
-    }
-    
-    #isDragAcceptable(e) {
-        // Tip ve grup kontrolleri...
-        return true;
-    }
-
-    #onDragEnter(e) {
-        e.preventDefault(); e.stopPropagation();
-        if (!this.#isDragAcceptable(e)) return;
-        this.htmlObject.classList.add(this.dropOptions.hoverClass);
-        if (this.dropOptions.showPlaceHolder) this.#updatePlaceholder(e);
-    }
-
-    #onDragOver(e) {
-        e.preventDefault(); e.stopPropagation();
-        if (!this.#isDragAcceptable(e)) return;
-        e.dataTransfer.dropEffect = 'move';
-        if (this.dropOptions.showPlaceHolder) this.#updatePlaceholder(e);
-    }
-
-    #onDragLeave(e) {
-        e.preventDefault();
-        if (!this.htmlObject.contains(e.relatedTarget)) {
-            this.htmlObject.classList.remove(this.dropOptions.hoverClass);
-            DOM.dragPlaceHolder?.remove();
-            this.htmlObject.querySelectorAll('.dock-highlight').forEach(el => el.classList.remove('dock-highlight'));
+            // Kopyalama için başlangıç durumu
+            this.#initOpts = safeCloneOptions(opts);
+            this.#initialKeys = new Set(Object.getOwnPropertyNames(this));
+              if(globs.historyManager) globs.historyManager.addTrack(this,this.historyOptions);
         }
-    }
-
-    #onDrop(e) {
-        e.preventDefault(); e.stopPropagation();
-        this.htmlObject.classList.remove(this.dropOptions.hoverClass);
-        
-        if (!this.#isDragAcceptable(e)) return;
-
-        const draggedIds = JSON.parse(e.dataTransfer.getData('application/json'));
-        
-        draggedIds.forEach(id => {
-            const draggedElement = document.getElementById(id)?.owner;
-            if (draggedElement) {
-                draggedElement.#dragState.isDropped = true;
-                const cmd = new MoveCommand(draggedElement, this, draggedElement.parent, draggedElement.htmlObject.nextSibling);
-                this.history.execute(cmd);
+        #handleSelection(e) {
+            if (e.ctrlKey || e.metaKey) {
+                this.htmlObject.classList.toggle('selected');
+                globs.selectionManager.has(this) ? globs.selectionManager.delete(this) : globs.selectionManager.add(this);
+            } else {
+                globs.selectionManager.forEach(el => el.htmlObject.classList.remove('selected'));
+                globs.selectionManager.clear();
+                globs.selectionManager.add(this);
+                this.htmlObject.classList.add('selected');
             }
-        });
-        
-        DOM.dragPlaceHolder?.remove();
-        this.htmlObject.querySelectorAll('.dock-highlight').forEach(el => el.classList.remove('dock-highlight'));
-    }
-    
-    #updatePlaceholder(e) {
-        if (!DOM.dragPlaceHolder) {
-            DOM.dragPlaceHolder = document.createElement('div');
         }
-        const placeholder = DOM.dragPlaceHolder;
-        placeholder.className = this.dropOptions.placeHolderClass;
-
-        const children = [...this.htmlObject.children].filter(c => !c.classList.contains(this.dragOptions.dragClass) && c !== placeholder);
-        let target = children.find(c => c.contains(e.target)) || null;
-        if (!target) {
-            target = children.reduce((acc, ch) => {
-                const r = ch.getBoundingClientRect();
-                if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) return ch;
-                return acc;
-            }, null);
-        }
-        if (!target) {
-            placeholder.style.width = '100%';
-            placeholder.style.height = '6px';
-            placeholder.style.margin = '2px 0';
-            this.htmlObject.appendChild(placeholder);
-            return;
+        // --- Yardımcı Metotlar ---
+        #refreshDragListeners() {
+            this.#disableDrag();
+            if (!this.#hybridDrag && this.status?.draggable) this.#enableDrag();
         }
 
-        const rect = target.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const inCenter = x > rect.width * 0.25 && x < rect.width * 0.75 && y > rect.height * 0.25 && y < rect.height * 0.75;
-
-        if (inCenter && target.owner?.status?.dockable) {
-            placeholder.remove();
-            target.classList.add('dock-highlight');
-            return;
-        } else {
-            target.classList.remove('dock-highlight');
+        #updateHybridFlag() {
+            this.#hybridDrag = (
+                this.moveOptions.handle === this.dragOptions.handle &&
+                this.status.movable &&
+                this.status.draggable
+            );
         }
 
-        const horizontal = Math.abs(x - rect.width / 2) < Math.abs(y - rect.height / 2);
-        let before = false;
-        if (horizontal) {
-            placeholder.style.width = '100%';
-            placeholder.style.height = '6px';
-            placeholder.style.margin = '2px 0';
-            before = y < rect.height / 2;
-        } else {
-            placeholder.style.width = '6px';
-            placeholder.style.height = rect.height + 'px';
-            placeholder.style.margin = '0 2px';
-            before = x < rect.width / 2;
-        }
-        this.htmlObject.insertBefore(placeholder, before ? target : target.nextSibling);
-    }
-    
-    #enableSizing(isOn) {
-        DOM.makeResizable?.(this.htmlObject, isOn ? { flags: this.resize_flags, useHelper: this.useResizeHelper } : false);
-    }
         #injectStyles() {
             if (Telementstyles) return;
-          let textContent = /*`
-      .locked { pointer-events: none; }
-      .draggable { user-select: none; }
-      .movable { cursor: move; }
-      .scrollable { overflow: auto; }
-      .selectable { user-select: text; }
-      .hidden { display: none !important; }
-      .drop-indicator { position: absolute; width:50px; height:50px; border:2px dashed #888; pointer-events:none; }
-      .disable, .disabled { opacity: 0.5; pointer-events: none; }
-      .res-handle { position: absolute; background: transparent; }
-      .res-handle:hover { background: rgba(0,0,0,0.1); }
-      .res-top, .res-bottom { height: 6px; left: 0; right: 0; cursor: ns-resize; }
-      .res-top { top: -3px; }
-      .res-bottom { bottom: -3px; }
-      .res-left, .res-right { width: 6px; top: 0; bottom: 0; cursor: ew-resize; }
-      .res-left { left: -3px; }
-      .res-right { right: -3px; }
-    `*/
-     `.telement:focus { outline: 2px solid #0078d4; outline-offset: 1px; }
+            const styles = `
+            .telement:focus { outline: 2px solid #0078d4; outline-offset: 1px; }
             .dragging { opacity: 0.4; }
-            .droppable-hover { background-color: rgba(0, 120, 212, 0.05); }
-            .drop-placeholder { background: #0078d4; border-radius: 3px; }
-            .dock-highlight { outline: 2px dashed #0078d4; }
+            .inside-drag-handle { cursor: grab; user-select: none; margin-right: 4px; }
             .selected { box-shadow: 0 0 0 1px white, 0 0 0 3px #0078d4; }
             .disabled { opacity: 0.5; pointer-events: none; }
             .locked { pointer-events: none; }
             .hidden { display: none !important; }
+            .droppable-hover { background-color: rgba(0, 120, 212, 0.05); }
+            .dockable:empty { border: 2px dotted #0078d4 !important; }
+            .dock-highlight { outline: 2px dashed #0078d4 !important; background-color: rgba(0, 120, 212, 0.1) !important; }
         `;
-           DOM.addStyle(textContent);
-           Telementstyles = true;
-        }
-         #handleStatusChange(changes) {
-        // disable veya lockable önceliklidir
-        if (changes.disable === true || changes.lockable === true) {
-            const flag = changes.disable ? 'disable' : 'lockable';
-            this.#toggleFeature(flag, true);
-            ['sizable', 'movable', 'draggable', 'dockable', 'scrollable', 'selectable'].forEach(s => {
-                if (this.status[s]) this.status[s] = false; // Diğerlerini kapat
-            });
-            return;
+            DOM.addStyle(styles);
+            Telementstyles = true;
         }
 
-        for (const [flag, value] of Object.entries(changes)) {
-            this.#toggleFeature(flag, value);
+        // --- Sürükleme/Bırakma Mantığı ---
+        #findDropTarget(pt, draggedSet = globs.selectionManager) {
+            const draggedArr = [...draggedSet];
+            draggedArr.forEach(te => te.htmlObject.style.pointerEvents = 'none');
+            let el = document.elementFromPoint(pt.x, pt.y);
+            draggedArr.forEach(te => te.htmlObject.style.pointerEvents = '');
+
+            while (el && el !== document.body) {
+                if (el.classList?.contains('drop-placeholder')) {
+                    el = el.parentElement;
+                    continue;
+                }
+                const te = el.owner;
+                if (te) {
+                    if (draggedArr.some(d => d === te || d.htmlObject.contains(el))) {
+                        el = el.parentElement;
+                        continue;
+                    }
+                    if (te.status?.dockable) return te;
+                }
+                el = el.parentElement;
+            }
+            return null;
         }
-    }
-        
-     
-        clientRect() {
-            const r = this.htmlObject.getBoundingClientRect();
-            return new Trect(
-                r.left + this.htmlObject.clientLeft + window.scrollX,
-                r.top + this.htmlObject.clientTop + window.scrollY,
-                this.htmlObject.clientWidth,
-                this.htmlObject.clientHeight
-            );
+
+        #updatePlaceholder(e) {
+            if (!DOM.dragPlaceHolder) {
+                DOM.dragPlaceHolder = Object.assign(document.createElement('div'), {
+                    className: 'drop-placeholder',
+                    style: 'position:absolute;height:4px;width:40px;background:#0078d4;border-radius:2px;pointer-events:none;z-index:9999;display:none'
+                });
+                document.body.appendChild(DOM.dragPlaceHolder);
+            }
+
+            const ph = DOM.dragPlaceHolder;
+            ph.style.display = 'none';
+            ph.referenceElement = null;
+
+            if (this._lastHighlighted) {
+                this._lastHighlighted.classList.remove('dock-highlight');
+                this._lastHighlighted = null;
+            }
+
+            const pt = { x: e.clientX, y: e.clientY };
+            const root = this.#findDropTarget(pt, globs.selectionManager);
+            if (!root) return;
+
+            root.htmlObject.classList.add('dock-highlight');
+            this._lastHighlighted = root.htmlObject;
+
+            if (root.children.length > 0) {
+                let vertical = root.children.length > 1
+                    ? Math.abs(root.children[0].htmlObject.getBoundingClientRect().top -
+                        root.children[1].htmlObject.getBoundingClientRect().top) >
+                    Math.abs(root.children[0].htmlObject.getBoundingClientRect().left -
+                        root.children[1].htmlObject.getBoundingClientRect().left)
+                    : true;
+
+                let bestIdx = -1, bestDist = 1e9, place = 'before';
+                root.children.forEach((c, i) => {
+                    if (globs.selectionManager.has(c)) return;
+                    const r = c.htmlObject.getBoundingClientRect();
+                    const dist = vertical
+                        ? Math.abs(pt.y - (r.top + r.height / 2))
+                        : Math.abs(pt.x - (r.left + r.width / 2));
+
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        bestIdx = i;
+                        place = vertical
+                            ? (pt.y < r.top + r.height / 2 ? 'before' : 'after')
+                            : (pt.x < r.left + r.width / 2 ? 'before' : 'after');
+                    }
+                });
+
+                if (bestIdx === -1) return;
+                root.htmlObject.classList.remove('dock-highlight');
+
+                const refChild = root.children[bestIdx];
+                const refRect = refChild.htmlObject.getBoundingClientRect();
+                ph.referenceElement = refChild.htmlObject;
+                ph.placement = place;
+
+                const scrollX = window.scrollX;
+                const scrollY = window.scrollY;
+                if (vertical) {
+                    Object.assign(ph.style, {
+                        width: `${refRect.width}px`,
+                        height: '2px',
+                        left: `${refRect.left + scrollX}px`,
+                        top: `${(place === 'before' ? refRect.top : refRect.bottom) + scrollY}px`
+                    });
+                } else {
+                    Object.assign(ph.style, {
+                        width: '2px',
+                        height: `${refRect.height}px`,
+                        top: `${refRect.top + scrollY}px`,
+                        left: `${(place === 'before' ? refRect.left : refRect.right) + scrollX}px`
+                    });
+                }
+                ph.style.display = '';
+            }
         }
-        prevCss() {
-            this.htmlObject.style.cssText = this.htmlObject._prevCss || "";
+        #updateDropVisuals(e) {
+            // 1. Önceki görsel ipuçlarını temizle
+            if (this.#_lastDropTarget) {
+                this.#_lastDropTarget.htmlObject.classList.remove('dock-highlight');
+            }
+            if (DOM.dragPlaceHolder) {
+                DOM.dragPlaceHolder.style.display = 'none';
+            }
+            this.#_lastDropTarget = null;
+
+            // 2. Geçerli bırakma hedefini (root) bul
+            let root = null;
+            if (e.type === 'dragover') {
+                // Standart sürüklemede, olay hedefi zaten dockable alandır.
+                root = this;
+            } else { // Hibrit (pointermove)
+                // Hibrit taşımada, farenin altındaki hedefi aramamız gerekir.
+                root = this.#findDropTarget({ x: e.clientX, y: e.clientY });
+            }
+
+            // Geçerli bir hedef yoksa veya hedef dockable değilse çık
+            if (!root || !root.status.dockable) return;
+
+            // 3. Görsel ipuçlarını göster
+            this.#_lastDropTarget = root; // Yeni hedefi kaydet
+            const targetEl = root.htmlObject;
+            const children = root.children.filter(c => !globs.selectionManager.has(c)); // Sürüklenenleri hariç tut
+
+            // Eğer hedefte (sürüklenenler hariç) çocuk yoksa, sadece alanı vurgula
+            if (children.length === 0) {
+                targetEl.classList.add('dock-highlight');
+                return;
+            }
+
+            // Hedefte çocuklar varsa, aralarına placeholder koy
+            const pt = { x: e.clientX, y: e.clientY };
+            let vertical = true; // Dizilimin yönünü belirle
+            if (children.length > 1) {
+                const r0 = children[0].htmlObject.getBoundingClientRect();
+                const r1 = children[1].htmlObject.getBoundingClientRect();
+                vertical = Math.abs(r0.top - r1.top) > Math.abs(r0.left - r1.left);
+            }
+
+            // Fareye en yakın çocuğu ve konumu bul
+            let bestMatch = { dist: Infinity, el: null, place: 'before' };
+            for (const child of children) {
+                const r = child.htmlObject.getBoundingClientRect();
+                const dist = vertical ? Math.abs(pt.y - (r.top + r.height / 2)) : Math.abs(pt.x - (r.left + r.width / 2));
+                if (dist < bestMatch.dist) {
+                    bestMatch.dist = dist;
+                    bestMatch.el = child.htmlObject;
+                    const center = vertical ? r.top + r.height / 2 : r.left + r.width / 2;
+                    const pointerPos = vertical ? pt.y : pt.x;
+                    bestMatch.place = pointerPos < center ? 'before' : 'after';
+                }
+            }
+
+            // Placeholder'ı oluştur ve konumlandır
+            const ph = DOM.getDragPlaceholder();
+            const refRect = bestMatch.el.getBoundingClientRect();
+            ph.referenceElement = bestMatch.el; // Referans ve konumu sakla
+            ph.placement = bestMatch.place;
+
+            const scrollX = window.scrollX;
+            const scrollY = window.scrollY;
+
+            if (vertical) {
+                Object.assign(ph.style, {
+                    width: `${refRect.width}px`, height: '2px',
+                    left: `${refRect.left + scrollX}px`,
+                    top: `${(bestMatch.place === 'before' ? refRect.top : refRect.bottom) + scrollY}px`
+                });
+            } else {
+                Object.assign(ph.style, {
+                    width: '2px', height: `${refRect.height}px`,
+                    top: `${refRect.top + scrollY}px`,
+                    left: `${(bestMatch.place === 'before' ? refRect.left : refRect.right) + scrollX}px`
+                });
+            }
+            ph.style.display = 'block';
         }
-        nextCss = function () {
-            if (this.htmlObject._nextCss)
-                this.htmlObject.style.cssText = this.htmlObject._nextCss;
+        // --- Olay Yönetimi ---
+        #onDragStart(e) {
+            e.stopPropagation();
+            if (!globs.selectionManager.has(this)) {
+                this.#handleSelection(e);
+            }
+            this.#dragState = { isDropped: false };
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', this.id); // Tarayıcı uyumluluğu için
+
+            // Sürükleme başladığında orijinali gizle
+            setTimeout(() => { this.htmlObject.style.visibility = 'hidden'; }, 0);
         }
-         isVisible() {
-            if (!this.visible) return false;
-            if (this.parent) return this.parent.isVisible();
+
+        #onDragEnd(e) {
+            this.htmlObject.style.visibility = 'visible';
+            if (!this.#dragState.isDropped && this.dragOptions.revertIfNotDropped) {
+                // Revert logic here
+            }
+            if (this.#_lastDropTarget) this.#_lastDropTarget.classList.remove('dock-highlight');
+            DOM.dragPlaceHolder && (DOM.dragPlaceHolder.style.display = 'none');
+        }
+
+        #onDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.#performDrop(this);
+        }
+        #isDragAcceptable(e) {
+            // Tip ve grup kontrolleri...
             return true;
         }
-        bind(event, handler, options = {}) {
-            const wrappedHandler = (e) => {
-                const result = handler.call(this, e);
-                if (result === false) e.preventDefault();
-                return result;
+        #enableDrag() {
+            if (this.#dragHandlers || this.#hybridDrag) return;
+            const h = this.dragOptions.handle;
+            if (!(h instanceof HTMLElement)) return;
+
+            this.htmlObject.setAttribute('draggable', 'true');
+            this.#dragHandlers = {
+                dragstart: e => this.#onDragStart(e),
+                dragend: e => this.#onDragEnd(e)
             };
+            h.addEventListener('dragstart', this.#dragHandlers.dragstart);
+            h.addEventListener('dragend', this.#dragHandlers.dragend);
+        }
+        #disableDrag() {
+            if (!this.#dragHandlers) return;
+            const h = this.dragOptions.handle;
+            h?.removeEventListener('dragstart', this.#dragHandlers.dragstart);
+            h?.removeEventListener('dragend', this.#dragHandlers.dragend);
+            this.#dragHandlers = null;
+            this.htmlObject.setAttribute('draggable', 'false');
+        }
 
-            if (!this._eventlist.has(handler)) {
-                this._eventlist.set(handler, { event, wrappedHandler, options });
-                this.htmlObject?.addEventListener(event, wrappedHandler, options);
+
+        #onDragEnter(e) {
+            e.preventDefault(); e.stopPropagation();
+            if (!this.#isDragAcceptable(e)) return;
+            this.htmlObject.classList.add(this.dropOptions.hoverClass);
+            if (this.dropOptions.showPlaceHolder) this.#updatePlaceholder(e);
+        }
+        #onDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.#updateDropVisuals(e); // Merkezi yöneticiyi çağır
+        }
+
+        #onDragLeave(e) {
+            e.preventDefault();
+            // Only hide indicators if the mouse leaves the container element entirely.
+            if (!this.htmlObject.contains(e.relatedTarget)) {
+                this.htmlObject.classList.remove(this.dropOptions.hoverClass);
+                if (DOM.dragPlaceHolder) {
+                    DOM.dragPlaceHolder.style.display = 'none';
+                }
+                // Clear any highlighted drop target
+                if (this._lastHighlighted) {
+                    this._lastHighlighted.classList.remove('dock-highlight');
+                    this._lastHighlighted = null;
+                }
             }
-            return handler;
+        }
+        #enableSizing(isOn) {
+            DOM.makeResizable?.(this.htmlObject, isOn ? { flags: this.resize_flags, useHelper: this.useResizeHelper } : false);
+        }
+        #enableDrop() {
+            if (this.#dropHandlers) return;
+            this.#dropHandlers = {
+                dragenter: e => this.#onDragEnter(e),
+                dragover: e => this.#onDragOver(e),
+                dragleave: e => this.#onDragLeave(e),
+                drop: e => this.#onDrop(e),
+            };
+            Object.entries(this.#dropHandlers).forEach(([evt, h]) => this.htmlObject.addEventListener(evt, h));
         }
 
-        unbind(event, handler) {
-            const listener = this._eventlist?.get(handler);
-            if (listener && listener.event === event) {
-                this.htmlObject?.removeEventListener(event, listener.wrappedHandler, listener.options);
-                this._eventlist.delete(handler);
+        #disableDrop() {
+            if (!this.#dropHandlers) return;
+            Object.entries(this.#dropHandlers).forEach(([evt, h]) => this.htmlObject.removeEventListener(evt, h));
+            this.#dropHandlers = null;
+        }
+        #performDrop(targetContainer) {
+            if (!targetContainer) return;
+            const dragged = Array.from(globs.selectionManager);
+            if (dragged.length === 0) return;
+
+            const ph = DOM.dragPlaceHolder;
+            if (ph && ph.style.display !== 'none' && ph.referenceElement) {
+                const refOwner = ph.referenceElement.owner;
+                const parent = refOwner.parent;
+                const next = ph.placement === 'before' ? refOwner : (refOwner.htmlObject.nextSibling?.owner ?? null);
+
+                dragged.forEach(el => {
+                    const cmd = new MoveCommand(el, parent, el.parent, el.htmlObject.nextSibling?.owner || null, next);
+                    this.history.execute(cmd);
+                    el.#dragState.isDropped = true;
+                });
+            } else {
+                dragged.forEach(el => {
+                    const cmd = new MoveCommand(el, targetContainer, el.parent, el.htmlObject.nextSibling?.owner || null, null);
+                    this.history.execute(cmd);
+                    el.#dragState.isDropped = true;
+                });
             }
         }
 
-        destroy() {
-            // Tüm listener'ları temizle
-            this._eventlist?.forEach(({ event, wrappedHandler, options }) => {
-                this.htmlObject?.removeEventListener(event, wrappedHandler, options);
-            });
-            this._eventlist = null;
+        // --- Özellik Yönetimi ---
+        #toggleFeature(flag, isOn) {
+            if (flag === 'draggable' || flag === 'movable') this.#updateHybridFlag();
+            this.htmlObject.classList.toggle(flag, isOn);
+
+            switch (flag) {
+                case 'draggable':
+                    if (this.#hybridDrag || !isOn) this.#disableDrag();
+                    else this.#enableDrag();
+                    break;
+                case 'movable': {
+                    if (isOn && this.#hybridDrag) this.#disableDrag();
+                    const onMoveStart = () => {
+                        if (this.#hybridDrag) {
+                            globs.selectionManager.clear();
+                            globs.selectionManager.add(this);
+                            this.#dragState = { isDropped: false };
+                        }
+                    };
+                    DOM.makeMovable?.(
+                        this.htmlObject,
+                        this.moveOptions.handle,
+                        isOn ? this.moveOptions.bound : false,
+                        true, true,
+                        onMoveStart,
+                        e => { if (this.#hybridDrag) this.#updatePlaceholder(e) },
+                        pt => { if (this.#hybridDrag) this.#handleHybridDrop(pt) }
+                    );
+                    break;
+                }
+                case 'dockable': isOn ? this.#enableDrop() : this.#disableDrop(); break;
+                case 'sizable': this.#enableSizing(isOn); break;
+                case 'visible': this.htmlObject.classList.toggle('hidden', !isOn); break;
+            }
         }
-      appendChild(child) {
-    if (!(child instanceof Telement)) {
-        // Normal DOM ekleme
-        this.htmlObject.appendChild(child);
-        return;
-    }
-    // Child history aktifse ekleme işlemini komut üzerinden yap
-    if (this.childHistory) {
-        const nextSibling = null; // veya özel sıralama
-        this.history.execute(new AddChildCommand(this, child, nextSibling));
-        return;
-    }
-    // Standart davranış: Önce eski parent'tan çıkar
-    if (child.parent) child.parent.removeChild(child);
 
-    this.children.push(child);
-    child.parent = this;
-
-    if (this.htmlObject && child.htmlObject) {
-        this.htmlObject.appendChild(child.htmlObject);
-        child.htmlObject.owner = child;
-    }
-}
-
-removeChild(child) {
-    if (!(child instanceof Telement)) {
-        this.htmlObject.removeChild(child);
-        return;
-    }
-    // Child history aktifse çıkarma işlemini komut üzerinden yap
-    if (this.childHistory) {
-        const nextSibling = child.htmlObject.nextSibling;
-        this.history.execute(new RemoveChildCommand(this, child, nextSibling));
-        return;
-    }
-    // Standart çıkarma
-    let idx = this.children.indexOf(child);
-    if (idx > -1) this.children.splice(idx, 1);
-    if (this.htmlObject && child.htmlObject)
-        this.htmlObject.removeChild(child.htmlObject);
-    child.parent = null;
-}
-
+        #handleStatusChange(changes) {
+            if (changes.disable || changes.lockable) {
+                const flag = changes.disable ? 'disable' : 'lockable';
+                this.#toggleFeature(flag, true);
+                ['sizable', 'movable', 'draggable', 'dockable', 'scrollable', 'selectable'].forEach(s => {
+                    if (this.status[s]) this.status[s] = false;
+                });
+                return;
+            }
+            for (const [flag, value] of Object.entries(changes)) {
+                this.#toggleFeature(flag, value);
+            }
+        }
+        #handleHybridDrop(pt) {
+            const targetContainer = this.#findDropTarget(pt);
+            this.#performDrop(targetContainer);
+        }
+        // --- Genel Metotlar ---
         body() {
             if (this.loaded) return;
-            if (!this.htmlObject.parentElement) {
-                document.body.appendChild(this.htmlObject);
-            }
+            if (!this.htmlObject.parentElement) document.body.appendChild(this.htmlObject);
             this.children.forEach(child => child.body(this.htmlObject));
             this.dispatchEvent(new CustomEvent('load'));
+            this.moveOptions.handle = this.moveOptions.handle;
+            this.dragOptions.handle = this.dragOptions.handle;
+            const sts = Number(this.status);
+            this.status = 0;
+            this.status = sts;
             this.loaded = true;
         }
-        get visible() { return this.status.visible }
-        set visible(val) { this.status.visible = val }
-        addEvent(event, handler) {
-            this.htmlObject.addEventListener(event, handler);
+
+        copy() {
+            const LOCAL_SKIP = ["parent", "children", "htmlObject", "status", "resize_flags", "history", "_initialKeys", "_initOpts"];
+            const tag = this.htmlObject.tagName.toLowerCase();
+            const opts = { ...this.#initOpts, id: undefined };
+            const clone = new Telement(tag, opts);
+
+            Object.getOwnPropertyNames(this).forEach(k => {
+                if (this.#initialKeys.has(k) || LOCAL_SKIP.includes(k) ||
+                    k.startsWith("_") || k.startsWith("#")) return;
+                const v = this[k];
+                if (v instanceof Telement || v instanceof EventTarget) return;
+                clone[k] = deepCopy(v, LOCAL_SKIP);
+            });
+
+            // HTML kopyalama
+            const src = this.htmlObject;
+            const dst = clone.htmlObject;
+            Array.from(src.attributes).forEach(a => a.name !== "id" && dst.setAttribute(a.name, a.value));
+            dst.style.cssText = src.style.cssText;
+            src.classList.forEach(cls => dst.classList.add(cls));
+
+            // Çocuklar
+            this.children.forEach(ch => clone.appendChild(ch.copy?.() || deepCopy(ch, LOCAL_SKIP)));
+            Array.from(this.htmlObject.childNodes)
+                .filter(node => !node.owner)
+                .forEach(node => clone.htmlObject.appendChild(deepCopy(node, LOCAL_SKIP)));
+
+            // Durumlar
+            clone.status = Number(this.status);
+            clone.resize_flags = Number(this.resize_flags);
+            if (this.loaded) clone.body();
+
+            return clone;
         }
+
+        // --- Diğer Genel Metotlar ---
+        appendChild(child) {
+            if (!(child instanceof Telement)) {
+                if (typeof child === 'string' || typeof child === 'number') {
+                    child = document.createTextNode(child);
+                }
+                this.htmlObject.appendChild(child);
+                return;
+            }
+            if (child.parent) child.parent.removeChild(child);
+            this.children.push(child);
+            child.parent = this;
+            this.htmlObject.appendChild(child.htmlObject);
+            child.htmlObject.owner = child;
+        }
+
         destroy() {
-            super.destroy();
-            // 1. Event handler temizliği
             if (this.#dockingHandlers) this.#disableDrop();
             if (this.status) this.status.onchange = null;
-
-            // 2. Children destroy (recursive)
-            if (this.children && this.children.length) {
-                this.children.forEach(child => {
-                    if (typeof child.destroy === "function") child.destroy();
-                });
-                this.children = [];
-            }
-
-            // 3. Resize Observer ve diğer global kaynaklardan çık
-            if (this.sizeHistory) {
-                globs.resizeObserver.unobserve(this.htmlObject);
-            }
-            if(this.styleHistory) {
-                globs.styleObserver.unobserve(this.htmlObject);
-            }
-
-            // 4. DOM'dan kaldır
+            this.children.forEach(child => child.destroy?.());
+            if (this.sizeHistory) globs.resizeObserver.unobserve(this.htmlObject);
+            if (this.styleHistory) globs.styleObserver.unobserve(this.htmlObject);
             this.htmlObject?.parentNode?.removeChild(this.htmlObject);
-
-            // 5. Referansları sil
-            if (this.htmlObject) {
-                this.htmlObject.owner = null;
-                this.htmlObject = null;
-            }
-            this.moveHandle = null;
-            this.#dropIndicator = null;
-            this.#dockingHandlers = null;
+            this.htmlObject.owner = null;
             this.dispatchEvent(new CustomEvent('destroy'));
-            if (this.eventList) {
-                this.eventList.forEach(({ event, lh }) => {
-                    this.htmlObject?.removeEventListener(event, lh);
-                });
-                this.eventList = null;
-            }
         }
-        html(content) {
-            if (typeof content === 'undefined') {
-                return this.htmlObject.innerHTML;
-            } else {
-                this.htmlObject.innerHTML = content;
-            }
-        }
-        addEvent(eventType, handler) {
-            this.htmlObject.addEventListener(eventType, handler);
-        }
-        css = function (property, value) {
-            // Önceki CSS'i sakla
-            let ho = this.htmlObject;
-            ho._prevCss = ho.style.cssText;
-            function toCamelCase(property) {
-                return property.replace(/-([a-z])/g, function (match, letter) {
-                    return letter.toUpperCase();
-                });
-            }
-            if (typeof property === 'object' && property !== null) {
-                // Obje şeklinde çoklu özellik ayarlama
-                for (let key in property) {
-                    if (property.hasOwnProperty(key)) {
-                        let camelKey = toCamelCase(key);
-                        ho.style[camelKey] = property[key];
-                    }
-                }
-            } else if (typeof property === 'string') {
-                if (value !== undefined) {
-                    // Tek bir özellik ayarlama
-                    let camelKey = toCamelCase(property);
-                    ho.style[camelKey] = value;
-                } else {
-                    // Bir veya daha fazla özellik alma
-                    let result = {};
-                    let properties = property.split(';').map(prop => prop.trim()).filter(prop => prop);
-
-                    properties.forEach(prop => {
-                        let [key, val] = prop.split(':').map(part => part.trim());
-                        if (key && val !== undefined) {
-                            let camelKey = toCamelCase(key);
-                            ho.style[camelKey] = val;
-                        } else if (key) {
-                            // Sadece özellik adı verildiğinde, değeri döndür
-                            let camelKey = toCamelCase(key);
-                            result[key] = getComputedStyle(ho)[camelKey];
-                        }
-                    });
-
-                    if (Object.keys(result).length > 0) {
-                        return result;
-                    }
-                }
-            }
-
-            // Sonraki CSS'i sakla
-            ho._nextCss = ho.style.cssText;
-
-            return ho._nextCss;
-        };
-
+        track(options={}){
+    this.historyOptions = { ...this.historyOptions, ...options };
+    if(globs.historyManager) globs.historyManager.addTrack(this,this.historyOptions);
+  }
+        // --- Getter/Setter'lar ---
+        get hybridDrag() { return this.#hybridDrag; }
+        get visible() { return this.status.visible; }
+        set visible(val) { this.status.visible = val; }
     }
     let needupdate = true;
     function ensureSelectionOverlay(root) {
-    let selection = root.mainLayers.selection?.htmlObject.querySelector('#descendant-bbox-selection');
-    if (!selection) {
-        selection = document.createElement('div');
-        selection.id = 'descendant-bbox-selection';
-        Object.assign(selection.style, {
-            position: 'absolute',
-            pointerEvents: 'none',
-            border: '2px dashed #2196f3',
-            zIndex: 9999,
-            display: 'none'
-        });
-        root.mainLayers.selection?.htmlObject.appendChild(selection);
+        let selection = root.mainLayers.selection?.htmlObject.querySelector('#descendant-bbox-selection');
+        if (!selection) {
+            selection = document.createElement('div');
+            selection.id = 'descendant-bbox-selection';
+            Object.assign(selection.style, {
+                position: 'absolute',
+                pointerEvents: 'none',
+                border: '2px dashed #2196f3',
+                zIndex: 9999,
+                display: 'none'
+            });
+            root.mainLayers.selection?.htmlObject.appendChild(selection);
+        }
+        return selection;
     }
-    return selection;
-}
     function drawSelectionOverlay(rootLayer) {
-       const selectedLayers = rootLayer.selection();
+        const selectedLayers = rootLayer.selection();
         const selection = ensureSelectionOverlay(rootLayer);
-    if (selectedLayers.length<2){selection.style.display = "none"; return;}
-selection.style.display = "";
-    // Tüm seçili layer’ların DOM’daki boundingRect’lerini topla
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    selectedLayers.forEach(layer => {
-        const rect = layer.htmlObject.getBoundingClientRect();
-        if (rect.left < minX) minX = rect.left;
-        if (rect.top < minY) minY = rect.top;
-        if (rect.right > maxX) maxX = rect.right;
-        if (rect.bottom > maxY) maxY = rect.bottom;
-    });
+        if (selectedLayers.length < 2) { selection.style.display = "none"; return; }
+        selection.style.display = "";
+        // Tüm seçili layer’ların DOM’daki boundingRect’lerini topla
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        selectedLayers.forEach(layer => {
+            const rect = layer.htmlObject.getBoundingClientRect();
+            if (rect.left < minX) minX = rect.left;
+            if (rect.top < minY) minY = rect.top;
+            if (rect.right > maxX) maxX = rect.right;
+            if (rect.bottom > maxY) maxY = rect.bottom;
+        });
 
-    // (rootLayer.mainLayers.overlay veya uygun kapsayıcıya overlay’i yerleştir)
-   
-    Object.assign(selection.style, {
-        left: (minX - rootLayer.htmlObject.getBoundingClientRect().left) + "px",
-        top: (minY - rootLayer.htmlObject.getBoundingClientRect().top) + "px",
-        width: (maxX - minX) + "px",
-        height: (maxY - minY) + "px",
-        display: ""
-    });
+        // (rootLayer.mainLayers.overlay veya uygun kapsayıcıya overlay’i yerleştir)
+
+        Object.assign(selection.style, {
+            left: (minX - rootLayer.htmlObject.getBoundingClientRect().left) + "px",
+            top: (minY - rootLayer.htmlObject.getBoundingClientRect().top) + "px",
+            width: (maxX - minX) + "px",
+            height: (maxY - minY) + "px",
+            display: ""
+        });
     }
 
     function removeSelectionselection() {
@@ -2481,20 +2573,20 @@ selection.style.display = "";
             dyn.forEach((child, i) => child.htmlObject.style.zIndex = i + 1);
             this._notifyChange('reflowZ');
         }
-        createSubLayers(names = Olayers,visible=true) {
-        names.forEach(name => {
-            const lyr = new Tlayer('div', { layerName: name });
-            lyr.htmlObject.classList.add("baseLayer");
-            lyr.htmlObject.dataset.baseLayer = true;
-           
-            this.mainLayers[name] = lyr;
-            lyr.status.visible=visible;
-            this.appendChild(lyr);
-            lyr.htmlObject.style.pointerEvents = "none";
-              lyr.htmlObject.style.inset = "0";
-        });
-    }
-     
+        createSubLayers(names = Olayers, visible = true) {
+            names.forEach(name => {
+                const lyr = new Tlayer('div', { layerName: name });
+                lyr.htmlObject.classList.add("baseLayer");
+                lyr.htmlObject.dataset.baseLayer = true;
+
+                this.mainLayers[name] = lyr;
+                lyr.status.visible = visible;
+                this.appendChild(lyr);
+                lyr.htmlObject.style.pointerEvents = "none";
+                lyr.htmlObject.style.inset = "0";
+            });
+        }
+
         // --- DOM ve iç yapı ile birlikte ekle/çıkar
         appendChild(child) {
             super.appendChild(child);
@@ -2559,8 +2651,8 @@ selection.style.display = "";
                     parent.htmlObject.insertBefore(this.htmlObject, target.htmlObject);
                 }
                 this.parent = parent;
-                if(!this.isStatic)
-                this.reflowZ();
+                if (!this.isStatic)
+                    this.reflowZ();
                 parent._notifyChange('moveTo-sibling', { child: this, target, after });
             }
         }
@@ -2568,22 +2660,22 @@ selection.style.display = "";
         // --- Kopya üret
         copyTo(target, after) {
             if (!(target instanceof Tlayer)) return;
-           
+
             const clone = this.copy();
             if (after === undefined) {
                 target.appendChild(clone);
             } else {
                 const parent = target.parent;
                 if (!parent) return;
-          
+
                 if (after) {
                     parent.insertAfter(clone, target);
                 } else {
-                   parent.insertBefore(clone, target);
+                    parent.insertBefore(clone, target);
                 }
             }
             (clone.parent || target)._notifyChange('copyTo', { original: this, clone, target, after });
-            
+
             return clone;
         }
 
@@ -2643,12 +2735,12 @@ selection.style.display = "";
             if (!addToSelection) this.parent.deselect(true, false);
             this.#isSelected = true;
             this.htmlObject.classList.toggle('selected', true);
-             const root = this.getRoot();
+            const root = this.getRoot();
             if (root && addToSelection) drawSelectionOverlay(root);
             needupdate = true;
             this._notifyChange('select');
         }
-       
+
         deselect(recursive = true, update = true) {
             let t = needupdate;
             needupdate = false;
@@ -2656,31 +2748,31 @@ selection.style.display = "";
             this.htmlObject.classList.toggle('selected', false);
             if (recursive) this.children.forEach(child => child.deselect(true, false));
             needupdate = t;
-                  const root = this.getRoot();
+            const root = this.getRoot();
             if (root) drawSelectionOverlay(root);
             if (!this.parent) drawSelectionOverlay(this); // root ise
             if (update)
                 this._notifyChange('deselect');
         }
-      
-       bringToFront() {
-        if (!this.parent) return;
 
-        if (this.isStatic) {
-            this.parent.appendChild(this);
-        } else {
-            const parent = this.parent;
-            parent.children = parent.children.filter(c => c !== this);
-            parent.children.push(this);
-            const dyn = parent.#dynamicChildren();
-            const max = dyn.reduce((m, l) => Math.max(m, l.zIndex), 0);
-            this.zIndex = max + 1;
-            parent.reflowZ();
+        bringToFront() {
+            if (!this.parent) return;
+
+            if (this.isStatic) {
+                this.parent.appendChild(this);
+            } else {
+                const parent = this.parent;
+                parent.children = parent.children.filter(c => c !== this);
+                parent.children.push(this);
+                const dyn = parent.#dynamicChildren();
+                const max = dyn.reduce((m, l) => Math.max(m, l.zIndex), 0);
+                this.zIndex = max + 1;
+                parent.reflowZ();
+            }
+
+            this._notifyChange('bringToFront');
         }
-
-        this._notifyChange('bringToFront');
-    }
-  sendToBack() {
+        sendToBack() {
             const parent = this.parent;
             if (!parent) return false;
             if (this.isStatic) {
@@ -2712,7 +2804,7 @@ selection.style.display = "";
         }
     };
 
- let treeviewStyles=false;
+    let treeviewStyles = false;
     TtreeView = class TtreeView {
         /**
          * @param {string|HTMLElement} containerSelector - Ağacın konulacağı DOM elemanı (veya CSS selector).
@@ -2742,7 +2834,7 @@ selection.style.display = "";
         #injectStyles() {
             if (treeviewStyles) return;
 
-           let textContent = `
+            let textContent = `
       [data-treeview] ul { list-style:none; padding-left:20px; margin:0; }
       [data-treeview] li { padding:4px; cursor:pointer; position:relative; transition: background-color 0.2s; border: 1px solid transparent; }
       [data-treeview] li.selected { background:#d0eaff; border:1px solid #80bfff; }
@@ -2795,8 +2887,8 @@ selection.style.display = "";
     right: -10px;
 }
     `;
-        DOM.addStyle(textContent);
-            treeviewStyles=true;
+            DOM.addStyle(textContent);
+            treeviewStyles = true;
         }
 
         // --- Layer'dan <li> DOM oluşturur
@@ -2804,7 +2896,7 @@ selection.style.display = "";
             const li = document.createElement('li');
             li.dataset.id = layer.id;
             li.draggable = layer != this.rootLayer && !layer.htmlObject.dataset.baseLayer;
-            
+
             // Toggle (expand/collapse)
             const toggle = document.createElement('span');
             toggle.className = 'toggle';
@@ -2816,7 +2908,7 @@ selection.style.display = "";
             // Etiket
             const lbl = document.createElement('span');
             lbl.className = 'label';
-            lbl.textContent = layer.layerName|| layer.id;
+            lbl.textContent = layer.layerName || layer.id;
 
             li.append(toggle, lbl);
 
@@ -3367,7 +3459,7 @@ selection.style.display = "";
 
                 this.htmlObject.appendChild(this.captionBar);
                 // Drag-move
-                this.moveHandle = this.captionBar;
+                this.moveOptions.handle = this.captionBar;
                 this.status.movable = true;
             }
 
@@ -3568,7 +3660,7 @@ selection.style.display = "";
 
     // Varsayımlar: EwindowStatus, EcaptionButton ve TabsoluteElement daha önce tanımlı.
 
-   
+
 
     function controlAtPos(x, y, findobj, compobj) {
         x = x || mouse.x;
@@ -4060,7 +4152,7 @@ selection.style.display = "";
         }
     };
     wonmup.bindToEvent(document, "mouseup");
-let _styleEl=null;
+    let _styleEl = null;
     window.DOM = {
         modaldiv: document.createElement("DiV"),
         timers: new Array(),
@@ -4079,87 +4171,87 @@ let _styleEl=null;
                 };
             target.style.cursor = "default";
         },
-         head: document.head,
-  path: window.location.href,
-  addStyle: function(cssText) {
-    if (!_styleEl) {
-      _styleEl = document.createElement('style');
-      document.head.appendChild(_styleEl);
-    }
-    _styleEl.appendChild(document.createTextNode(cssText));
-    return _styleEl;
-  },
-  addMeta: function(attributes) {
-    const meta = document.createElement('meta');
-    for (const key in attributes) {
-      meta.setAttribute(key, attributes[key]);
-    }
-    document.head.appendChild(meta);
-    return meta;
-  },
-  addLink: function(attributes) {
-    const link = document.createElement('link');
-    for (const key in attributes) {
-      link.setAttribute(key, attributes[key]);
-    }
-    document.head.appendChild(link);
-    return link;
-  },
-  addScript: function(pathOrOptions) {
-    if (typeof pathOrOptions === 'string') {
-      if (!document.querySelector(`script[src='${pathOrOptions}']`)) {
-        const script = document.createElement('script');
-        script.src = pathOrOptions;
-        document.head.appendChild(script);
-        return script;
-      }
-      return null;
-    } else {
-      const { src = null, inlineContent = '', attributes = {} } = pathOrOptions;
-      if (src && document.querySelector(`script[src='${src}']`)) return null;
-      const script = document.createElement('script');
-      if (src) script.src = src;
-      if (inlineContent) script.appendChild(document.createTextNode(inlineContent));
-      for (const key in attributes) {
-        script.setAttribute(key, attributes[key]);
-      }
-      document.head.appendChild(script);
-      return script;
-    }
-  },
-  setTitle: function(text) {
-    let title = document.head.querySelector('title');
-    if (!title) {
-      title = document.createElement('title');
-      document.head.appendChild(title);
-    }
-    title.textContent = text;
-    return title;
-  },
-  addStyleSheet: function(path) {
-    let link = document.createElement('link');
-    link.href = path;
-    link.type = 'text/css';
-    link.rel = 'stylesheet';
-    link.media = 'screen,print';
-    document.head.appendChild(link);
-    return link;
-  },
-  getUpPath: function(currentPath = null, levels = 1) {
-    const fullUrl = currentPath
-      ? new URL(currentPath, window.location.origin).href
-      : window.location.href;
-    const url = new URL(fullUrl);
-    let pathname = url.pathname;
-    const parts = pathname.split('/').filter(p => p !== '');
-    levels = Math.floor(Math.abs(levels));
-    if (levels >= parts.length) {
-      pathname = '/';
-    } else {
-      pathname = '/' + parts.slice(0, -levels).join('/') + '/';
-    }
-    return url.origin + pathname;
-  }
+        head: document.head,
+        path: window.location.href,
+        addStyle: function (cssText) {
+            if (!_styleEl) {
+                _styleEl = document.createElement('style');
+                document.head.appendChild(_styleEl);
+            }
+            _styleEl.appendChild(document.createTextNode(cssText));
+            return _styleEl;
+        },
+        addMeta: function (attributes) {
+            const meta = document.createElement('meta');
+            for (const key in attributes) {
+                meta.setAttribute(key, attributes[key]);
+            }
+            document.head.appendChild(meta);
+            return meta;
+        },
+        addLink: function (attributes) {
+            const link = document.createElement('link');
+            for (const key in attributes) {
+                link.setAttribute(key, attributes[key]);
+            }
+            document.head.appendChild(link);
+            return link;
+        },
+        addScript: function (pathOrOptions) {
+            if (typeof pathOrOptions === 'string') {
+                if (!document.querySelector(`script[src='${pathOrOptions}']`)) {
+                    const script = document.createElement('script');
+                    script.src = pathOrOptions;
+                    document.head.appendChild(script);
+                    return script;
+                }
+                return null;
+            } else {
+                const { src = null, inlineContent = '', attributes = {} } = pathOrOptions;
+                if (src && document.querySelector(`script[src='${src}']`)) return null;
+                const script = document.createElement('script');
+                if (src) script.src = src;
+                if (inlineContent) script.appendChild(document.createTextNode(inlineContent));
+                for (const key in attributes) {
+                    script.setAttribute(key, attributes[key]);
+                }
+                document.head.appendChild(script);
+                return script;
+            }
+        },
+        setTitle: function (text) {
+            let title = document.head.querySelector('title');
+            if (!title) {
+                title = document.createElement('title');
+                document.head.appendChild(title);
+            }
+            title.textContent = text;
+            return title;
+        },
+        addStyleSheet: function (path) {
+            let link = document.createElement('link');
+            link.href = path;
+            link.type = 'text/css';
+            link.rel = 'stylesheet';
+            link.media = 'screen,print';
+            document.head.appendChild(link);
+            return link;
+        },
+        getUpPath: function (currentPath = null, levels = 1) {
+            const fullUrl = currentPath
+                ? new URL(currentPath, window.location.origin).href
+                : window.location.href;
+            const url = new URL(fullUrl);
+            let pathname = url.pathname;
+            const parts = pathname.split('/').filter(p => p !== '');
+            levels = Math.floor(Math.abs(levels));
+            if (levels >= parts.length) {
+                pathname = '/';
+            } else {
+                pathname = '/' + parts.slice(0, -levels).join('/') + '/';
+            }
+            return url.origin + pathname;
+        }
     }
 
     DOM.addStyleSheet(
@@ -4167,18 +4259,26 @@ let _styleEl=null;
 
     );
     DOM.head.innerHTML += " #d3d {background-image:" + "url(" + DOM.getUpPath(null, 2) + "/files/images/ortak/gradienObutton.png);background-repeat:repeat-x;background-size:auto 100%;};";
-        DOM.ghost= new Telement("DiV"),
-        DOM.spareSpan= new Telement("SPAN"),
-        DOM.pointer= new Telement("DiV"),
-        DOM.disableScreen= new Telement("DiV"),
-        DOM.dialogBox= new TabsoluteElement("DiV", "dlgBox"),
-        DOM.scrollBox= new TabsoluteElement("DiV", "scrollBox"),
+    DOM.ghost = new Telement("DiV"),
+        DOM.spareSpan = new Telement("SPAN"),
+        DOM.pointer = new Telement("DiV"),
+        DOM.disableScreen = new Telement("DiV"),
+        DOM.dialogBox = new TabsoluteElement("DiV", "dlgBox"),
+        DOM.scrollBox = new TabsoluteElement("DiV", "scrollBox"),
+        DOM.designMode = false;
 
-    DOM.designMode = false;
-    DOM.dragPlaceHolder = null;
     DOM.selectedElements = new Set();
     DOM.selectionRectangle = document.createElement('div');
     DOM.resizeHelpers = [];
+    DOM.getDragPlaceholder = () => {
+        if (!DOM.dragPlaceHolder) {
+            DOM.dragPlaceHolder = document.createElement('div');
+            DOM.dragPlaceHolder.className = 'drop-placeholder';
+            // Diğer stiller...
+            document.body.appendChild(DOM.dragPlaceHolder);
+        }
+        return DOM.dragPlaceHolder;
+    };
 
     // Initialize selection rectangle
 
@@ -4473,108 +4573,101 @@ let _styleEl=null;
         document.removeEventListener('mousemove', DOM.handleDesignDrag);
         document.removeEventListener('mouseup', DOM.handleDesignDragEnd);
     };
-    const INTERACTION_STATE = new WeakMap(); 
-DOM.makeResizable = function (el, options) {
-    // Önce eski eventleri temizle
-    (el._eventList || []).filter(e =>
-        (e.event === 'mousemove' || e.event === 'mousedown') && e.listener && e.listener._isResizeHandler
-    ).forEach(e => el.removeEventListener(e.event, e.listener));
-    // (Helper handle'lar varsa, onları da kaldır)
+    const INTERACTION_STATE = new WeakMap();
+    DOM.makeResizable = function (el, options) {
+        // Önce eski eventleri temizle
+        (el.eventList || []).filter(e =>
+            (e.event === 'mousemove' || e.event === 'mousedown') && e.listener && e.listener._isResizeHandler
+        ).forEach(e => el.removeEventListener(e.event, e.listener));
+        // (Helper handle'lar varsa, onları da kaldır)
 
-    el.style.cursor = '';
-    if (!options) return;
+        el.style.cursor = '';
+        if (!options) return;
 
-    let { flags, useHelper } = options;
+        let { flags, useHelper } = options;
 
-    function has(flag) {
-        return ((flags & flag) === flag) || (flags === Eborder.all && flag !== 0);
-    }
+        function has(flag) {
+            return ((flags & flag) === flag) || (flags === Eborder.all && flag !== 0);
+        }
 
-    function hit(x, y, w, h) {
-        const th = 7;
-        if (has(Eborder.leftTop) && x < th && y < th) return 'nw';
-        if (has(Eborder.rightTop) && x > w - th && y < th) return 'ne';
-        if (has(Eborder.leftBottom) && x < th && y > h - th) return 'sw';
-        if (has(Eborder.rightBottom) && x > w - th && y > h - th) return 'se';
-        if (has(Eborder.top) && y < th) return 'n';
-        if (has(Eborder.bottom) && y > h - th) return 's';
-        if (has(Eborder.left) && x < th) return 'w';
-        if (has(Eborder.right) && x > w - th) return 'e';
-        return '';
-    }
+        function hit(x, y, w, h) {
+            const th = 7;
+            if (has(Eborder.leftTop) && x < th && y < th) return 'nw';
+            if (has(Eborder.rightTop) && x > w - th && y < th) return 'ne';
+            if (has(Eborder.leftBottom) && x < th && y > h - th) return 'sw';
+            if (has(Eborder.rightBottom) && x > w - th && y > h - th) return 'se';
+            if (has(Eborder.top) && y < th) return 'n';
+            if (has(Eborder.bottom) && y > h - th) return 's';
+            if (has(Eborder.left) && x < th) return 'w';
+            if (has(Eborder.right) && x > w - th) return 'e';
+            return '';
+        }
 
-    const mouseMoveHandler = function (e) {
-        const rect = el.getBoundingClientRect();
-        const dir = hit(
-            e.clientX - rect.left,
-            e.clientY - rect.top,
-            rect.width,
-            rect.height
-        );
-        el.style.cursor = dir
-            ? (dir + '-resize')
-            : '';
-    };
-    mouseMoveHandler._isResizeHandler = true;
-
-    const mouseDownHandler = function (e) {
-        const rect = el.getBoundingClientRect();
-        const dir = hit(
-            e.clientX - rect.left,
-            e.clientY - rect.top,
-            rect.width,
-            rect.height
-        );
-        if (!dir) return;
-
-        if (INTERACTION_STATE.get(el)) return;
-        INTERACTION_STATE.set(el, 'resizing');
-
-        const minW = 20, minH = 20;
-        const start = {
-            x: e.clientX, y: e.clientY,
-            left: el.offsetLeft,
-            top: el.offsetTop,
-            width: rect.width,
-            height: rect.height,
+        const mouseMoveHandler = function (e) {
+            const rect = el.getBoundingClientRect();
+            const dir = hit(
+                e.clientX - rect.left,
+                e.clientY - rect.top,
+                rect.width,
+                rect.height
+            );
+            el.style.cursor = dir
+                ? (dir + '-resize')
+                : '';
         };
-        function drag(ev) {
-            const dx = ev.clientX - start.x, dy = ev.clientY - start.y;
-            let newW = start.width, newH = start.height, newL = start.left, newT = start.top;
-            if (dir.includes('e')) newW = start.width + dx;
-            if (dir.includes('s')) newH = start.height + dy;
-            if (dir.includes('w')) {
-                newW = start.width - dx;
-                newL = start.left + dx;
+        mouseMoveHandler._isResizeHandler = true;
+
+        const mouseDownHandler = function (e) {
+            const rect = el.getBoundingClientRect();
+            const dir = hit(
+                e.clientX - rect.left,
+                e.clientY - rect.top,
+                rect.width,
+                rect.height
+            );
+            if (!dir) return;
+
+            if (INTERACTION_STATE.get(el)) return;
+            INTERACTION_STATE.set(el, 'resizing');
+
+            const minW = 20, minH = 20;
+            const start = {
+                x: e.clientX, y: e.clientY,
+                left: el.offsetLeft,
+                top: el.offsetTop,
+                width: rect.width,
+                height: rect.height,
+            };
+            function drag(ev) {
+                const dx = ev.clientX - start.x, dy = ev.clientY - start.y;
+                let newW = start.width, newH = start.height, newL = start.left, newT = start.top;
+                if (dir.includes('e')) newW = start.width + dx;
+                if (dir.includes('s')) newH = start.height + dy;
+                if (dir.includes('w')) {
+                    newW = start.width - dx;
+                    newL = start.left + dx;
+                }
+                if (dir.includes('n')) {
+                    newH = start.height - dy;
+                    newT = start.top + dy;
+                }
+                if (newW > minW) { el.style.width = newW + 'px'; if (dir.includes('w')) el.style.left = newL + 'px'; }
+                if (newH > minH) { el.style.height = newH + 'px'; if (dir.includes('n')) el.style.top = newT + 'px'; }
             }
-            if (dir.includes('n')) {
-                newH = start.height - dy;
-                newT = start.top + dy;
+            function up() {
+                document.removeEventListener('mousemove', drag);
+                document.removeEventListener('mouseup', up);
+                INTERACTION_STATE.delete(el);
             }
-            if (newW > minW) { el.style.width = newW + 'px'; if (dir.includes('w')) el.style.left = newL + 'px'; }
-            if (newH > minH) { el.style.height = newH + 'px'; if (dir.includes('n')) el.style.top = newT + 'px'; }
-        }
-        function up() {
-            document.removeEventListener('mousemove', drag);
-            document.removeEventListener('mouseup', up);
-            INTERACTION_STATE.delete(el);
-        }
-        document.addEventListener('mousemove', drag);
-        document.addEventListener('mouseup', up);
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', up);
+        };
+        mouseDownHandler._isResizeHandler = true;
+
+        el.addEventListener('mousemove', mouseMoveHandler);
+        el.addEventListener('mousedown', mouseDownHandler);
     };
-    mouseDownHandler._isResizeHandler = true;
-
-    el.addEventListener('mousemove', mouseMoveHandler);
-    el.addEventListener('mousedown', mouseDownHandler);
-};
-
-    // Modify existing makeMovable to respect designMode
-
-
-    // Initialize design mode CSS
-
-
-    const css =`
+    const css = `
         [data-layer] {
             transition: box-shadow 0.2s;
         }
@@ -4962,98 +5055,6 @@ DOM.makeResizable = function (el, options) {
         }
     };
 
-   DOM.makeMovable = function (element, handle = null, movableRect = null, xable = true, yable = true) {
-    handle = handle || element;
-
-    // Eski handler varsa temizle
-    const entry = (handle._eventList || []).find(e =>
-        e.event === 'pointerdown' && e.listener && e.listener._isMovableHandler
-    );
-    if (entry) handle.removeEventListener('pointerdown', entry.listener);
-
-    // Yeni handler
-    const onPointerDown = e => {
-        const threshold = 7;
-        const rect = element.getBoundingClientRect();
-        const nearEdge = (
-            e.clientX - rect.left < threshold || rect.right - e.clientX < threshold ||
-            e.clientY - rect.top < threshold || rect.bottom - e.clientY < threshold
-        );
-        if ((element._resizeHandles && element._resizeHandles.includes(e.target)) || nearEdge) {
-            return; // resizing has priority
-        }
-        if (INTERACTION_STATE.get(element)) return;
-        INTERACTION_STATE.set(element, 'moving');
-
-        handle.setPointerCapture(e.pointerId);
-
-        const container = movableRect instanceof Element
-            ? movableRect
-            : (element.offsetParent || document.documentElement);
-
-        const scrollLeft = container.scrollLeft;
-        const scrollTop = container.scrollTop;
-
-        const startPageX = e.pageX;
-        const startPageY = e.pageY;
-
-        const startLeft = parseInt(getComputedStyle(element).left, 10) || element.offsetLeft;
-        const startTop = parseInt(getComputedStyle(element).top, 10) || element.offsetTop;
-
-        let boundRect = null;
-        if (movableRect === true) boundRect = new DOMRect(0, 0, 1e7, 1e7);
-        else if (movableRect instanceof Element) {
-            const r = movableRect.getBoundingClientRect();
-            boundRect = new DOMRect(r.left + scrollLeft, r.top + scrollTop, r.width, r.height);
-        } else if (movableRect instanceof DOMRect) {
-            boundRect = movableRect;
-        }
-
-        const onPointerMove = ev => {
-            const curPageX = ev.pageX;
-            const curPageY = ev.pageY;
-            let dx = curPageX - startPageX;
-            let dy = curPageY - startPageY;
-            let newLeft = startLeft + dx;
-            let newTop = startTop + dy;
-
-            if (xable && boundRect) {
-                const minX = boundRect.x;
-                const maxX = boundRect.x + boundRect.width - element.offsetWidth;
-                newLeft = Math.min(Math.max(minX, newLeft), maxX);
-            }
-            if (yable && boundRect) {
-                const minY = boundRect.y;
-                const maxY = boundRect.y + boundRect.height - element.offsetHeight;
-                newTop = Math.min(Math.max(minY, newTop), maxY);
-            }
-
-            element.style.left = `${newLeft}px`;
-            element.style.top = `${newTop}px`;
-
-            ev.stopPropagation();
-        };
-
-        const cleanup = (pid) => {
-            handle.releasePointerCapture(pid);
-            handle.removeEventListener('pointermove', onPointerMove);
-            handle.removeEventListener('pointerup', onPointerUp);
-            INTERACTION_STATE.delete(element);
-        };
-
-        const onPointerUp = ev => cleanup(ev.pointerId);
-        handle.addEventListener('pointermove', onPointerMove);
-        handle.addEventListener('pointerup', onPointerUp, { once: true });
-    };
-    onPointerDown._isMovableHandler = true;
-
-    if (movableRect !== false) {
-        handle.addEventListener('pointerdown', onPointerDown);
-    }
-};
-
-
-
 
     // Helper-based handles attach
     // Shared cursor map for handles and edges
@@ -5198,74 +5199,236 @@ DOM.makeResizable = function (el, options) {
 
 
 
-   DOM.makeDraggable = function (element, handle = null, enable = true, customDragging = false) {
-    const target = handle || element;
+    DOM.makeDraggable = function (element, handle = null, enable = true, customDragging = false) {
+        const target = handle || element;
 
-    // Önce eski eventleri temizle
-    (target._eventList || []).filter(e =>
-        (
-            // Custom
-            ((e.event === 'pointerdown' || e.event === 'pointermove' || e.event === 'pointerup') && e.listener && e.listener._isCustomDraggableHandler)
-        ) ||
-        (
-            // Native
-            ((e.event === 'dragstart' || e.event === 'dragend') && e.listener && e.listener._isNativeDraggableHandler)
-        )
-    ).forEach(e => target.removeEventListener(e.event, e.listener));
-    target.removeAttribute('draggable');
+        // Önce eski eventleri temizle
+        (target.eventList || []).filter(e =>
+            (
+                // Custom
+                ((e.event === 'pointerdown' || e.event === 'pointermove' || e.event === 'pointerup') && e.listener && e.listener._isCustomDraggableHandler)
+            ) ||
+            (
+                // Native
+                ((e.event === 'dragstart' || e.event === 'dragend') && e.listener && e.listener._isNativeDraggableHandler)
+            )
+        ).forEach(e => target.removeEventListener(e.event, e.listener));
+        target.removeAttribute('draggable');
 
-    if (!enable) return;
+        if (!enable) return;
 
-    if (customDragging) {
-        let dragging = false, offsetX = 0, offsetY = 0;
+        if (customDragging) {
+            let dragging = false, offsetX = 0, offsetY = 0;
 
-        const pointerDown = (e) => {
-            if (INTERACTION_STATE.get(element)) return;
-            INTERACTION_STATE.set(element, 'dragging');
-            dragging = true;
-            offsetX = e.clientX - element.offsetLeft;
-            offsetY = e.clientY - element.offsetTop;
-            target.setPointerCapture(e.pointerId);
-            element.classList.add('dragging');
+            const pointerDown = (e) => {
+                if (INTERACTION_STATE.get(element)) return;
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                INTERACTION_STATE.set(element, 'dragging');
+                dragging = true;
+                offsetX = e.clientX - element.offsetLeft;
+                offsetY = e.clientY - element.offsetTop;
+                target.setPointerCapture(e.pointerId);
+                element.classList.add('dragging');
+            };
+            const pointerMove = (e) => {
+                if (!dragging) return;
+                element.style.left = (e.clientX - offsetX) + 'px';
+                element.style.top = (e.clientY - offsetY) + 'px';
+            };
+            const pointerUp = (e) => {
+                dragging = false;
+                target.releasePointerCapture(e.pointerId);
+                element.classList.remove('dragging');
+                INTERACTION_STATE.delete(element);
+            };
+
+            pointerDown._isCustomDraggableHandler = true;
+            pointerMove._isCustomDraggableHandler = true;
+            pointerUp._isCustomDraggableHandler = true;
+            target.addEventListener('pointerdown', pointerDown, true);
+            target.addEventListener('pointermove', pointerMove);
+            target.addEventListener('pointerup', pointerUp);
+        } else {
+            target.setAttribute('draggable', 'true');
+            const dragStart = e => {
+                if (INTERACTION_STATE.get(element)) { e.preventDefault(); return; }
+                INTERACTION_STATE.set(element, 'dragging');
+                e.dataTransfer.setData('text/plain', element.id || '');
+                element.classList.add('dragging');
+            };
+            const dragEnd = () => {
+                element.classList.remove('dragging');
+                INTERACTION_STATE.delete(element);
+            };
+            dragStart._isNativeDraggableHandler = true;
+            dragEnd._isNativeDraggableHandler = true;
+
+            target.addEventListener('dragstart', dragStart);
+            target.addEventListener('dragend', dragEnd);
+        }
+    };
+   DOM.makeMovable = function (element, handle = null, movableRect = null,
+    xable = true, yable = true,
+    onMoveStartCb = null,
+    onMoveCb = null,
+    onDropCb = null
+) {
+    if (!handle) return;
+
+    // Eski dinleyicileri temizle
+    (handle.eventList || []).filter(e =>
+        e.event === 'pointerdown' && e.listener?._isMovableHandler
+    ).forEach(e => handle.removeEventListener('pointerdown', e.listener));
+
+    const onPointerDown = e => {
+        if (e.target !== handle) return;
+        if (INTERACTION_STATE.get(element)) return;
+        INTERACTION_STATE.set(element, 'moving');
+        onMoveStartCb?.();
+
+        const te = element.owner;
+        if (te && !globs.selectionManager.has(te)) {
+            globs.selectionManager.forEach(el => el.htmlObject.classList.remove('selected'));
+            globs.selectionManager.clear();
+            globs.selectionManager.add(te);
+            te.htmlObject.classList.add('selected');
+        }
+        const threshold = 7;
+        const rect = element.getBoundingClientRect();
+        const nearEdge = (
+            e.clientX - rect.left < threshold || rect.right - e.clientX < threshold ||
+            e.clientY - rect.top < threshold || rect.bottom - e.clientY < threshold
+        );
+        if (nearEdge) return; // resize öncelikli
+
+        handle.setPointerCapture(e.pointerId);
+
+        const container = movableRect instanceof Element
+            ? movableRect
+            : (element.offsetParent || document.documentElement);
+
+        const scrollLeft = container.scrollLeft;
+        const scrollTop = container.scrollTop;
+
+        const startPageX = e.pageX;
+        const startPageY = e.pageY;
+
+        const startLeft = parseInt(getComputedStyle(element).left, 10) || element.offsetLeft;
+        const startTop = parseInt(getComputedStyle(element).top, 10) || element.offsetTop;
+
+        let boundRect = null;
+        if (movableRect === true) boundRect = new DOMRect(0, 0, 9e9, 9e9);
+        else if (movableRect instanceof Element) {
+            const r = movableRect.getBoundingClientRect();
+            boundRect = new DOMRect(r.left + scrollLeft, r.top + scrollTop, r.width, r.height);
+        } else if (movableRect instanceof DOMRect) boundRect = movableRect;
+
+        const onPointerMove = (ev) => {
+            const dx = ev.pageX - startPageX;
+            const dy = ev.pageY - startPageY;
+
+            let newLeft = startLeft + dx;
+            let newTop = startTop + dy;
+
+            if (xable && boundRect) {
+                const minX = boundRect.x;
+                const maxX = boundRect.x + boundRect.width - element.offsetWidth;
+                newLeft = Math.min(Math.max(minX, newLeft), maxX);
+            }
+            if (yable && boundRect) {
+                const minY = boundRect.y;
+                const maxY = boundRect.y + boundRect.height - element.offsetHeight;
+                newTop = Math.min(Math.max(minY, newTop), maxY);
+            }
+
+            element.style.left = `${newLeft}px`;
+            element.style.top = `${newTop}px`;
+
+            onMoveCb?.(ev);
+            ev.stopPropagation();
         };
-        const pointerMove = (e) => {
-            if (!dragging) return;
-            element.style.left = (e.clientX - offsetX) + 'px';
-            element.style.top = (e.clientY - offsetY) + 'px';
-        };
-        const pointerUp = (e) => {
-            dragging = false;
-            target.releasePointerCapture(e.pointerId);
-            element.classList.remove('dragging');
+
+        const onPointerUp = (ev) => {
             INTERACTION_STATE.delete(element);
+            handle.removeEventListener('pointermove', onPointerMove);
+            handle.removeEventListener('pointerup', onPointerUp);
+            handle.releasePointerCapture(e.pointerId);
+            onDropCb?.({ x: ev.clientX, y: ev.clientY });
         };
 
-        pointerDown._isCustomDraggableHandler = true;
-        pointerMove._isCustomDraggableHandler = true;
-        pointerUp._isCustomDraggableHandler = true;
+        handle.addEventListener('pointermove', onPointerMove);
+        handle.addEventListener('pointerup', onPointerUp, { once: true });
+    };
+    onPointerDown._isMovableHandler = true;
 
-        target.addEventListener('pointerdown', pointerDown);
-        target.addEventListener('pointermove', pointerMove);
-        target.addEventListener('pointerup', pointerUp);
-    } else {
-        target.setAttribute('draggable', 'true');
-        const dragStart = e => {
-            if (INTERACTION_STATE.get(element)) { e.preventDefault(); return; }
-            INTERACTION_STATE.set(element, 'dragging');
-            e.dataTransfer.setData('text/plain', element.id || '');
-            element.classList.add('dragging');
-        };
-        const dragEnd = () => {
-            element.classList.remove('dragging');
-            INTERACTION_STATE.delete(element);
-        };
-        dragStart._isNativeDraggableHandler = true;
-        dragEnd._isNativeDraggableHandler = true;
-
-        target.addEventListener('dragstart', dragStart);
-        target.addEventListener('dragend', dragEnd);
-    }
+    if (movableRect !== false)
+        handle.addEventListener('pointerdown', onPointerDown);
 };
 
+    /**
+     * Enable simple drag-reordering of child elements within a container.
+     * @param {HTMLElement} container
+     * @param {string} [itemSelector] selector for draggable items
+     */
+    DOM.makeSortable = function (container, itemSelector = '> *') {
+        let active = null;
+        let placeholder = null;
+        let stylesAdded = DOM.makeSortable._stylesAdded;
+
+        if (!stylesAdded) {
+            DOM.addStyle(`.sort-placeholder{background:#0078d4;height:4px;margin:2px 0;border-radius:2px}`);
+            DOM.makeSortable._stylesAdded = true;
+        }
+
+        const getItem = (target) => target.closest(itemSelector);
+
+        const onDown = (e) => {
+            const item = getItem(e.target);
+            if (!item || !container.contains(item)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            active = item;
+            placeholder = document.createElement('div');
+            placeholder.className = 'sort-placeholder';
+            placeholder.style.height = `${item.getBoundingClientRect().height}px`;
+            item.after(placeholder);
+            item.classList.add('dragging');
+            item.setPointerCapture(e.pointerId);
+        };
+
+        const onMove = (e) => {
+            if (!active) return;
+            const over = document.elementFromPoint(e.clientX, e.clientY);
+            const target = getItem(over);
+            if (target && target !== placeholder && container.contains(target)) {
+                const rect = target.getBoundingClientRect();
+                if (e.clientY < rect.top + rect.height / 2) {
+                    container.insertBefore(placeholder, target);
+                } else {
+                    container.insertBefore(placeholder, target.nextSibling);
+                }
+            }
+        };
+
+        const onUp = (e) => {
+            if (!active) return;
+            active.classList.remove('dragging');
+            container.insertBefore(active, placeholder);
+            placeholder.remove();
+            active.releasePointerCapture(e.pointerId);
+            active = placeholder = null;
+        };
+
+        container.addEventListener('pointerdown', onDown);
+        container.addEventListener('pointermove', onMove);
+        container.addEventListener('pointerup', onUp);
+
+        return () => {
+            container.removeEventListener('pointerdown', onDown);
+            container.removeEventListener('pointermove', onMove);
+            container.removeEventListener('pointerup', onUp);
+        };
+    };
 })();
 
