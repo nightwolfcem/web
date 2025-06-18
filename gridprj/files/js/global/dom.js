@@ -1880,15 +1880,65 @@ var OID = 0;
 
     let Telementstyles = false;
 
-    /**
-    * Gelişmiş Temel Telement Sınıfı
-    * - Alt sınıflar için kolay genişletme
-    * - Modern component mantığı, event/state/destroy sistemi
-    *
-    * @class Telement
-    * @param {string|HTMLElement} tagOrEl - Oluşturulacak tag ismi veya doğrudan HTMLElement
-    * @param {Object} [options] - Ayar nesnesi
-    */
+/**
+ * Gelişmiş Temel Telement Sınıfı
+ *
+ * @param {string|HTMLElement} tagOrEl
+ *   Oluşturulacak tag’ın adı veya var olan bir HTMLElement.
+ * @param {Object} [options]
+ *   Yapılandırma objesi. İçerdiği alanlar:
+ *   @param {string}                     [options.id]               — HTML id
+ *   @param {string|string[]}            [options.className]        — Ek CSS sınıfları
+ *   @param {Object}                     [options.style]            — inline CSS stilleri ({ left, top, width, … })
+ *   @param {Object}                     [options.attrs]            — diğer HTML attribute’ları ({ title, 'data-*', … })
+ *   @param {Object.<string,Function>}   [options.events]          — event handler’lar ({ click: fn, mouseover: fn, … })
+ *   @param {Telement|HTMLElement}       [options.parent]           — parent konteyner (Telement ya da raw HTMLElement)
+ *   @param {Array.<Telement>}           [options.children]         — başlangıç çocukları
+ *   @param {EelementStatus|Object}      [options.status]           — başlangıç status flag’leri
+ *
+ *   @param {Object}                     [options.resizeOptions]    — resize ayarları
+ *   @param {number}                     [options.resizeOptions.flags]       — Eborder bitmask (hangi kenarlardan resize yapılır)
+ *   @param {number}                     [options.resizeOptions.minWidth]    — minimum width (px)
+ *   @param {number}                     [options.resizeOptions.maxWidth]    — maximum width (px)
+ *   @param {number}                     [options.resizeOptions.minHeight]   — minimum height (px)
+ *   @param {number}                     [options.resizeOptions.maxHeight]   — maximum height (px)
+ *   @param {boolean}                    [options.resizeOptions.useHelper]   — görsel handle’lar çizilsin mi
+ *
+ *   @param {Object}                     [options.dragOptions]      — native HTML5 drag ayarları
+ *   @param {HTMLElement|string|null}    [options.dragOptions.handle]          — drag başlatma handle’ı (selector veya HTMLElement)
+ *   @param {string|null}                [options.dragOptions.group]           — drag grup etiketi (aynı gruptakiler arasında drop)
+ *   @param {string}                     [options.dragOptions.type]            — drag tipi (örn. 'default')
+ *   @param {boolean}                    [options.dragOptions.revertIfNotDropped] — drop olmazsa geri dönsün mü
+ *   @param {string}                     [options.dragOptions.dragClass]       — sürüklenirken eklenen CSS sınıfı
+ *   @param {Function}                   [options.dragOptions.onDragStart]     — dragstart tetiklendiğinde çağrılır
+ *   @param {Function}                   [options.dragOptions.onDragEnd]       — dragend tetiklendiğinde çağrılır
+ *
+ *   @param {Object}                     [options.moveOptions]      — pointer tabanlı taşıma ayarları
+ *   @param {HTMLElement|string|null}    [options.moveOptions.handle]         — taşımayı başlatan handle (selector veya HTMLElement)
+ *   @param {boolean|DOMRect|HTMLElement}[options.moveOptions.bound]          — hareket sınırı (true=body tüm alan, DOMRect ya da HTML element)
+ *   @param {boolean}                    [options.moveOptions.xable]          — yatayda taşınabilir mi
+ *   @param {boolean}                    [options.moveOptions.yable]          — dikeyde taşınabilir mi
+ *   @param {Function}                   [options.moveOptions.onMoveStart]    — taşımaya başlandığında çağrılır
+ *   @param {Function}                   [options.moveOptions.onMove]         — taşınırken her hareket anında çağrılır
+ *   @param {Function}                   [options.moveOptions.onDrop]         — drop anında çağrılır ({x,y} objesi parametre)
+ *
+ *   @param {Object}                     [options.dropOptions]      — drop hedef ayarları
+ *   @param {string[]}                   [options.dropOptions.acceptTypes]     — kabul edilecek drag tipleri
+ *   @param {string}                     [options.dropOptions.hoverClass]      — üzerine gelince eklenen CSS sınıfı
+ *   @param {string}                     [options.dropOptions.placeHolderClass] — placeholder için CSS sınıfı
+ *   @param {boolean}                    [options.dropOptions.showPlaceHolder] — placeholder gözüksün mü
+ *   @param {Function}                   [options.dropOptions.onDrop]         — drop gerçekleştiğinde çağrılır (event parametreli)
+ *
+ *   @param {Object}                     [options.historyOptions]   — undo/redo takibi için ayarlar
+ *   @param {boolean}                    [options.historyOptions.trackStyle]    — style değişikliklerini kaydet
+ *   @param {boolean}                    [options.historyOptions.trackResize]   — resize değişikliklerini kaydet
+ *   @param {boolean}                    [options.historyOptions.trackChildren] — çocuk ekleme/çıkarma
+ *   @param {boolean}                    [options.historyOptions.trackAttr]     — attribute değişikliklerini kaydet
+ *   @param {boolean}                    [options.historyOptions.trackEvents]   — event binding değişikliklerini kaydet
+ *
+ *   @param {...object}                 other             — diğer custom parametreler
+ */
+
    let _$dragObj=null;
     Telement = class Telement extends extendsClass(TClass, EventTarget) {
         #dropIndicator = null;
@@ -1935,12 +1985,11 @@ var OID = 0;
                 id, className, style = {}, attrs = {}, events = {},
                 parent, children = [],
                 status = EelementStatus.visible,
-                resize_flags = Eborder.all,
-                useResizeHelper = false,
+                resizeOptions={},
                 dragOptions = {}, moveOptions = {}, dropOptions = {}, historyOptions = {},
                 ...other
             } = opts;
-
+           
             // HTML nitelikleri
             html.id = html.id || id || this.id;
             const clsDef = this.constructor.name;
@@ -1960,6 +2009,14 @@ var OID = 0;
                 acceptTypes: ['default'], hoverClass: 'droppable-hover',
                 placeHolderClass: 'drop-placeholder', showPlaceHolder: true
             }, dropOptions);
+this.resizeOptions = Object.assign({
+  borders: Eborder.all,
+  useHelper: false,
+  minWidth: 20,
+  maxWidth: Infinity,
+  minHeight: 20,
+  maxHeight: Infinity
+}, resizeOptions);
 
             const resolveHandle = h => {
                 if (!h) return null;
@@ -2044,8 +2101,8 @@ var OID = 0;
 
             // Enum bağlamaları
             EelementStatus.bindTo('status', this);
-            Eborder.bindTo('resize_flags', this);
-            this.resize_flags = resize_flags;
+            Eborder.bindTo('resizeOptions.borders', this);
+            this.resizeOptions.borders = resizeOptions.borders;
             if (status instanceof Object) this.status.assign(status);
             else this.status = status;
             this.status.onchange = ch => this.#handleStatusChange(ch);
@@ -2384,7 +2441,19 @@ var OID = 0;
             }
         }
         #enableSizing(isOn) {
-            DOM.makeResizable?.(this.htmlObject, isOn ? { flags: this.resize_flags, useHelper: this.useResizeHelper } : false);
+              DOM.makeResizable?.(
+    this.htmlObject,
+    this.status.sizable
+      ? {
+          flags:      this.resizeOptions.flags,
+          useHelper:  this.resizeOptions.useHelper,
+          minWidth:   this.resizeOptions.minWidth,
+          maxWidth:   this.resizeOptions.maxWidth,
+          minHeight:  this.resizeOptions.minHeight,
+          maxHeight:  this.resizeOptions.maxHeight
+        }
+      : false
+  );
         }
         #enableDrop() {
             if (this.#dropHandlers) return;
@@ -2457,8 +2526,8 @@ var OID = 0;
                     DOM.makeMovable?.(
                         this.htmlObject,
                         this.moveOptions.handle,
-                        isOn ? this.moveOptions.bound : false,
-                        true, true,
+                        isOn ? this.moveOptions.rect : false,
+                        moveOptions.movableX, moveOptions.movableY,
                         onMoveStart,
                         e => { if (this.#hybridDrag) this.#updatePlaceholder(e) },
                         pt => { if (this.#hybridDrag) this.#handleHybridDrop(pt) }
@@ -2504,7 +2573,7 @@ var OID = 0;
         }
 
         copy() {
-            const LOCAL_SKIP = ["parent", "children", "htmlObject", "status", "resize_flags", "history", "_initialKeys", "_initOpts"];
+            const LOCAL_SKIP = ["parent", "children", "htmlObject", "status", "resizeOptions.borders", "history", "_initialKeys", "_initOpts"];
             const tag = this.htmlObject.tagName.toLowerCase();
             const opts = { ...this.#initOpts, id: undefined };
             const clone = new Telement(tag, opts);
@@ -2532,7 +2601,7 @@ var OID = 0;
 
             // Durumlar
             clone.status = Number(this.status);
-            clone.resize_flags = Number(this.resize_flags);
+            clone.resizeOptions.borders = Number(this.resizeOptions.borders);
             if (this.loaded) clone.body();
 
             return clone;
@@ -3036,6 +3105,12 @@ var OID = 0;
             this.#setupDragAndDrop();
 
             this.refreshTree();
+     
+            let onselectionchange=(e)=> {
+               let [action, item] = [e.detail.action, e.detail.item];
+           this.treeElement.querySelector(`[data-id="${item.id}"]`).classList.toggle("selected", action === 'select');
+            }
+            globs.selectionManager.addEventListener('change', onselectionchange);
         }
 
         // --- Stil dosyası (lock için renk vurgusu ve selection)
@@ -3111,7 +3186,7 @@ var OID = 0;
 
             const hasChildren = layer.children.length > 0;
             if (hasChildren) li.classList.add('expanded');
-            else li.classList.add('collapsed');
+          
 
             // Etiket
             const lbl = document.createElement('span');
@@ -4782,99 +4857,129 @@ var OID = 0;
         document.removeEventListener('mouseup', DOM.handleDesignDragEnd);
     };
     const INTERACTION_STATE = new WeakMap();
-    DOM.makeResizable = function (el, options) {
-        // Önce eski eventleri temizle
-        (el.eventList || []).filter(e =>
-            (e.event === 'mousemove' || e.event === 'mousedown') && e.listener && e.listener._isResizeHandler
-        ).forEach(e => el.removeEventListener(e.event, e.listener));
-        // (Helper handle'lar varsa, onları da kaldır)
+  DOM.makeResizable = function (el, options) {
+  // Temizleme: Önceki resize handler’ları kaldır
+  (el.eventList || [])
+    .filter(e =>
+      (e.event === 'mousemove' || e.event === 'mousedown') &&
+      e.listener &&
+      e.listener._isResizeHandler
+    )
+    .forEach(e => el.removeEventListener(e.event, e.listener));
 
-        el.style.cursor = '';
-        if (!options) return;
+  // Eğer options yoksa (sizable false), cursor’u kaldır ve çık
+  if (!options) {
+    el.style.cursor = '';
+    return;
+  }
 
-        let { flags, useHelper } = options;
+  // Ayarları ayıkla
+  const {
+    borders,      // Eborder bitmask: hangi kenarlardan resize edilecek
+    useHelper,    // (isteğe bağlı, eklenecekse helper çizim mantığı)
+    minWidth, maxWidth,
+    minHeight, maxHeight
+  } = options;
 
-        function has(flag) {
-            return ((flags & flag) === flag) || (flags === Eborder.all && flag !== 0);
-        }
+  // Kenar bitmask’ini kontrol eden fonksiyon
+  function hasBorder(flag) {
+    return ((borders & flag) === flag) ||
+           (borders === Eborder.all && flag !== 0);
+  }
 
-        function hit(x, y, w, h) {
-            const th = 7;
-            if (has(Eborder.leftTop) && x < th && y < th) return 'nw';
-            if (has(Eborder.rightTop) && x > w - th && y < th) return 'ne';
-            if (has(Eborder.leftBottom) && x < th && y > h - th) return 'sw';
-            if (has(Eborder.rightBottom) && x > w - th && y > h - th) return 'se';
-            if (has(Eborder.top) && y < th) return 'n';
-            if (has(Eborder.bottom) && y > h - th) return 's';
-            if (has(Eborder.left) && x < th) return 'w';
-            if (has(Eborder.right) && x > w - th) return 'e';
-            return '';
-        }
+  // Fare pozisyonuna göre hangi kenardan resize yapılacağını bulur
+  function hitZone(x, y, w, h) {
+    const th = 7; // eşik (px)
+    if (hasBorder(Eborder.leftTop)    && x < th   && y < th)   return 'nw';
+    if (hasBorder(Eborder.rightTop)   && x > w-th && y < th)   return 'ne';
+    if (hasBorder(Eborder.leftBottom) && x < th   && y > h-th) return 'sw';
+    if (hasBorder(Eborder.rightBottom)&& x > w-th && y > h-th) return 'se';
+    if (hasBorder(Eborder.top)        && y < th)               return 'n';
+    if (hasBorder(Eborder.bottom)     && y > h-th)             return 's';
+    if (hasBorder(Eborder.left)       && x < th)               return 'w';
+    if (hasBorder(Eborder.right)      && x > w-th)             return 'e';
+    return '';
+  }
 
-        const mouseMoveHandler = function (e) {
-            const rect = el.getBoundingClientRect();
-            const dir = hit(
-                e.clientX - rect.left,
-                e.clientY - rect.top,
-                rect.width,
-                rect.height
-            );
-            el.style.cursor = dir
-                ? (dir + '-resize')
-                : '';
-        };
-        mouseMoveHandler._isResizeHandler = true;
+  // Fare dokununca cursor’ü güncelleyen handler
+  const mouseMoveHandler = function (e) {
+    const r = el.getBoundingClientRect();
+    const zone = hitZone(
+      e.clientX - r.left,
+      e.clientY - r.top,
+      r.width,
+      r.height
+    );
+    el.style.cursor = zone ? (zone + '-resize') : '';
+  };
+  mouseMoveHandler._isResizeHandler = true;
 
-        const mouseDownHandler = function (e) {
-            const rect = el.getBoundingClientRect();
-            const dir = hit(
-                e.clientX - rect.left,
-                e.clientY - rect.top,
-                rect.width,
-                rect.height
-            );
-            if (!dir) return;
+  // Fare basılınca resize işlemini başlatan handler
+  const mouseDownHandler = function (e) {
+    const r = el.getBoundingClientRect();
+    const zone = hitZone(
+      e.clientX - r.left,
+      e.clientY - r.top,
+      r.width,
+      r.height
+    );
+    if (!zone) return;  // kenarda değilse resize başlatılmaz
 
-            if (INTERACTION_STATE.get(el)) return;
-            INTERACTION_STATE.set(el, 'resizing');
+    e.preventDefault();
+    e.stopPropagation();
+    if (INTERACTION_STATE.get(el)) return;
+    INTERACTION_STATE.set(el, 'resizing');
 
-            const minW = 20, minH = 20;
-            const start = {
-                x: e.clientX, y: e.clientY,
-                left: el.offsetLeft,
-                top: el.offsetTop,
-                width: rect.width,
-                height: rect.height,
-            };
-            function drag(ev) {
-                const dx = ev.clientX - start.x, dy = ev.clientY - start.y;
-                let newW = start.width, newH = start.height, newL = start.left, newT = start.top;
-                if (dir.includes('e')) newW = start.width + dx;
-                if (dir.includes('s')) newH = start.height + dy;
-                if (dir.includes('w')) {
-                    newW = start.width - dx;
-                    newL = start.left + dx;
-                }
-                if (dir.includes('n')) {
-                    newH = start.height - dy;
-                    newT = start.top + dy;
-                }
-                if (newW > minW) { el.style.width = newW + 'px'; if (dir.includes('w')) el.style.left = newL + 'px'; }
-                if (newH > minH) { el.style.height = newH + 'px'; if (dir.includes('n')) el.style.top = newT + 'px'; }
-            }
-            function up() {
-                document.removeEventListener('mousemove', drag);
-                document.removeEventListener('mouseup', up);
-                INTERACTION_STATE.delete(el);
-            }
-            document.addEventListener('mousemove', drag);
-            document.addEventListener('mouseup', up);
-        };
-        mouseDownHandler._isResizeHandler = true;
-
-        el.addEventListener('mousemove', mouseMoveHandler);
-        el.addEventListener('mousedown', mouseDownHandler);
+    // Başlangıç değerlerini al
+    const start = {
+      x: e.clientX, y: e.clientY,
+      left: el.offsetLeft,
+      top: el.offsetTop,
+      width: r.width,
+      height: r.height
     };
+
+    // Fare hareket ettikçe boyut ve konum günceller
+    function onDrag(ev) {
+      const dx = ev.clientX - start.x;
+      const dy = ev.clientY - start.y;
+      let newW = start.width, newH = start.height;
+      let newL = start.left,  newT = start.top;
+
+      if (zone.includes('e')) newW = start.width  + dx;
+      if (zone.includes('s')) newH = start.height + dy;
+      if (zone.includes('w')) { newW = start.width  - dx; newL = start.left + dx; }
+      if (zone.includes('n')) { newH = start.height - dy; newT = start.top  + dy; }
+
+      // Min/max sınırlarını uygula
+      if (newW >= minWidth && newW <= maxWidth) {
+        el.style.width  = newW + 'px';
+        if (zone.includes('w')) el.style.left = newL + 'px';
+      }
+      if (newH >= minHeight && newH <= maxHeight) {
+        el.style.height = newH + 'px';
+        if (zone.includes('n')) el.style.top  = newT + 'px';
+      }
+    }
+
+    // Mouse up’da cleanup
+    function onUp() {
+      document.removeEventListener('mousemove', onDrag);
+      document.removeEventListener('mouseup', onUp);
+      INTERACTION_STATE.delete(el);
+    }
+
+    // Listener’ları ekle
+    document.addEventListener('mousemove', onDrag);
+    document.addEventListener('mouseup', onUp, { once: true });
+  };
+  mouseDownHandler._isResizeHandler = true;
+
+  // Olayları ekle
+  el.addEventListener('mousemove', mouseMoveHandler);
+  el.addEventListener('mousedown', mouseDownHandler);
+};
+
     const css = `
         [data-layer] {
             transition: box-shadow 0.2s;
