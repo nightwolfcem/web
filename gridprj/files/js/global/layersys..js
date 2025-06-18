@@ -1,3 +1,5 @@
+
+
 /**
  * layersys.js – Profesyonel ve Optimize Edilmiş Geçmiş Yönetimi Sistemi
  *
@@ -199,7 +201,16 @@ function setupEventTracking(history){
   EventCommand.origAdd    = function(...a){ inCmd=true; origAdd.apply(this,a); inCmd=false; };
   EventCommand.origRemove = function(...a){ inCmd=true; origRem.apply(this,a); inCmd=false; };
 }
-
+class SelectCommand extends BaseCommand {
+  constructor(manager, item, multi) {
+    super("Select");
+    this.manager = manager;
+    this.item = item;
+    this.multi = multi;
+  }
+  execute() { this.manager.select(this.item, { multi: this.multi }); }
+  undo() { this.manager.toggle(this.item); }
+}
 // Patch’i etkinleştir
 
 

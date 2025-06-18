@@ -383,8 +383,9 @@ var OID = 0;
             }
             return val;
         },
+
     };
-   
+
     function extendsClass(...mixins) {
         // 1) Mevcut kodunla NewClass gövdesini üretip eval et
         let s, i, str = "";
@@ -1694,6 +1695,116 @@ var OID = 0;
         };
     };
 
+    class SelectionManager extends EventTarget {
+        constructor() {
+            super();
+            this._selected = new Set();
+        }
+
+        /**
+         * Select an item.
+         * @param {Telement} item
+         * @param {Object} options
+         *   @param {boolean} [options.multi=false]          Add to existing selection?
+         *   @param {boolean} [options.silent=false]         Don't fire change events?
+         *   @param {boolean} [options.scrollIntoView=false] Scroll into view?
+         */
+        select(item, {
+            multi = false,
+            silent = false,
+            scrollIntoView = false,
+            // ← you can add more options here:
+            onSelect,         // callback
+            cssClass = 'selected', // custom class
+            animate = false,  // trigger an animation
+            filter            // only select if filter(item)===true
+        } = {}) {
+            // (1) filter
+            if (filter && !filter(item)) return;
+
+            // (2) clear or not
+            if (!multi) this.clear({ silent });
+
+            // (3) do the actual add
+            if (!this._selected.has(item)) {
+                this._selected.add(item);
+
+                // (4) custom callback
+                if (typeof onSelect === 'function') onSelect(item);
+
+                // (5) custom class name
+                if (!silent) {
+                    this.dispatchEvent(new CustomEvent('change', {
+                        detail: { action: 'select', item, cssClass }
+                    }));
+                }
+
+                // (6) scroll
+                if (scrollIntoView) item.htmlObject.scrollIntoView({
+                    behavior: 'smooth', block: 'nearest', inline: 'nearest'
+                });
+
+                // (7) animate
+                if (animate) {
+                    item.htmlObject.classList.add('select-animate');
+                    setTimeout(() => item.htmlObject.classList.remove('select-animate'), 300);
+                }
+            }
+        }
+        get selection() { return [...this._selected]; }
+        get selectionSet() { return this._selected; }
+        /**
+         * Deselect a single item.
+         * @param {Telement} item
+         * @param {Object} options
+         *   @param {boolean} [options.silent=false]
+         */
+        deselect(item, { silent = false } = {}) {
+            if (this._selected.delete(item) && !silent) {
+                this.dispatchEvent(new CustomEvent('change', {
+                    detail: { action: 'deselect', item }
+                }));
+            }
+        }
+
+        /**
+         * Clear all selection.
+         * @param {Object} options
+         *   @param {boolean} [options.silent=false]
+         */
+        clear({ silent = false } = {}) {
+            for (let item of [...this._selected]) {
+                if (!silent) {
+                    this.dispatchEvent(new CustomEvent('change', {
+                        detail: { action: 'deselect', item }
+                    }));
+                }
+            }
+            this._selected.clear();
+        }
+
+        toggle(item, opts = {}) {
+            if (this._selected.has(item)) this.deselect(item, opts);
+            else this.select(item, opts);
+        }
+
+        has(item) {
+            return this._selected.has(item);
+        }
+
+    }
+
+    // ── Hook it up ────────────────────────────────────────────────────────────────
+    globs.selectionManager = new SelectionManager();
+
+    // on change, toggle the class:
+    globs.selectionManager.addEventListener('change', ({ detail }) => {
+        detail.item.htmlObject.classList.toggle(
+            'selected',
+            detail.action === 'select'
+        );
+    });
+
 
 
     TClass = class TClass extends Object {
@@ -1767,10 +1878,8 @@ var OID = 0;
 
     // ==== Seçim Yöneticisi (multi-drag için) ====
 
-    globs.selectionManager = new Set();
-
-
     let Telementstyles = false;
+
     /**
     * Gelişmiş Temel Telement Sınıfı
     * - Alt sınıflar için kolay genişletme
@@ -1780,6 +1889,7 @@ var OID = 0;
     * @param {string|HTMLElement} tagOrEl - Oluşturulacak tag ismi veya doğrudan HTMLElement
     * @param {Object} [options] - Ayar nesnesi
     */
+   let _$dragObj=null;
     Telement = class Telement extends extendsClass(TClass, EventTarget) {
         #dropIndicator = null;
         #dockingHandlers = null;
@@ -1790,12 +1900,10 @@ var OID = 0;
         #hybridDrag = null;
         #initOpts = null;
         #initialKeys = null;
-        #_lastDropTarget = null;
+        #lastDropTarget = null;
         #touchHandlers = null;
         #dragState = {};
-        #handleSelectionBound = null;
         loaded = false;
-
         constructor(tagOrEl, opts = {}) {
             const safeCloneOptions = (src) => {
                 if (src === null || typeof src !== "object") return src;
@@ -1812,11 +1920,7 @@ var OID = 0;
                 }
                 return clone;
             };
-
             super();
-      
-
-            // HTML Element oluşturma
             const html = (tagOrEl instanceof HTMLElement)
                 ? tagOrEl
                 : document.createElement(typeof tagOrEl === 'string' ? tagOrEl : 'div');
@@ -1833,7 +1937,7 @@ var OID = 0;
                 status = EelementStatus.visible,
                 resize_flags = Eborder.all,
                 useResizeHelper = false,
-                dragOptions = {}, moveOptions = {}, dropOptions = {},historyOptions={},
+                dragOptions = {}, moveOptions = {}, dropOptions = {}, historyOptions = {},
                 ...other
             } = opts;
 
@@ -1856,7 +1960,7 @@ var OID = 0;
                 acceptTypes: ['default'], hoverClass: 'droppable-hover',
                 placeHolderClass: 'drop-placeholder', showPlaceHolder: true
             }, dropOptions);
-            
+
             const resolveHandle = h => {
                 if (!h) return null;
                 if (h instanceof HTMLElement) return h;
@@ -1898,12 +2002,41 @@ var OID = 0;
                     if (thisRef.status.movable) thisRef.#toggleFeature('movable', true);
                 }
             });
+            let dragStartX = 0;
+            let dragStartY = 0;
+            let dragThreshold = 0;
+            html.addEventListener("mousedown", e => {
+                if (e.button !== 0 || !this.status.selectable) return;
+                e.stopPropagation();
+                // seçim
+                if (e.ctrlKey || e.metaKey) globs.selectionManager.toggle(this);
+                else globs.selectionManager.select(this, { multi: false });
 
-            // Tarihçe ve diğer ayarlar
+                // drag threshold
+                dragStartX = e.clientX;
+                dragStartY = e.clientY;
+                const onMove = mv => {
+                    const dx = Math.abs(mv.clientX - dragStartX);
+                    const dy = Math.abs(mv.clientY - dragStartY);
+                    if (dx + dy > this.dragThreshold) {
+                        // native dragstart tetikle
+                        this.#onDragStart(mv);
+                        cleanup();
+                    }
+                };
+                const cleanup = () => {
+                    window.removeEventListener("mousemove", onMove);
+                    window.removeEventListener("mouseup", cleanup);
+                };
+                window.addEventListener("mousemove", onMove);
+                window.addEventListener("mouseup", cleanup);
+            });
 
-            const defaultHist = { trackStyle:false, trackResize:false, trackChildren:false, trackAttr:false, trackEvents:false };
-    this.historyOptions = { ...defaultHist, ...historyOptions };
-               
+
+
+            const defaultHist = { trackStyle: false, trackResize: false, trackChildren: false, trackAttr: false, trackEvents: false };
+            this.historyOptions = { ...defaultHist, ...historyOptions };
+
             // Çocuk elemanlar ve ebeveyn
             this.children = [];
             children.forEach(ch => this.appendChild(ch));
@@ -1932,26 +2065,14 @@ var OID = 0;
             if (this.styleHistory) this._styleObserver = trackStyleChanges(this);
             if (this.status.selectable) {
                 this.htmlObject.classList.add('selectable');
-                this.#handleSelectionBound = e => this.#handleSelection(e);
-                this.htmlObject.addEventListener('click', this.#handleSelectionBound);
             }
 
             // Kopyalama için başlangıç durumu
             this.#initOpts = safeCloneOptions(opts);
             this.#initialKeys = new Set(Object.getOwnPropertyNames(this));
-              if(globs.historyManager) globs.historyManager.addTrack(this,this.historyOptions);
+            if (globs.historyManager) globs.historyManager.addTrack(this, this.historyOptions);
         }
-        #handleSelection(e) {
-            if (e.ctrlKey || e.metaKey) {
-                this.htmlObject.classList.toggle('selected');
-                globs.selectionManager.has(this) ? globs.selectionManager.delete(this) : globs.selectionManager.add(this);
-            } else {
-                globs.selectionManager.forEach(el => el.htmlObject.classList.remove('selected'));
-                globs.selectionManager.clear();
-                globs.selectionManager.add(this);
-                this.htmlObject.classList.add('selected');
-            }
-        }
+
         // --- Yardımcı Metotlar ---
         #refreshDragListeners() {
             this.#disableDrag();
@@ -1972,7 +2093,12 @@ var OID = 0;
             .telement:focus { outline: 2px solid #0078d4; outline-offset: 1px; }
             .dragging { opacity: 0.4; }
             .inside-drag-handle { cursor: grab; user-select: none; margin-right: 4px; }
-            .selected { box-shadow: 0 0 0 1px white, 0 0 0 3px #0078d4; }
+            .selectable:hover { background-color: rgba(0, 102, 255, 0.08);cursor: pointer;}
+            .selected {border: 2px solid #0066FF;box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.5);}
+            .selectable.selected {border-color: #004bb5;box-shadow: 0 0 0 2px rgba(0, 75, 181, 0.7);}
+            .selectable:not(.selected) {transition: background-color 0.2s, border-color 0.2s;}
+            body:not(.design-mode) .selected:hover {background-color: transparent;}
+            .selectable:focus {outline: none;border: 2px dashed rgba(0, 102, 255, 0.7);}
             .disabled { opacity: 0.5; pointer-events: none; }
             .locked { pointer-events: none; }
             .hidden { display: none !important; }
@@ -1985,8 +2111,12 @@ var OID = 0;
         }
 
         // --- Sürükleme/Bırakma Mantığı ---
-        #findDropTarget(pt, draggedSet = globs.selectionManager) {
-            const draggedArr = [...draggedSet];
+        #findDropTarget(pt) {
+            let draggedArr;
+            draggedArr = globs.selectionManager.selection;
+            if (draggedArr.length === 0 && this.status.draggable) {
+                draggedArr = [_$dragObj];
+            }
             draggedArr.forEach(te => te.htmlObject.style.pointerEvents = 'none');
             let el = document.elementFromPoint(pt.x, pt.y);
             draggedArr.forEach(te => te.htmlObject.style.pointerEvents = '');
@@ -2028,7 +2158,7 @@ var OID = 0;
             }
 
             const pt = { x: e.clientX, y: e.clientY };
-            const root = this.#findDropTarget(pt, globs.selectionManager);
+            const root = this.#findDropTarget(pt);
             if (!root) return;
 
             root.htmlObject.classList.add('dock-highlight');
@@ -2089,13 +2219,13 @@ var OID = 0;
         }
         #updateDropVisuals(e) {
             // 1. Önceki görsel ipuçlarını temizle
-            if (this.#_lastDropTarget) {
-                this.#_lastDropTarget.htmlObject.classList.remove('dock-highlight');
+            if (this.#lastDropTarget) {
+                this.#lastDropTarget.htmlObject.classList.remove('dock-highlight');
             }
             if (DOM.dragPlaceHolder) {
                 DOM.dragPlaceHolder.style.display = 'none';
             }
-            this.#_lastDropTarget = null;
+            this.#lastDropTarget = null;
 
             // 2. Geçerli bırakma hedefini (root) bul
             let root = null;
@@ -2111,7 +2241,7 @@ var OID = 0;
             if (!root || !root.status.dockable) return;
 
             // 3. Görsel ipuçlarını göster
-            this.#_lastDropTarget = root; // Yeni hedefi kaydet
+            this.#lastDropTarget = root; // Yeni hedefi kaydet
             const targetEl = root.htmlObject;
             const children = root.children.filter(c => !globs.selectionManager.has(c)); // Sürüklenenleri hariç tut
 
@@ -2171,15 +2301,17 @@ var OID = 0;
         // --- Olay Yönetimi ---
         #onDragStart(e) {
             e.stopPropagation();
-            if (!globs.selectionManager.has(this)) {
-                this.#handleSelection(e);
+            if (!e.dataTransfer) {
+                // modern tarayıcılarda DataTransfer constructor’ı var
+                e.dataTransfer = new DataTransfer();
             }
             this.#dragState = { isDropped: false };
             e.dataTransfer.effectAllowed = 'move';
             e.dataTransfer.setData('text/plain', this.id); // Tarayıcı uyumluluğu için
 
             // Sürükleme başladığında orijinali gizle
-            setTimeout(() => { this.htmlObject.style.visibility = 'hidden'; }, 0);
+            _$dragObj=this;
+            setTimeout(() => { this.htmlObject.style.visibility = 'hidden'; console.log("hideHtml"); }, 0);
         }
 
         #onDragEnd(e) {
@@ -2187,8 +2319,9 @@ var OID = 0;
             if (!this.#dragState.isDropped && this.dragOptions.revertIfNotDropped) {
                 // Revert logic here
             }
-            if (this.#_lastDropTarget) this.#_lastDropTarget.classList.remove('dock-highlight');
+            if (this.#lastDropTarget) { this.#lastDropTarget.htmlObject.classList.remove('dock-highlight'); this.#lastDropTarget = null; }
             DOM.dragPlaceHolder && (DOM.dragPlaceHolder.style.display = 'none');
+            console.log("drageend");
         }
 
         #onDrop(e) {
@@ -2271,27 +2404,35 @@ var OID = 0;
         }
         #performDrop(targetContainer) {
             if (!targetContainer) return;
-            const dragged = Array.from(globs.selectionManager);
-            if (dragged.length === 0) return;
-
+             let dragged = globs.selectionManager.selection;
+        if (dragged.length === 0) {
+            dragged = [_$dragObj];
+        }
+        
             const ph = DOM.dragPlaceHolder;
+            let targetParentTelement;
+            let nextSiblingTelement;
+
             if (ph && ph.style.display !== 'none' && ph.referenceElement) {
                 const refOwner = ph.referenceElement.owner;
-                const parent = refOwner.parent;
-                const next = ph.placement === 'before' ? refOwner : (refOwner.htmlObject.nextSibling?.owner ?? null);
-
-                dragged.forEach(el => {
-                    const cmd = new MoveCommand(el, parent, el.parent, el.htmlObject.nextSibling?.owner || null, next);
-                    this.history.execute(cmd);
-                    el.#dragState.isDropped = true;
-                });
+                targetParentTelement = refOwner.parent;
+                nextSiblingTelement = ph.placement === 'before' ? refOwner : (refOwner.htmlObject.nextSibling?.owner ?? null);
             } else {
-                dragged.forEach(el => {
-                    const cmd = new MoveCommand(el, targetContainer, el.parent, el.htmlObject.nextSibling?.owner || null, null);
-                    this.history.execute(cmd);
-                    el.#dragState.isDropped = true;
-                });
+                targetParentTelement = targetContainer;
+                nextSiblingTelement = null;
             }
+
+            if (!targetParentTelement) return;
+
+            const targetParentHtml = targetParentTelement.htmlObject;
+            const nextSiblingHtml = nextSiblingTelement ? nextSiblingTelement.htmlObject : null;
+
+            dragged.forEach(el => {
+                // Elementi DOM'da yeni pozisyonuna taşı.
+                targetParentHtml.insertBefore(el.htmlObject, nextSiblingHtml);
+                el.#dragState.isDropped = true;
+            });
+
         }
 
         // --- Özellik Yönetimi ---
@@ -2309,7 +2450,7 @@ var OID = 0;
                     const onMoveStart = () => {
                         if (this.#hybridDrag) {
                             globs.selectionManager.clear();
-                            globs.selectionManager.add(this);
+                            globs.selectionManager.select(this);
                             this.#dragState = { isDropped: false };
                         }
                     };
@@ -2327,6 +2468,7 @@ var OID = 0;
                 case 'dockable': isOn ? this.#enableDrop() : this.#disableDrop(); break;
                 case 'sizable': this.#enableSizing(isOn); break;
                 case 'visible': this.htmlObject.classList.toggle('hidden', !isOn); break;
+                case 'selectable': this.htmlObject.classList.toggle('selectable', isOn); break;
             }
         }
 
@@ -2395,6 +2537,48 @@ var OID = 0;
 
             return clone;
         }
+        clientRect() {
+            const r = this.htmlObject.getBoundingClientRect();
+            return new Trect(
+                r.left + this.htmlObject.clientLeft + window.scrollX,
+                r.top + this.htmlObject.clientTop + window.scrollY,
+                this.htmlObject.clientWidth,
+                this.htmlObject.clientHeight
+            );
+        }
+        prevCss() {
+            this.htmlObject.style.cssText = this.htmlObject._prevCss || "";
+        }
+        nextCss = function () {
+            if (this.htmlObject._nextCss)
+                this.htmlObject.style.cssText = this.htmlObject._nextCss;
+        }
+        isVisible() {
+            if (!this.visible) return false;
+            if (this.parent) return this.parent.isVisible();
+            return true;
+        }
+        bind(event, handler, options = {}) {
+            const wrappedHandler = (e) => {
+                const result = handler.call(this, e);
+                if (result === false) e.preventDefault();
+                return result;
+            };
+
+            if (!this.eventList.has(handler)) {
+                this.eventList.set(handler, { event, wrappedHandler, options });
+                this.htmlObject?.addEventListener(event, wrappedHandler, options);
+            }
+            return handler;
+        }
+
+        unbind(event, handler) {
+            const listener = this.eventList?.get(handler);
+            if (listener && listener.event === event) {
+                this.htmlObject?.removeEventListener(event, listener.wrappedHandler, listener.options);
+                this.eventList.delete(handler);
+            }
+        }
 
         // --- Diğer Genel Metotlar ---
         appendChild(child) {
@@ -2411,7 +2595,19 @@ var OID = 0;
             this.htmlObject.appendChild(child.htmlObject);
             child.htmlObject.owner = child;
         }
+        removeChild(child) {
+            if (!(child instanceof Telement)) {
+                this.htmlObject.removeChild(child);
+                return;
+            }
 
+            // Standart çıkarma
+            let idx = this.children.indexOf(child);
+            if (idx > -1) this.children.splice(idx, 1);
+            if (this.htmlObject && child.htmlObject)
+                this.htmlObject.removeChild(child.htmlObject);
+            child.parent = null;
+        }
         destroy() {
             if (this.#dockingHandlers) this.#disableDrop();
             if (this.status) this.status.onchange = null;
@@ -2422,11 +2618,30 @@ var OID = 0;
             this.htmlObject.owner = null;
             this.dispatchEvent(new CustomEvent('destroy'));
         }
-        track(options={}){
-    this.historyOptions = { ...this.historyOptions, ...options };
-    if(globs.historyManager) globs.historyManager.addTrack(this,this.historyOptions);
-  }
-        // --- Getter/Setter'lar ---
+        html(content) {
+            if (typeof content === 'undefined') {
+                return this.htmlObject.innerHTML;
+            } else {
+                this.htmlObject.innerHTML = content;
+            }
+        }
+        addEvent(eventType, handler) {
+            this.htmlObject.addEventListener(eventType, handler);
+        }
+        track(options = {}) {
+            this.historyOptions = { ...this.historyOptions, ...options };
+            if (globs.historyManager) globs.historyManager.addTrack(this, this.historyOptions);
+        }
+        // now `opts` can include multi, silent, scrollIntoView,onSelect, cssClass, animate, filter…
+        select(opts = {}) {
+            globs.selectionManager.select(this, opts);
+        };
+        deselect({ silent = false } = {}) {
+            globs.selectionManager.deselect(this, { silent });
+        };
+        get isSelected() {
+            return globs.selectionManager.has(this);
+        }
         get hybridDrag() { return this.#hybridDrag; }
         get visible() { return this.status.visible; }
         set visible(val) { this.status.visible = val; }
@@ -2481,7 +2696,7 @@ var OID = 0;
     Tlayer = class Tlayer extends Telement {
         #changeListeners = [];
 
-        #isSelected = false;
+  
 
         /**
          * Katman (Layer) nesnesi oluşturur.
@@ -2501,7 +2716,6 @@ var OID = 0;
         constructor(tagOrEl = 'div', options = {}) {
             super(tagOrEl, options);
             this.htmlObject.dataset.layer = this.id;
-            this.#isSelected = false;
             this.mainLayers = [];
             this.#changeListeners = [];
             if (options.layerName) {
@@ -2556,7 +2770,7 @@ var OID = 0;
         }
 
         // --- Seçili mi?
-        get isSelected() { return this.#isSelected; }
+
 
 
         // --- Dinamik ve statik alt katmanlar
@@ -2722,38 +2936,32 @@ var OID = 0;
 
         // --- Seçim fonksiyonları
         selection() {
-            const selected = [];
-            function walk(layer) {
-                if (layer.isSelected) selected.push(layer);
-                layer.children.forEach(walk);
-            }
-            walk(this);
-            return selected;
-        }
-        select(addToSelection = false) {
-            needupdate = false;
-            if (!addToSelection) this.parent.deselect(true, false);
-            this.#isSelected = true;
-            this.htmlObject.classList.toggle('selected', true);
-            const root = this.getRoot();
-            if (root && addToSelection) drawSelectionOverlay(root);
-            needupdate = true;
-            this._notifyChange('select');
+            return globs.selectionManager.selection.filter(item => {
+                let p = item;
+                while (p) {
+                    if (p === this) return true;
+                    p = p.parent;
+                }
+                return false;
+            });
         }
 
-        deselect(recursive = true, update = true) {
-            let t = needupdate;
-            needupdate = false;
-            this.#isSelected = false;
-            this.htmlObject.classList.toggle('selected', false);
-            if (recursive) this.children.forEach(child => child.deselect(true, false));
-            needupdate = t;
-            const root = this.getRoot();
-            if (root) drawSelectionOverlay(root);
-            if (!this.parent) drawSelectionOverlay(this); // root ise
-            if (update)
-                this._notifyChange('deselect');
+        select(addToSelection = false) {
+            // önce temel Telement.select()'i çalıştıralım
+            super.select(addToSelection);
+
+            // sonra kendi overlay/marquee çizim mantığımızı çağırabiliriz
+            this.getRoot().drawSelectionOverlay?.(this.getRoot());
         }
+
+        deselect() {
+            // temel teardown
+            super.deselect();
+
+            // overlay güncellemesi
+            this.getRoot().drawSelectionOverlay?.(this.getRoot());
+        }
+
 
         bringToFront() {
             if (!this.parent) return;
@@ -5268,103 +5476,103 @@ var OID = 0;
             target.addEventListener('dragend', dragEnd);
         }
     };
-   DOM.makeMovable = function (element, handle = null, movableRect = null,
-    xable = true, yable = true,
-    onMoveStartCb = null,
-    onMoveCb = null,
-    onDropCb = null
-) {
-    if (!handle) return;
+    DOM.makeMovable = function (element, handle = null, movableRect = null,
+        xable = true, yable = true,
+        onMoveStartCb = null,
+        onMoveCb = null,
+        onDropCb = null
+    ) {
+        if (!handle) return;
 
-    // Eski dinleyicileri temizle
-    (handle.eventList || []).filter(e =>
-        e.event === 'pointerdown' && e.listener?._isMovableHandler
-    ).forEach(e => handle.removeEventListener('pointerdown', e.listener));
+        // Eski dinleyicileri temizle
+        (handle.eventList || []).filter(e =>
+            e.event === 'pointerdown' && e.listener?._isMovableHandler
+        ).forEach(e => handle.removeEventListener('pointerdown', e.listener));
 
-    const onPointerDown = e => {
-        if (e.target !== handle) return;
-        if (INTERACTION_STATE.get(element)) return;
-        INTERACTION_STATE.set(element, 'moving');
-        onMoveStartCb?.();
+        const onPointerDown = e => {
+            if (e.target !== handle) return;
+            if (INTERACTION_STATE.get(element)) return;
+            INTERACTION_STATE.set(element, 'moving');
+            onMoveStartCb?.();
 
-        const te = element.owner;
-        if (te && !globs.selectionManager.has(te)) {
-            globs.selectionManager.forEach(el => el.htmlObject.classList.remove('selected'));
-            globs.selectionManager.clear();
-            globs.selectionManager.add(te);
-            te.htmlObject.classList.add('selected');
-        }
-        const threshold = 7;
-        const rect = element.getBoundingClientRect();
-        const nearEdge = (
-            e.clientX - rect.left < threshold || rect.right - e.clientX < threshold ||
-            e.clientY - rect.top < threshold || rect.bottom - e.clientY < threshold
-        );
-        if (nearEdge) return; // resize öncelikli
-
-        handle.setPointerCapture(e.pointerId);
-
-        const container = movableRect instanceof Element
-            ? movableRect
-            : (element.offsetParent || document.documentElement);
-
-        const scrollLeft = container.scrollLeft;
-        const scrollTop = container.scrollTop;
-
-        const startPageX = e.pageX;
-        const startPageY = e.pageY;
-
-        const startLeft = parseInt(getComputedStyle(element).left, 10) || element.offsetLeft;
-        const startTop = parseInt(getComputedStyle(element).top, 10) || element.offsetTop;
-
-        let boundRect = null;
-        if (movableRect === true) boundRect = new DOMRect(0, 0, 9e9, 9e9);
-        else if (movableRect instanceof Element) {
-            const r = movableRect.getBoundingClientRect();
-            boundRect = new DOMRect(r.left + scrollLeft, r.top + scrollTop, r.width, r.height);
-        } else if (movableRect instanceof DOMRect) boundRect = movableRect;
-
-        const onPointerMove = (ev) => {
-            const dx = ev.pageX - startPageX;
-            const dy = ev.pageY - startPageY;
-
-            let newLeft = startLeft + dx;
-            let newTop = startTop + dy;
-
-            if (xable && boundRect) {
-                const minX = boundRect.x;
-                const maxX = boundRect.x + boundRect.width - element.offsetWidth;
-                newLeft = Math.min(Math.max(minX, newLeft), maxX);
+            const te = element.owner;
+            if (te && !globs.selectionManager.has(te)) {
+                globs.selectionManager.forEach(el => el.htmlObject.classList.remove('selected'));
+                globs.selectionManager.clear();
+                globs.selectionManager.add(te);
+                te.htmlObject.classList.add('selected');
             }
-            if (yable && boundRect) {
-                const minY = boundRect.y;
-                const maxY = boundRect.y + boundRect.height - element.offsetHeight;
-                newTop = Math.min(Math.max(minY, newTop), maxY);
-            }
+            const threshold = 7;
+            const rect = element.getBoundingClientRect();
+            const nearEdge = (
+                e.clientX - rect.left < threshold || rect.right - e.clientX < threshold ||
+                e.clientY - rect.top < threshold || rect.bottom - e.clientY < threshold
+            );
+            if (nearEdge) return; // resize öncelikli
 
-            element.style.left = `${newLeft}px`;
-            element.style.top = `${newTop}px`;
+            handle.setPointerCapture(e.pointerId);
 
-            onMoveCb?.(ev);
-            ev.stopPropagation();
+            const container = movableRect instanceof Element
+                ? movableRect
+                : (element.offsetParent || document.documentElement);
+
+            const scrollLeft = container.scrollLeft;
+            const scrollTop = container.scrollTop;
+
+            const startPageX = e.pageX;
+            const startPageY = e.pageY;
+
+            const startLeft = parseInt(getComputedStyle(element).left, 10) || element.offsetLeft;
+            const startTop = parseInt(getComputedStyle(element).top, 10) || element.offsetTop;
+
+            let boundRect = null;
+            if (movableRect === true) boundRect = new DOMRect(0, 0, 9e9, 9e9);
+            else if (movableRect instanceof Element) {
+                const r = movableRect.getBoundingClientRect();
+                boundRect = new DOMRect(r.left + scrollLeft, r.top + scrollTop, r.width, r.height);
+            } else if (movableRect instanceof DOMRect) boundRect = movableRect;
+
+            const onPointerMove = (ev) => {
+                const dx = ev.pageX - startPageX;
+                const dy = ev.pageY - startPageY;
+
+                let newLeft = startLeft + dx;
+                let newTop = startTop + dy;
+
+                if (xable && boundRect) {
+                    const minX = boundRect.x;
+                    const maxX = boundRect.x + boundRect.width - element.offsetWidth;
+                    newLeft = Math.min(Math.max(minX, newLeft), maxX);
+                }
+                if (yable && boundRect) {
+                    const minY = boundRect.y;
+                    const maxY = boundRect.y + boundRect.height - element.offsetHeight;
+                    newTop = Math.min(Math.max(minY, newTop), maxY);
+                }
+
+                element.style.left = `${newLeft}px`;
+                element.style.top = `${newTop}px`;
+
+                onMoveCb?.(ev);
+                ev.stopPropagation();
+            };
+
+            const onPointerUp = (ev) => {
+                INTERACTION_STATE.delete(element);
+                handle.removeEventListener('pointermove', onPointerMove);
+                handle.removeEventListener('pointerup', onPointerUp);
+                handle.releasePointerCapture(e.pointerId);
+                onDropCb?.({ x: ev.clientX, y: ev.clientY });
+            };
+
+            handle.addEventListener('pointermove', onPointerMove);
+            handle.addEventListener('pointerup', onPointerUp, { once: true });
         };
+        onPointerDown._isMovableHandler = true;
 
-        const onPointerUp = (ev) => {
-            INTERACTION_STATE.delete(element);
-            handle.removeEventListener('pointermove', onPointerMove);
-            handle.removeEventListener('pointerup', onPointerUp);
-            handle.releasePointerCapture(e.pointerId);
-            onDropCb?.({ x: ev.clientX, y: ev.clientY });
-        };
-
-        handle.addEventListener('pointermove', onPointerMove);
-        handle.addEventListener('pointerup', onPointerUp, { once: true });
+        if (movableRect !== false)
+            handle.addEventListener('pointerdown', onPointerDown);
     };
-    onPointerDown._isMovableHandler = true;
-
-    if (movableRect !== false)
-        handle.addEventListener('pointerdown', onPointerDown);
-};
 
     /**
      * Enable simple drag-reordering of child elements within a container.
