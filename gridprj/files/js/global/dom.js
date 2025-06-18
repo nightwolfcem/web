@@ -1695,105 +1695,105 @@ var OID = 0;
         };
     };
 
-    class SelectionManager extends EventTarget {
-        constructor() {
-            super();
-            this._selected = new Set();
-        }
+  class SelectionManager extends EventTarget {
+  constructor() {
+    super();
+    this._selected = new Set();
+  }
 
-        /**
-         * Select an item.
-         * @param {Telement} item
-         * @param {Object} options
-         *   @param {boolean} [options.multi=false]          Add to existing selection?
-         *   @param {boolean} [options.silent=false]         Don't fire change events?
-         *   @param {boolean} [options.scrollIntoView=false] Scroll into view?
-         */
-        select(item, {
-            multi = false,
-            silent = false,
-            scrollIntoView = false,
-            // ← you can add more options here:
-            onSelect,         // callback
-            cssClass = 'selected', // custom class
-            animate = false,  // trigger an animation
-            filter            // only select if filter(item)===true
-        } = {}) {
-            // (1) filter
-            if (filter && !filter(item)) return;
+  /**
+   * Select an item.
+   * @param {Telement} item
+   * @param {Object} options
+   *   @param {boolean} [options.multi=false]          — Add to existing selection?
+   *   @param {boolean} [options.silent=false]         — Don't fire change events?
+   *   @param {boolean} [options.scrollIntoView=false]— Scroll into view?
+   *   @param {Function} [options.onSelect]            — Callback when selected
+   *   @param {string}   [options.cssClass='selected']— CSS sınıfı
+   *   @param {boolean}  [options.animate=false]       — Basıldığında kısa animasyon
+   *   @param {Function} [options.filter]              — Sadece filter(item)===true ise seç
+   */
+  select(item, {
+    multi = false,
+    silent = false,
+    scrollIntoView = false,
+    onSelect,
+    cssClass = 'selected',
+    animate = false,
+    filter
+  } = {}) {
+    if (filter && !filter(item)) return;
 
-            // (2) clear or not
-            if (!multi) this.clear({ silent });
+    // multi değilse, tıklananı hariç tutup diğerlerini temizle
+    if (!multi) this.clear({ silent, except: item });
 
-            // (3) do the actual add
-            if (!this._selected.has(item)) {
-                this._selected.add(item);
+    if (!this._selected.has(item)) {
+      this._selected.add(item);
 
-                // (4) custom callback
-                if (typeof onSelect === 'function') onSelect(item);
+      if (typeof onSelect === 'function') onSelect(item);
 
-                // (5) custom class name
-                if (!silent) {
-                    this.dispatchEvent(new CustomEvent('change', {
-                        detail: { action: 'select', item, cssClass }
-                    }));
-                }
+      if (!silent) {
+        this.dispatchEvent(new CustomEvent('change', {
+          detail: { action: 'select', item, cssClass }
+        }));
+      }
 
-                // (6) scroll
-                if (scrollIntoView) item.htmlObject.scrollIntoView({
-                    behavior: 'smooth', block: 'nearest', inline: 'nearest'
-                });
+      if (scrollIntoView) {
+        item.htmlObject.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      }
 
-                // (7) animate
-                if (animate) {
-                    item.htmlObject.classList.add('select-animate');
-                    setTimeout(() => item.htmlObject.classList.remove('select-animate'), 300);
-                }
-            }
-        }
-        get selection() { return [...this._selected]; }
-        get selectionSet() { return this._selected; }
-        /**
-         * Deselect a single item.
-         * @param {Telement} item
-         * @param {Object} options
-         *   @param {boolean} [options.silent=false]
-         */
-        deselect(item, { silent = false } = {}) {
-            if (this._selected.delete(item) && !silent) {
-                this.dispatchEvent(new CustomEvent('change', {
-                    detail: { action: 'deselect', item }
-                }));
-            }
-        }
-
-        /**
-         * Clear all selection.
-         * @param {Object} options
-         *   @param {boolean} [options.silent=false]
-         */
-        clear({ silent = false } = {}) {
-            for (let item of [...this._selected]) {
-                if (!silent) {
-                    this.dispatchEvent(new CustomEvent('change', {
-                        detail: { action: 'deselect', item }
-                    }));
-                }
-            }
-            this._selected.clear();
-        }
-
-        toggle(item, opts = {}) {
-            if (this._selected.has(item)) this.deselect(item, opts);
-            else this.select(item, opts);
-        }
-
-        has(item) {
-            return this._selected.has(item);
-        }
-
+      if (animate) {
+        item.htmlObject.classList.add('select-animate');
+        setTimeout(() => item.htmlObject.classList.remove('select-animate'), 300);
+      }
     }
+  }
 
+  /**
+   * Deselect a single item.
+   * @param {Telement} item
+   * @param {Object} options
+   *   @param {boolean} [options.silent=false]
+   */
+  deselect(item, { silent = false } = {}) {
+    if (this._selected.delete(item) && !silent) {
+      this.dispatchEvent(new CustomEvent('change', {
+        detail: { action: 'deselect', item }
+      }));
+    }
+  }
+
+  /**
+   * Clear all selection, but optionally keep one item.
+   * @param {Object} options
+   *   @param {boolean}   [options.silent=false]
+   *   @param {Telement}  [options.except] — Hariç tutulacak öğe
+   */
+  clear({ silent = false, except = null } = {}) {
+    for (let item of [...this._selected]) {
+      if (item === except) continue;
+      if (!silent) {
+        this.dispatchEvent(new CustomEvent('change', {
+          detail: { action: 'deselect', item }
+        }));
+      }
+      this._selected.delete(item);
+    }
+  }
+
+  toggle(item, opts = {}) {
+    if (this._selected.has(item)) this.deselect(item, opts);
+    else this.select(item, opts);
+  }
+
+  has(item) {
+    return this._selected.has(item);
+  }
+
+  get selection() {
+    return [...this._selected];
+  }
+}
     // ── Hook it up ────────────────────────────────────────────────────────────────
     globs.selectionManager = new SelectionManager();
 
@@ -1879,7 +1879,7 @@ var OID = 0;
     // ==== Seçim Yöneticisi (multi-drag için) ====
 
     let Telementstyles = false;
-
+   const INTERACTION_STATE = new WeakMap();
 /**
  * Gelişmiş Temel Telement Sınıfı
  *
@@ -1935,6 +1935,16 @@ var OID = 0;
  *   @param {boolean}                    [options.historyOptions.trackChildren] — çocuk ekleme/çıkarma
  *   @param {boolean}                    [options.historyOptions.trackAttr]     — attribute değişikliklerini kaydet
  *   @param {boolean}                    [options.historyOptions.trackEvents]   — event binding değişikliklerini kaydet
+ * 
+ *   @param {Object}                     [options.selectOptions]       
+ *   @param {boolean}                    [options.selectOptions.multi]            — ctrl/meta ile çoklu seçim
+ *   @param {boolean}                    [options.selectOptions.silent]           — seçilirken change event’i atılmasın
+ *   @param {boolean}                    [options.selectOptions.scroll]  — seçince elemana scroll etsin
+ *   @param {string}                     [options.selectOptions.selectClass]      — seçildiğinde eklenecek CSS sınıfı
+ *   @param {string}                     [options.selectOptions.deselectClass]    — seçim kaldırıldığında eklenecek CSS sınıfı
+ *   @param {Function}                   [options.selectOptions.onSelect]         — seçildiğinde çağrılır (this parametreli)
+ *   @param {Function}                   [options.selectOptions.onDeselect]       — kaldırıldığında çağrılır (this parametreli)
+
  *
  *   @param {...object}                 other             — diğer custom parametreler
  */
@@ -1942,6 +1952,7 @@ var OID = 0;
    let _$dragObj=null;
     Telement = class Telement extends extendsClass(TClass, EventTarget) {
         #dropIndicator = null;
+        #moveHandlers = null;
         #dockingHandlers = null;
         #dragHandlers = null;
         #dropHandlers = null;
@@ -1986,10 +1997,19 @@ var OID = 0;
                 parent, children = [],
                 status = EelementStatus.visible,
                 resizeOptions={},
+                selectOptions={},
                 dragOptions = {}, moveOptions = {}, dropOptions = {}, historyOptions = {},
                 ...other
             } = opts;
-           
+    this.selectOptions = Object.assign({
+  multiKey: e => e.ctrlKey || e.metaKey,
+  silent:    false,
+  scroll:    false,
+  selectClass: 'selected',
+  deselectClass: null,
+  onSelect:  null,
+  onDeselect:null
+}, opts.selectOptions);
             // HTML nitelikleri
             html.id = html.id || id || this.id;
             const clsDef = this.constructor.name;
@@ -2000,7 +2020,7 @@ var OID = 0;
             Object.entries(events).forEach(([e, h]) => html.addEventListener(e, h));
 
             // Drag/Move/Drop ayarları
-            this.moveOptions = Object.assign({ handle: null, bound: true }, moveOptions);
+            this.moveOptions = Object.assign({ handle: null, bound: true,xable:true,yable:true }, moveOptions);
             this.dragOptions = Object.assign({
                 handle: null, group: null, type: 'default',
                 revertIfNotDropped: true, dragClass: 'dragging'
@@ -2059,18 +2079,41 @@ this.resizeOptions = Object.assign({
                     if (thisRef.status.movable) thisRef.#toggleFeature('movable', true);
                 }
             });
-            let dragStartX = 0;
+     let dragStartX = 0;
             let dragStartY = 0;
             let dragThreshold = 0;
-            html.addEventListener("mousedown", e => {
-                if (e.button !== 0 || !this.status.selectable) return;
-                e.stopPropagation();
-                // seçim
-                if (e.ctrlKey || e.metaKey) globs.selectionManager.toggle(this);
-                else globs.selectionManager.select(this, { multi: false });
+            this.htmlObject.addEventListener('mousedown', e => {
+            
+    if (e.button !== 0 ) return;
+    e.stopPropagation();
 
-                // drag threshold
-                dragStartX = e.clientX;
+   if(this.status.selectable)
+{
+     const { multiKey, silent, scroll, selectClass, deselectClass, onSelect, onDeselect } = this.selectOptions;
+  const multi = multiKey(e);    // ctrl/meta’yu otomatik alır
+
+  if (multi) {
+    globs.selectionManager.toggle(this, { silent });
+  } else {
+    // except: this ile diğerlerini temizle, kendini koru
+    globs.selectionManager.clear({ silent, except: this });
+    if (!globs.selectionManager.has(this)) {
+      globs.selectionManager.select(this, { multi: false, silent });
+    }
+  }
+
+  // sınıfları uygula
+  this.htmlObject.classList.add(selectClass);
+  if (deselectClass) this.htmlObject.classList.remove(deselectClass);
+
+  // callback
+  if (onSelect) onSelect.call(this);
+
+  // otomatik scroll
+  if (scroll) this.htmlObject.scrollIntoView({ behavior:'smooth', block:'center' });
+}
+
+             dragStartX = e.clientX;
                 dragStartY = e.clientY;
                 const onMove = mv => {
                     const dx = Math.abs(mv.clientX - dragStartX);
@@ -2085,16 +2128,25 @@ this.resizeOptions = Object.assign({
                     window.removeEventListener("mousemove", onMove);
                     window.removeEventListener("mouseup", cleanup);
                 };
-                window.addEventListener("mousemove", onMove);
+                 window.addEventListener("mousemove", onMove);
                 window.addEventListener("mouseup", cleanup);
-            });
+ 
+
+  
+  });
+
+  // deselect olaylarını dinle
+  globs.selectionManager.addEventListener('change', ({ detail }) => {
+    if (detail.action === 'deselect' && detail.item === this) {
+      if (this.selectOptions.deselectClass) {
+        this.htmlObject.classList.add(this.selectOptions.deselectClass);
+      }
+      this.htmlObject.classList.remove(this.selectOptions.selectClass);
+      this.selectOptions.onDeselect?.call(this);
+    }
+  });
 
 
-
-            const defaultHist = { trackStyle: false, trackResize: false, trackChildren: false, trackAttr: false, trackEvents: false };
-            this.historyOptions = { ...defaultHist, ...historyOptions };
-
-            // Çocuk elemanlar ve ebeveyn
             this.children = [];
             children.forEach(ch => this.appendChild(ch));
             if (parent) (parent instanceof Telement ? parent.appendChild(this) : parent.appendChild(html));
@@ -2118,8 +2170,7 @@ this.resizeOptions = Object.assign({
 
             // Başlangıç işlemleri
             this.#injectStyles();
-            if (this.sizeHistory) globs.resizeObserver.observe(html);
-            if (this.styleHistory) this._styleObserver = trackStyleChanges(this);
+
             if (this.status.selectable) {
                 this.htmlObject.classList.add('selectable');
             }
@@ -2127,9 +2178,88 @@ this.resizeOptions = Object.assign({
             // Kopyalama için başlangıç durumu
             this.#initOpts = safeCloneOptions(opts);
             this.#initialKeys = new Set(Object.getOwnPropertyNames(this));
-            if (globs.historyManager) globs.historyManager.addTrack(this, this.historyOptions);
+       
+            const defaultHist = { trackStyle: false, trackResize: false, trackChildren: false, trackAttr: false, trackEvents: false };
+            this.historyOptions = { ...defaultHist, ...historyOptions };
+                 if (globs.historyManager) globs.historyManager.addTrack(this, this.historyOptions);
         }
 
+
+#enableMove() {
+  if (this.#moveHandlers) return;
+  const h = this.moveOptions.handle;
+  if (!(h instanceof HTMLElement)) return;
+
+  let boundRect = null;
+  if (this.moveOptions.bound === true) {
+    boundRect = new DOMRect(
+      0,
+      0,
+      document.documentElement.clientWidth,
+      document.documentElement.clientHeight
+    );
+  } else if (this.moveOptions.bound instanceof HTMLElement) {
+    const r = this.moveOptions.bound.getBoundingClientRect();
+    boundRect = new DOMRect(r.left, r.top, r.width, r.height);
+  } else if (this.moveOptions.bound instanceof DOMRect) {
+    boundRect = this.moveOptions.bound;
+  }
+
+  const onDown = e => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    if (INTERACTION_STATE.get(this.htmlObject)) return;
+    INTERACTION_STATE.set(this.htmlObject, 'moving');
+
+    const startX = e.clientX, startY = e.clientY;
+    const origLeft = parseInt(getComputedStyle(this.htmlObject).left, 10) || 0;
+    const origTop  = parseInt(getComputedStyle(this.htmlObject).top, 10)  || 0;
+
+    this.moveOptions.onMoveStart?.call(this, e);
+
+    const onMove = ev => {
+      let newLeft = origLeft + (ev.clientX - startX);
+      let newTop  = origTop  + (ev.clientY - startY);
+
+      // Bound kontrolü:
+      if (boundRect) {
+        // Yatay sınır
+        newLeft = Math.max(boundRect.x,
+                  Math.min(boundRect.x + boundRect.width  - this.htmlObject.offsetWidth,
+                           newLeft));
+        // Dikey sınır
+        newTop  = Math.max(boundRect.y,
+                  Math.min(boundRect.y + boundRect.height - this.htmlObject.offsetHeight,
+                           newTop));
+      }
+
+      if (this.moveOptions.xable) this.htmlObject.style.left = `${newLeft}px`;
+      if (this.moveOptions.yable) this.htmlObject.style.top  = `${newTop}px`;
+
+      this.moveOptions.onMove?.call(this, ev);
+    };
+
+    const onUp = ev => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      INTERACTION_STATE.delete(this.htmlObject);
+      this.moveOptions.onDrop?.call(this, { x: ev.clientX, y: ev.clientY });
+    };
+
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp, { once: true });
+  };
+
+  h.addEventListener('pointerdown', onDown);
+  this.#moveHandlers = { onDown };
+}
+
+#disableMove() {
+  if (!this.#moveHandlers) return;
+  const h = this.moveOptions.handle;
+  h.removeEventListener('pointerdown', this.#moveHandlers.onDown);
+  this.#moveHandlers = null;
+}
         // --- Yardımcı Metotlar ---
         #refreshDragListeners() {
             this.#disableDrag();
@@ -2523,15 +2653,8 @@ this.resizeOptions = Object.assign({
                             this.#dragState = { isDropped: false };
                         }
                     };
-                    DOM.makeMovable?.(
-                        this.htmlObject,
-                        this.moveOptions.handle,
-                        isOn ? this.moveOptions.rect : false,
-                        moveOptions.movableX, moveOptions.movableY,
-                        onMoveStart,
-                        e => { if (this.#hybridDrag) this.#updatePlaceholder(e) },
-                        pt => { if (this.#hybridDrag) this.#handleHybridDrop(pt) }
-                    );
+                     if (isOn) this.#enableMove();
+                    else      this.#disableMove();
                     break;
                 }
                 case 'dockable': isOn ? this.#enableDrop() : this.#disableDrop(); break;
