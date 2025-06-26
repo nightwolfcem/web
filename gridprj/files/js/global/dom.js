@@ -16,6 +16,63 @@
 //const { object } = require("underscore");
 
 var $ = $ || void 0;
+/* ============================================================
+ * saveFile(name, data [, mime])
+ * ------------------------------------------------------------
+ *  name : "toolbar.json"  (indirilecek dosya adı)
+ *  data : String  |  Blob |  Uint8Array
+ *  mime : İsteğe bağlı  → varsayılan "application/json;charset=utf-8"
+ * ---------------------------------------------------------- */
+function saveFile(name, data, mime = 'application/json;charset=utf-8') {
+  const blob = data instanceof Blob
+    ? data
+    : new Blob(
+        [data instanceof Uint8Array ? data : String(data)],
+        { type: mime }
+      );
+
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(a.href);
+    a.remove();
+  }, 0);
+}
+
+/* ============================================================
+ * openFile([accept])   →  Promise<string>
+ * ------------------------------------------------------------
+ *  accept : "application/json" | ".json,.txt" | "image/*" … 
+ *           (input[type=file] accept özniteliği)
+ * ---------------------------------------------------------- */
+function openFile(accept = '.json,.txt') {
+  return new Promise((resolve, reject) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = accept;
+    input.style.display = 'none';
+
+    input.onchange = () => {
+      const file = input.files[0];
+      if (!file) {
+        reject(new Error('Dosya seçilmedi.'));
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = err => reject(err);
+      reader.readAsText(file);
+      input.remove();
+    };
+
+    document.body.appendChild(input);
+    input.click();
+  });
+}
 
 function getDeviceInfo() {
     const userAgent = navigator.userAgent.toLowerCase();
@@ -63,234 +120,7 @@ const deviceInfo = getDeviceInfo();
 var OID = 0;
 (() => {
 
-    class BaseCommand {
-        constructor(label = "") { this.label = label; }
-        execute() { }
-        undo() { }
-        getState(when) { return undefined; }
-    }
 
-    // ==== Batch (Çoklu İşlem) Komutu ====
-    class BatchCommand extends BaseCommand {
-        constructor(commands, label = "Çoklu İşlem") {
-            super(label);
-            this.commands = commands;
-        }
-        execute() { this.commands.forEach(cmd => cmd.execute()); }
-        undo() { [...this.commands].reverse().forEach(cmd => cmd.undo()); }
-        getState(when) {
-            return this.commands.map(cmd => cmd.getState?.(when));
-        }
-    }
-
-    // ==== Boyut Değişikliği Komutu ====
-    class SizeCommand extends BaseCommand {
-        constructor(element, oldSize, newSize, label = "Boyut Değiştir") {
-            super(label);
-            this.element = element;
-            this.oldSize = oldSize;
-            this.newSize = newSize;
-        }
-        execute() { this._apply(this.newSize); }
-        undo() { this._apply(this.oldSize); }
-        _apply(sz) {
-            if (!sz) return;
-            const { left, top, width, height } = sz;
-            Object.assign(this.element.htmlObject.style, {
-                left: left + "px", top: top + "px",
-                width: width + "px", height: height + "px"
-            });
-        }
-        getState(when) { return when === "before" ? this.oldSize : this.newSize; }
-    }
-
-    // ==== Stil Değişikliği Komutu ====
-
-    class StyleCommand extends BaseCommand {
-        constructor(element, oldStyles, newStyles, label = "Stil Değişimi") {
-            super(label);
-            this.element = element;
-            this.oldStyles = oldStyles;
-            this.newStyles = newStyles;
-        }
-        execute() { Object.assign(this.element.htmlObject.style, this.newStyles); }
-        undo() { Object.assign(this.element.htmlObject.style, this.oldStyles); }
-        getState(when) { return when === "before" ? this.oldStyles : this.newStyles; }
-    }
-
-
-    // ==== Taşıma Komutu ====
-    // Mevcut MoveCommand sınıfını bununla değiştirin.
-    class MoveCommand extends BaseCommand {
-        constructor(element, newParent, oldParent, oldNextSibling, newNextSibling = null, label = "Taşı") {
-            super(label);
-            this.element = element;
-            this.newParent = newParent;
-            this.oldParent = oldParent;
-            this.oldNextSibling = oldNextSibling; // Bu bir Telement nesnesi veya null olmalı
-            this.newNextSibling = newNextSibling; // Bu da bir Telement nesnesi veya null olmalı
-        }
-
-        execute() {
-            // Hedef HTML elemanını al (eğer varsa)
-            const newNextNode = this.newNextSibling ? this.newNextSibling.htmlObject : null;
-
-            // 1. DOM'da taşı
-            this.newParent.htmlObject.insertBefore(this.element.htmlObject, newNextNode);
-
-            // 2. Eski parent'ın `children` dizisinden kaldır
-            if (this.element.parent && this.element.parent.children) {
-                const idx = this.element.parent.children.indexOf(this.element);
-                if (idx > -1) {
-                    this.element.parent.children.splice(idx, 1);
-                }
-            }
-
-            // 3. Yeni parent'ın `children` dizisine doğru konuma ekle
-            if (this.newNextSibling) {
-                const idx = this.newParent.children.indexOf(this.newNextSibling);
-                if (idx > -1) {
-                    this.newParent.children.splice(idx, 0, this.element);
-                } else { // Eğer sibling bulunamazsa sona ekle (fallback)
-                    this.newParent.children.push(this.element);
-                }
-            } else {
-                this.newParent.children.push(this.element);
-            }
-
-            // 4. Öğenin parent referansını güncelle
-            this.element.parent = this.newParent;
-        }
-
-        undo() {
-            // Geri alma işlemi için de hedef HTML elemanını al
-            const oldNextNode = this.oldNextSibling ? this.oldNextSibling.htmlObject : null;
-
-            // 1. DOM'da eski yerine taşı
-            this.oldParent.htmlObject.insertBefore(this.element.htmlObject, oldNextNode);
-
-            // 2. Yeni parent'ın `children` dizisinden kaldır
-            if (this.element.parent && this.element.parent.children) {
-                const idx = this.element.parent.children.indexOf(this.element);
-                if (idx > -1) {
-                    this.element.parent.children.splice(idx, 1);
-                }
-            }
-
-            // 3. Eski parent'ın `children` dizisine geri ekle
-            if (this.oldNextSibling) {
-                const idx = this.oldParent.children.indexOf(this.oldNextSibling);
-                if (idx > -1) {
-                    this.oldParent.children.splice(idx, 0, this.element);
-                } else {
-                    this.oldParent.children.push(this.element);
-                }
-            } else {
-                this.oldParent.children.push(this.element);
-            }
-
-            // 4. Parent referansını eski haline getir
-            this.element.parent = this.oldParent;
-        }
-
-        getState(when) {
-            return when === "before"
-                ? { parent: this.oldParent, nextSibling: this.oldNextSibling }
-                : { parent: this.newParent, nextSibling: this.newNextSibling };
-        }
-    }
-    class ChildAddCommand extends BaseCommand {
-        constructor(parent, child, nextSibling = null) {
-            super("Çocuk Ekle");
-            this.parent = parent;
-            this.child = child;
-            this.nextSibling = nextSibling;
-        }
-        execute() {
-            this.parent._appendChildRaw(this.child, this.nextSibling);
-        }
-        undo() {
-            this.parent._removeChildRaw(this.child);
-        }
-        getState(when) {
-            return { parent: this.parent, child: this.child };
-        }
-    }
-
-    class ChildRemoveCommand extends BaseCommand {
-        constructor(parent, child) {
-            super("Çocuk Sil");
-            this.parent = parent;
-            this.child = child;
-            this.nextSibling = child.htmlObject.nextSibling;
-        }
-        execute() {
-            this.parent._removeChildRaw(this.child);
-        }
-        undo() {
-            this.parent._appendChildRaw(this.child, this.nextSibling);
-        }
-        getState(when) {
-            return { parent: this.parent, child: this.child };
-        }
-    }
-    // ==== Çocuk ekle/çıkar komutları (Opsiyonel) ====
-    // Eklenebilir.
-
-    // ==== HISTORY MANAGER (onChange destekli) ====
-    class HistoryManager {
-        constructor() {
-            this.undoStack = [];
-            this.redoStack = [];
-            this.listeners = {};
-            this.onChange = null; // (action, cmd, oldVal, newVal)
-        }
-        execute(cmd) {
-            const prev = cmd.getState ? cmd.getState('before') : undefined;
-            cmd.execute();
-            const next = cmd.getState ? cmd.getState('after') : undefined;
-            this.undoStack.push(cmd);
-            this.redoStack = [];
-            this._notify('change', cmd);
-            if (this.onChange) this.onChange('execute', cmd, prev, next);
-        }
-        undo() {
-            if (!this.undoStack.length) return;
-            const cmd = this.undoStack.pop();
-            const prev = cmd.getState ? cmd.getState('after') : undefined;
-            cmd.undo();
-            const next = cmd.getState ? cmd.getState('before') : undefined;
-            this.redoStack.push(cmd);
-            this._notify('change', cmd);
-            if (this.onChange) this.onChange('undo', cmd, prev, next);
-        }
-        redo() {
-            if (!this.redoStack.length) return;
-            const cmd = this.redoStack.pop();
-            const prev = cmd.getState ? cmd.getState('before') : undefined;
-            cmd.execute();
-            const next = cmd.getState ? cmd.getState('after') : undefined;
-            this.undoStack.push(cmd);
-            this._notify('change', cmd);
-            if (this.onChange) this.onChange('redo', cmd, prev, next);
-        }
-        clear() {
-            this.undoStack = [];
-            this.redoStack = [];
-            this._notify('change', null);
-        }
-        on(event, cb) {
-            (this.listeners[event] = this.listeners[event] || []).push(cb);
-        }
-        _notify(event, cmd) {
-            (this.listeners[event] || []).forEach(cb =>
-                cb({ canUndo: this.undoStack.length > 0, canRedo: this.redoStack.length > 0, cmd })
-            );
-        }
-        getHistoryLabels() {
-            return this.undoStack.map(cmd => cmd.label || cmd.constructor.name);
-        }
-    }
 
 
     window.globs = {
@@ -466,100 +296,194 @@ var OID = 0;
 
         return __Wrapped;
     }
+const EVENT_METHOD_POOL = [];      // 0 → gerçek Function nesnesi
+const FN2ID = new WeakMap();
 
+function getOrAddId(fn){
+  let id = FN2ID.get(fn);
+  if (id !== undefined) return id;
+  id = EVENT_METHOD_POOL.length;
+  EVENT_METHOD_POOL.push(fn);                 // 🔹 NESNENİN KENDİSİ
+  FN2ID.set(fn, id);
+  return id;
+}
+const getFnById = id => EVENT_METHOD_POOL[id];  
+    class ListenerMap extends Map {
+        hasSameListener(eventType, candidate) {
+            const list = this.get(eventType);
+            if (!list) return false;
 
+            const norm = fn =>
+                (fn.listenerStr || fn.toString()).replace(/\s+/g, ' ');
 
-
-
-    // Orijinal metotları saklayalım
-    const origAddEventListener = Element.prototype.addEventListener;
-    const origRemoveEventListener = Element.prototype.removeEventListener;
-
-    // addEventListener override: her elementin kendi eventList'ine ekleme yapacak
-    Element.prototype.addEventListener = function (type, listener, options) {
-        origAddEventListener.call(this, type, listener, options);
-        // Eğer element üzerinde eventList yoksa, non-enumerable olarak tanımlayalım
-        if (!this.hasOwnProperty('eventList')) {
-            Object.defineProperty(this, 'eventList', {
-                value: [],
-                writable: true,
-                configurable: true,
-                enumerable: false
+            return list.some(rec => {
+                if (rec.listener === candidate) return true;                        // referans eşit
+                if (rec.listener?._meta?.original &&                                // aynı orijinal
+                    candidate?._meta?.original &&
+                    rec.listener._meta.original === candidate._meta.original)
+                    return true;
+                return norm(rec.listener) === norm(candidate);                      // kodu aynı
             });
         }
-        this.eventList.push({
-            event: type,
-            listener: listener,
-            listenerStr: listener.toString(),
-            options: options
+    }
+
+    /* ── 2. WeakMap deposu & getter güncellemesi ───────────────────── */
+    const _eventMap = new WeakMap();
+    function getEventMap(el) {
+        let m = _eventMap.get(el);
+        if (!m) {
+            m = new ListenerMap();
+            _eventMap.set(el, m);
+        }
+        return m;
+    }
+
+
+    /* Opsiyonel debugger getter */
+    [HTMLElement.prototype, Document.prototype, Window.prototype].forEach(proto => {
+        if (!Object.prototype.hasOwnProperty.call(proto, 'eventList')) {
+            Object.defineProperty(proto, 'eventList', {
+                get() { return getEventMap(this); },
+                enumerable: false,
+                configurable: false
+            });
+        }
+    });                // Element → Map<type, Rec[]>
+/*
+    Function.prototype.bindToEvent = function (elem, type, obj, ...args) {
+        const original = this;
+        const context = obj || elem;
+        const wrapper = function (e, ...rest) {
+            const res = original.call(context, e, ...args, ...rest);
+            if (res === false) { e.preventDefault(); e.stopPropagation(); }
+            return res;
+        };
+        wrapper._meta = {
+            original: original,
+            args: args,
+            objId: obj?.id ?? -1
+        };
+        elem.addEventListener(type, wrapper, false);
+        const auxMap = elem._orig2wrap ||= new WeakMap();
+        const arr = auxMap.get(original) || [];
+        arr.push(wrapper);
+        auxMap.set(original, arr);
+        return original;
+    };*/
+Function.prototype.bindToEvent = function (elem, type, ctx=null, ...args){
+  const original = this;                        // gerçek handler
+  const wrapper  = function (ev){
+    const res = original.apply(ctx || elem, [ev, ...args]);
+    if (res === false){ ev.preventDefault(); ev.stopPropagation(); }
+  };
+
+  /* 🔹–🔹  meta işaretlemesi  🔹–🔹 */
+  wrapper._meta = { original, args };
+
+  /* Map’e kaydet + DOM’a ekle */
+  const map  = getEventMap(elem);
+  const list = map.get(type) || [];
+  map.set(type, list);
+  list.push({ wrapper, options:false });
+
+  elem.addEventListener(type, wrapper, false);
+  return wrapper;
+};
+  Function.prototype.unBindEvent = function (elem, type = null) {
+  const original = this;                      // this = kaldırılacak handler
+  const map      = getEventMap(elem);         // Map<event, list>
+  if (!map) return;
+
+  const types = type ? [type] : [...map.keys()];
+
+  types.forEach(evType => {
+    const list = map.get(evType);
+    if (!list) return;
+    for (let i = list.length - 1; i >= 0; i--) {
+      const rec = list[i];                          // {wrapper, …}
+      const w   = rec.wrapper ?? rec.listener ?? rec;
+      const same =
+        w === original ||
+        w._meta?.original === original;
+
+      if (same) {
+        elem.removeEventListener(evType, w, rec.options || false);
+        list.splice(i, 1);
+      }
+    }
+    if (list.length === 0) map.delete(evType);
+  });
+};
+    Function.prototype.toEventFunc = function (obj = null, ...boundArgs) {
+        const original = this;
+        const context = obj || window;               // bağlam: obj verildiyse o; yoksa window
+
+        const wrapper = function (event, ...runtimeArgs) {
+            event = event || window.event;
+            if (typeof $ !== 'undefined' && $.event && typeof $.event.fix === 'function') {
+                event = $.event.fix(event);
+            }
+            const res = original.call(context, event, ...boundArgs, ...runtimeArgs);
+            if (res === false) {
+                event.preventDefault?.();
+                event.stopPropagation?.();
+            }
+            return res;
+        };
+
+        /* meta → debug / unBindEvent için */
+        wrapper._meta = {
+            original: handler,
+            args: boundArgs,
+            objId: this.id ?? -1
+        };
+
+        return wrapper;
+    };
+    const origAddEventListener = EventTarget.prototype.addEventListener;
+    EventTarget.prototype.addEventListener = function (type, listener, options) {
+        /* 1.  Normal davranışı koru */
+        origAddEventListener.call(this, type, listener, options);
+
+        /* 2.  Kayıt tut */
+        if (!listener) return;                          // null / undefined koruması
+
+        const map = getEventMap(this);
+        const list = map.get(type) || [];
+        map.set(type, list);
+
+        /* tekrar eklemeyi engelle */
+        if (list.some(rec => rec.listener === listener)) return;
+
+        list.push({
+            listener,
+            id: getOrAddId(listener),
+            options
         });
     };
 
-    // removeEventListener override: kaldırılan event bilgisini eventList'ten silelim
-    Element.prototype.removeEventListener = function (type, listener, options) {
+    /* ──────────────────────────────────────────────────────────────── */
+    /*  removeEventListener override                                    */
+    /* ──────────────────────────────────────────────────────────────── */
+    const origRemoveEventListener = EventTarget.prototype.removeEventListener;
+    EventTarget.prototype.removeEventListener = function (type, listener, options) {
+        /* 1.  Normal davranışı koru */
         origRemoveEventListener.call(this, type, listener, options);
-        if (this.eventList && Array.isArray(this.eventList)) {
-            for (let i = this.eventList.length - 1; i >= 0; i--) {
-                const binding = this.eventList[i];
-                if (binding.event === type && binding.listener === listener) {
-                    this.eventList.splice(i, 1);
-                }
+
+        /* 2.  Kayıt sil */
+        const map = _eventMap.get(this);
+        if (!map || !map.has(type)) return;
+
+        const list = map.get(type);
+        for (let i = list.length - 1; i >= 0; i--) {
+            if (list[i].listener === listener) {
+                list.splice(i, 1);
             }
         }
+        if (list.length === 0) map.delete(type);
     };
 
-    // HTMLElement.prototype üzerinde "eventList" adında bir getter tanımlayalım
 
-    Function.prototype.toEventFunc = function (obj, ...args) {
-        const method = this;
-        return function (event) {
-            event = event || window.event;
-            if (typeof $ !== "undefined") event = $.event.fix(event);
-            return method.apply(obj, [event].concat(args, Array.prototype.slice.call(arguments, 1)));
-        };
-    };
-    Function.prototype.bindToEvent = function (elem, eventName, obj, ...args) {
-        const method = this;
-        const methodStr = method.toString();
-        const context = obj || elem;
-        let objId = -1;
-        if (obj?.id) objId = obj.id;
-        let wrapper = function (event) {
-            const ret = method.apply(context, [event].concat(args, Array.prototype.slice.call(arguments, 1)));
-            if (ret === false) {
-                event.stopPropagation();
-                event.preventDefault();
-            }
-            return ret;
-        }
-        // Wrapper'ı elemente ekliyoruz.
-        elem.addEventListener(eventName, wrapper, false);
-        // Elementin eventList (ya da eventList) üzerinden binding kaydına ek argümanları (args) ekliyoruz.
-        const bindings = elem.eventList[elem.eventList.length - 1];
-        if (bindings) {
-            bindings.objId = objId;
-            bindings.methodStr = methodStr;
-            bindings.args = args;  // EK ARGÜMANLARI EKLEDİK
-        }
-        return method;
-    };
-
-    Function.prototype.unBindEvent = function (elem, eventName) {
-        const method = this;
-        const methodStr = method.toString();
-        const bindings = elem.eventList; // eventList üzerinden binding bilgilerini alıyoruz.
-        if (!bindings) return;
-
-        // İlgili binding kaydını arıyoruz.
-        for (let i = 0; i < bindings.length; i++) {
-            const binding = bindings[i];
-            if (binding.event === eventName && binding.methodStr === methodStr) {
-                elem.removeEventListener(eventName, binding.listener, false);
-                bindings.splice(i, 1);
-                break;
-            }
-        }
-    };
 
     // Recursive Deep Copy with Constructor Preservation
     const SKIP_KEYS = [
@@ -579,62 +503,75 @@ var OID = 0;
             /* 1) Daha önce kopyalandı mı? */
             if (seen.has(obj)) return seen.get(obj);
 
-            /* 2) DOM düğümleri — nodeType ile kesin teşhis ------------ */
+            /* 2) DOM düğümleri -------------------------------------------- */
             switch (obj.nodeType) {
-                case Node.TEXT_NODE: {                 // 3
+                case Node.TEXT_NODE: {
                     const out = document.createTextNode(obj.nodeValue ?? "");
                     seen.set(obj, out);
                     return out;
                 }
-                case Node.COMMENT_NODE: {              // 8
+                case Node.COMMENT_NODE: {
                     const out = document.createComment(obj.nodeValue ?? "");
                     seen.set(obj, out);
                     return out;
                 }
-                case Node.ELEMENT_NODE: {              // 1  (Element + türevleri)
+                case Node.ELEMENT_NODE: {
                     const el = document.createElement(obj.tagName);
-                    seen.set(obj, el);                   // erken kayıt
+                    seen.set(obj, el);                         // erken kayıt
 
-                    /* Attributes (style hariç) */
-                    Array.from(obj.attributes || []).forEach(attr => {
+                    /* — attribute’ler (style hariç) — */
+                    Array.from(obj.attributes).forEach(attr => {
                         if (attr.name.toLowerCase() !== "style") {
                             el.setAttribute(attr.name, attr.value);
                         }
                     });
                     if (obj.style?.cssText) el.style.cssText = obj.style.cssText;
 
-                    /* “yalnız-metin” elementler */
+                    /* — “yalnız-metin” elementler — */
                     if (!obj.childNodes.length) el.textContent = obj.textContent ?? "";
 
-                    /* eventList taşı */
-                    obj.eventList?.forEach(evt => {
-                        const src = evt.methodStr ?? evt.listenerStr;
-                        const fn = new Function(`return (${src})`)();
+                    /* ------------------------------------------------------- */
+                    /*  YENİ: listener’ları taşı   (WeakMap  →  getEventMap)  */
+                    /* ------------------------------------------------------- */
+                    const srcMap = getEventMap(obj);           // eski elemanın haritası
+                    if (srcMap) {
+                        for (const [type, list] of srcMap) {
+                            for (const rec of list) {
+                                const wrapper = getFnById(rec.id);          // id → kod
 
-                        if (evt.methodStr) {               // kendi bindToEvent API'niz
-                            const target =
-                                evt.objId === -1 ? null
-                                    : evt.objId === rootId ? rootClone
-                                        : getObjectById(evt.objId);
-                            fn.bindToEvent(el, evt.event, target, ...evt.args);
-                        } else {
-                            el.addEventListener(evt.event, fn, evt.options);
+                                if (wrapper?._meta?.original) {
+                                    const orig = wrapper._meta.original;
+                                    const args = wrapper._meta.args || [];
+                                    const objId = wrapper._meta.objId ?? -1;
+
+                                    let targetCtx = null;
+                                    if (objId !== -1) {
+                                        targetCtx = AllClass.byId[objId] || AllClass.byOrder[objId];
+                                    }
+
+                                    orig.bindToEvent(el, type, targetCtx, ...args);
+                                } else {
+                                    /* addEventListener ile eklenmiş saf fonksiyon */
+                                    el.addEventListener(type, wrapper, rec.options);
+                                }
+                            }
                         }
-                    });
+                    }
+                    /* ------------------------------------------------------- */
 
-                    /* çocukları kopyala */
-                    obj.childNodes.forEach(node => el.appendChild(cloneAny(node)));
+                    /* — çocukları kopyala — */
+                    obj.childNodes.forEach(n => el.appendChild(cloneAny(n)));
                     return el;
                 }
             }
 
-            /* 3) Özel copy()  —— YALNIZ DOM DIŞI nesnelerde */
+            /* 3) Özel copy() — YALNIZ DOM DIŞI nesnelerde */
             if (
                 typeof obj.copy === "function" &&
                 obj.copy !== Object.prototype.copy &&
-                !("nodeType" in obj)                     // DOM değilse
+                !("nodeType" in obj)
             ) {
-                seen.set(obj, {});                       // yer tutucu ile döngü kır
+                seen.set(obj, {});
                 const out = obj.copy();
                 seen.set(obj, out);
                 return out;
@@ -661,6 +598,7 @@ var OID = 0;
             return out;
         }
 
+
         return cloneAny(root);
     }
 
@@ -672,77 +610,468 @@ var OID = 0;
         enumerable: false
     });
 
+  
 
-    // Recursive Serialize (Object -> String)
-    Object.prototype.toStr = function () {
-        const visited = new WeakSet();
-        const skipProps = new Set([
-            'firstChild', 'lastChild', 'nextSibling', 'previousSibling',
-            'parentNode', 'parentElement', 'childNodes', 'children',
-            'ownerDocument', '__proto__', 'style', 'classList'
-        ]);
 
-        function serialize(obj) {
-            if (visited.has(obj)) return undefined;
+ 
+/*************************************************************************
+*  0.  Yardımcı: “havuz” yalnız referans saklar, kod gövdesi saklamaz    *
+*************************************************************************/
+const FN_POOL = new WeakMap();               // fn → { ownerId, name }
+const ID2OBJ  = new Map();                   // id   → gerçek nesne
+let   OBJ_SEQ = 1;
 
-            if (obj === null || typeof obj !== 'object') {
-                if (typeof obj === 'function') return `"__func__${obj.toString()}"`;
-                return JSON.stringify(obj);
-            }
+function registerInstance(obj){
+  if (obj.id != null) return obj.id;
+  const id = OBJ_SEQ++;
+  Object.defineProperty(obj, 'id', { value:id, enumerable:false });
+  ID2OBJ.set(id, obj);
+  return id;
+}
 
-            visited.add(obj);
+/*************************************************************************
+*  1.  Telement.bind (store meta)                                        *
+*************************************************************************/
 
-            if (obj instanceof Text) {
-                return JSON.stringify({ _$type: 'Text', content: obj.nodeValue });
-            }
 
-            if (obj instanceof Comment) {
-                return JSON.stringify({ _$type: 'Comment', content: obj.nodeValue });
-            }
+/*************************************************************************
+*  2.  Serializer (tam + diff)                                          *
+*************************************************************************/
+const BASELINE = new WeakMap();
+const SKIP_KEY = k => /^[_$]/.test(k) || k==='__proto__';
 
-            if (obj instanceof Element) {
-                const attrs = [...obj.attributes].filter(a => a.name.toLowerCase() !== "style");
-                const children = [...obj.childNodes]
-                    .map(child => serialize(child))
-                    .filter(c => c)
-                    .map(c => JSON.parse(c));
-                return JSON.stringify({
-                    _$type: 'Element',
-                    tag: obj.tagName,
-                    attrs: attrs.map(a => [a.name, a.value]),
-                    style: obj.style.cssText || '',
-                    html: obj.childNodes.length === 0 ? obj.textContent : null,
-                    events: obj.eventList, // Burada artık "args" bilgisi de varsa yer alacak.
-                    children
-                });
-            }
+function serialize(root){
+  const seen = new WeakSet();
+  const ser  = (n,parentKey=null,isNew=true)=>{
+    /* --- özel kanca ---------------------------------------- */
+    if (n && typeof n.toStr === 'function' &&
+        n.toStr !== Object.prototype.toStr){
+      const custom = n.toStr(parentKey,isNew);
+      if (custom !== undefined) return custom;
+    }
 
-            const ctor = obj.constructor && obj.constructor.name;
-            if (Array.isArray(obj)) {
-                const items = obj
-                    .map(o => serialize(o))
-                    .filter(c => c)
-                    .map(c => JSON.parse(c));
-                return JSON.stringify({ _$type: 'Array', _$ctor: ctor, items });
-            }
+    /* --- primitive / visited ------------------------------- */
+    if (n === null || typeof n !== 'object') return n;
+    if (seen.has(n)) return;
+    seen.add(n);
 
-            const props = Object.keys(obj).reduce((acc, k) => {
-                if (!skipProps.has(k)) {
-                    const val = serialize(obj[k]);
-                    if (val !== undefined) acc[k] = JSON.parse(val);
-                }
-                return acc;
-            }, {});
+    /* --- DOM Text / Comment / Element ---------------------- */
+    if (n.nodeType===3) return { _$type:'Text',    content:n.nodeValue };
+    if (n.nodeType===8) return { _$type:'Comment', content:n.nodeValue };
+    if (n.nodeType===1) return serElement(n);
 
-            if (ctor && ctor !== 'Object') {
-                props._$ctor = ctor;
-            }
+    /* --- Array --------------------------------------------- */
+    if (Array.isArray(n)) return { _$type:'Array', items:n.map((x,i)=>ser(x,i,true)) };
 
-            return JSON.stringify(props);
-        }
+    /* --- Plain / custom obj -------------------------------- */
+    const ctor = n.constructor!==Object ? n.constructor.name : undefined;
+    const out  = {};
+    Object.keys(n).forEach(k=>{
+      if (SKIP_KEY(k)) return;
+      const v = ser(n[k], k, true);
+      if (v!==undefined) out[k]=v;
+    });
+    if (ctor) out._$ctor=ctor;
+    return out;
+  };
 
-        return serialize(this);
+  /* Element-özel -------------------------------------------- */
+  function serElement(el){
+    const attrs = Object.fromEntries(
+      [...el.attributes].filter(a=>a.name!=='style').map(a=>[a.name,a.value]));
+
+    /* Δ1: Map tabanlı event toplama ------------------------- */
+    const events=[];
+    const map = getEventMap(el);
+    for (const [type,list] of map||[]){
+      list.forEach(rec=>{
+        const meta = FN_POOL.get(rec.wrapper)||{};
+        events.push({ event:type, method:meta.method, objId:meta.ownerId, args:meta.args });
+      });
+    }
+
+    return {
+      _$_type : 'Element',
+      tag     : el.tagName,
+      attrs,
+      style   : el.style.cssText||'',
+      events,
+      children: [...el.childNodes].map((c,i)=>ser(c,i,true))
     };
+  }
+
+  return ser(root);
+}
+
+/*****************************************************************
+* 3. DIFF                                                        *
+*****************************************************************/
+function diff(curr, { reset = false } = {}) {
+  const base = BASELINE.get(curr);
+  const delta = _diff(curr, base) ?? {};
+  if (reset) {
+    // re-snapshot the post-diff state as the new baseline
+    BASELINE.set(curr, serialize(curr));
+  }
+  return delta;
+}
+function _diff(a,b,parentKey=null){
+  if (b===undefined) return serialize(a);          // yeni dal --> tam fotoğraf
+  if (a===b) return;
+
+  /* özel kanca ------------------------------------------------ */
+  if (a && typeof a.toStr==='function' &&
+      a.toStr!==Object.prototype.toStr){
+    const custom=a.toStr(parentKey,false);
+    if(custom!==undefined) return custom;
+  }
+
+  if (a===null||typeof a!=='object') return a;
+  if (a.nodeType===1) return diffElement(a,b);
+  if (Array.isArray(a)){
+    const out=[],N=Math.max(a.length,(b||[]).length);
+    for(let i=0;i<N;i++){
+      const d=_diff(a[i],b?.[i],i);
+      if(d!==undefined) out[i]=d;
+    }
+    return out.some(Boolean)?{_$type:'Array',items:out}:undefined;
+  }
+  const out={},keys=new Set([...Object.keys(a),...Object.keys(b||{})]);
+  keys.forEach(k=>{
+    if(SKIP_KEY(k)) return;
+    const d=_diff(a[k],b?.[k],k);
+    if(d!==undefined) out[k]=d;
+  });
+  return Object.keys(out).length?out:undefined;
+}
+
+function diffElement(el, ref){
+  const o={_$type:'Element'};
+  if(!ref||el.tagName!==ref.tag) o.tag=el.tagName;
+
+  const at=Object.fromEntries([...el.attributes]
+        .filter(a=>a.name!=='style').map(a=>[a.name,a.value]));
+  if(JSON.stringify(at)!==JSON.stringify(ref?.attrs||{})) o.attrs=at;
+  if(el.style.cssText!==(ref?.style||'')) o.style=el.style.cssText||'';
+
+  /* Δ2: Map sürümü ------------------------------------------ */
+  const news=[];
+  const map=getEventMap(el);
+  for(const [type,list] of map||[]){
+    list.forEach(rec=>{
+      const meta=FN_POOL.get(rec.wrapper)||{};
+      const existed=(ref?.events||[]).some(e=>e.event===type &&
+                                            e.method===meta.method &&
+                                            e.objId===meta.ownerId);
+      if(!existed) news.push({ event:type, method:meta.method, objId:meta.ownerId, args:meta.args });
+    });
+  }
+  if(news.length) o.events=news;
+
+  const kids=[],L=Math.max(el.childNodes.length,(ref?.children||[]).length);
+  for(let i=0;i<L;i++){
+    const d=_diff(el.childNodes[i],ref?.children?.[i],i);
+    if(d!==undefined) kids[i]=d;
+  }
+  if(kids.some(Boolean)) o.children=kids;
+
+  return Object.keys(o).length>1?o:undefined;
+}
+
+/*****************************************************************
+* 4. APPLY-PATCH                                                *
+*****************************************************************/
+function applyPatch(base, patch, parentObj = null, parentKey = null){
+  if(patch===undefined) return base;
+  if(patch===null)      return undefined;
+  if(typeof patch!=='object') return patch;
+
+  /* Δ3: özel static fromStr(data,parent,isNew,base) ---------- */
+  if (patch._ctor){
+    const C = window[patch._ctor] || Object;
+    if (typeof C.fromStr === 'function' && C.fromStr !== Object.fromStr){
+      const isNew = base === undefined || base === null;
+      return C.fromStr(patch, parentObj, parentKey, isNew, base);
+    }
+    const obj = new C(...(patch._args||[]));
+    return applyPatch(obj, patch.diff, parentKey);
+  }
+
+  
+  if (patch._$_type==='Element') return patchElement(base,patch);
+
+  if (patch._$type==='Array'){
+    const arr=base||[];
+    patch.items?.forEach((p,i)=>arr[i] = applyPatch(arr[i], p, arr, i));
+    return arr;
+  }
+
+  let obj=base;
+  if(!obj||patch._$ctor){
+    const C=window[patch._$ctor]||Object;
+    obj=new C();
+  }
+  Object.entries(patch).forEach(([k,v])=>{
+    if(k.startsWith('_$')) return;
+    obj[k] = applyPatch(obj[k], v, obj, k);
+  });
+  return obj;
+}
+
+function patchElement(base, p){
+  let el = base?.htmlObject || document.createElement(p.tag||'DIV');
+  if(p.attrs) Object.entries(p.attrs).forEach(([k,v])=>el.setAttribute(k,v));
+  if(p.style!==undefined) el.style.cssText = p.style;
+
+  if(p.events){
+    p.events.forEach(e=>{
+      const owner = e.objId>0 ? ID2OBJ.get(e.objId) : null;
+      const fn    = owner?.[e.method];
+      if (fn) fn.bindToEvent(el,e.event,owner,...(e.args||[]));
+    });
+  }
+  p.children?.forEach((c,i)=>{
+    const child = applyPatch(el.childNodes[i]?.owner||el.childNodes[i], c, el, i);
+    if(!el.childNodes[i] && child) el.appendChild(child.htmlObject||child);
+  });
+  return base||{htmlObject:el};
+}
+function diffJson(curr, prev) {
+  if (prev === undefined) return curr;              // tamamen yeni dal
+  if (curr === prev) return undefined;              // değişiklik yok
+
+  if (curr === null || typeof curr !== 'object')
+      return curr;                                  // primitif fark
+
+  if (Array.isArray(curr)) {
+    const out = [], N = Math.max(curr.length, (prev||[]).length);
+    for (let i = 0; i < N; i++) {
+      const d = diffJson(curr[i], prev?.[i]);
+      if (d !== undefined) out[i] = d;
+    }
+    return out.some(Boolean) ? out : undefined;
+  }
+
+  const out = {};
+  const keys = new Set([...Object.keys(curr), ...Object.keys(prev||{})]);
+  keys.forEach(k => {
+    const d = diffJson(curr[k], prev?.[k]);
+    if (d !== undefined) out[k] = d;
+  });
+  return Object.keys(out).length ? out : undefined;
+}
+// ———————————————————————————————————————————————————————
+// Monkey-patch applyPatch so it handles inline diffs on new ctors
+// ———————————————————————————————————————————————————————
+
+(function(){
+  const originalApplyPatch = applyPatch;  // capture the real one
+
+  // ────────────────────────────────────────────────
+  // 2) Override window.applyPatch with our version
+  // ────────────────────────────────────────────────
+  window.applyPatch = function(base, patch, parentObj = null, parentKey = null) {
+    // If this patch node has a _ctor, we want to new() it
+    if (patch && typeof patch === 'object' && patch._ctor) {
+      const C   = window[patch._ctor] || Object;
+      const obj = new C(...(patch._args || []));
+      // recurse into the diff payload (will call *this* override again
+      // for any nested patches with their own _ctor)
+      return applyPatch(obj, patch.diff, parentObj, parentKey);
+    }
+
+    // Otherwise delegate to the original, un-wrapped applyPatch:
+    return originalApplyPatch(base, patch, parentObj, parentKey);
+  };
+})();
+// ———————————————————————————————————————————————————————
+// Recursively walk your delta tree and, whenever a branch was new,
+// replace its inline props with `{ _ctor, _args, diff }` so we know
+// exactly which ctor+args to call later.
+// ———————————————————————————————————————————————————————
+const _origSerialize = serialize;
+serialize = function(root) {
+  const tree = _origSerialize(root);
+  // walk tree and copy _$args from symbol on live instances:
+  function injectArgs(node, live) {
+    if (!node || typeof node !== 'object') return;
+    if (live && Array.isArray(live[_ctorArgs]) && live[_ctorArgs].length) {
+      node._$args = live[_ctorArgs];
+    }
+    Object.keys(node).forEach(k => {
+      if (k === '_$args') return;
+      injectArgs(node[k], live ? live[k] : undefined);
+    });
+  }
+  injectArgs(tree, root);
+  return tree;
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// 2) annotatePatch: makes every brand-new branch minimal + ctor+args
+// ────────────────────────────────────────────────────────────────────────────
+function annotatePatch(patchNode, currNode, baseNode) {
+  if (!patchNode || typeof patchNode !== 'object') return;
+
+  // NEW BRANCH: baseNode was empty but patchNode came from serialize()
+  if (baseNode === undefined && patchNode._$ctor) {
+    const ctorName = patchNode._$ctor;
+    const args     = Array.isArray(patchNode._$args) ? patchNode._$args : [];
+
+    // Build fresh baseline JSON for this branch:
+    const C = window[ctorName] || Object;
+    let freshBaseline = {};
+    try {
+      freshBaseline = serialize(new C(...args));
+    } catch (e) { /* ignore */ }
+
+    // rawCurr = the full subtree JSON we got from currNode
+    const rawCurr = currNode;
+    // compute minimal diff:
+    const minimal = _diff(rawCurr, freshBaseline) || {};
+
+    // replace patchNode in-place:
+    Object.keys(patchNode).forEach(k => delete patchNode[k]);
+    patchNode._ctor = ctorName;
+    if (args.length) patchNode._args = args;
+    patchNode.diff  = minimal;
+
+    // recurse only on that minimal diff:
+    annotatePatch(patchNode.diff, rawCurr, freshBaseline);
+    return;
+  }
+
+  // EXISTING BRANCH: just recurse into children
+  for (const key of Object.keys(patchNode)) {
+    if (key === '_$ctor' || key === '_$args') continue;
+    if (patchNode.diff && key === 'diff') {
+      annotatePatch(patchNode.diff, currNode, baseNode);
+    } else {
+      annotatePatch(
+        patchNode[key],
+        currNode ? currNode[key] : undefined,
+        baseNode ? baseNode[key] : undefined
+      );
+    }
+  }
+}
+/*************************************************************************
+*  4.  Telement kısayollar                                              *
+*************************************************************************/
+/*  bütün sınıflar miras alır  */
+Object.prototype.track = function () {
+  BASELINE.set(this, serialize(this));
+  return this;
+};
+
+Object.defineProperty(Object.prototype, 'toStr', {
+  value: function() {
+    // 1. Baseline'dan önceki durumu al
+    const base = BASELINE.get(this) || {};
+    
+    // 2. Mevcut durumu serialize et
+    const current = serialize(this);
+    
+    // 3. Değişiklikleri hesapla (diff)
+    const diff = _diff(current, base);
+    
+    // 4. Yapıcı argümanlarını ekle
+    const output = {
+      _ctor: this.constructor.name,
+      _args: this[_ctorArgs] || [],
+      diff: diff || {}
+    };
+    
+    return JSON.stringify(output, null, 2);
+  },
+  writable: true,
+  configurable: true
+});
+
+// ——————————————————————————————
+// 2) global toObject(str)
+// ——————————————————————————————
+function toObject(str) {
+  return JSON.parse(str, (key, value) => {
+    if (value && value._$ctor) {
+      const C = window[value._$ctor];
+      if (typeof C === 'function') {
+        const args = Array.isArray(value._$args) ? value._$args : [];
+        const inst = new C(...args);
+        // geri kalan diff alanlarını kopyala
+        for (const k of Object.keys(value)) {
+          if (k === '_$ctor' || k === '_$args') continue;
+          inst[k] = value[k];
+        }
+        return inst;
+      }
+    }
+    return value;
+  });
+}
+Object.defineProperty(Object.prototype, 'toMinStr', {
+  value: function() {
+    // 1) last snapshot JSON
+    const baseTree = BASELINE.get(this) || {};
+    // 2) current JSON
+    const currTree = serialize(this);
+    // 3) raw delta
+    const rawDelta = _diff(currTree, baseTree) || {};
+    // 4) make new branches minimal + ctor+args
+    annotatePatch(rawDelta, currTree, baseTree);
+    // 5) wrap with root ctor+args
+    const out = { _ctor: this.constructor.name };
+    if (Array.isArray(currTree._$args) && currTree._$args.length) {
+      out._args = currTree._$args;
+    }
+    out.diff = rawDelta;
+    return JSON.stringify(out, null, 2);
+  },
+  writable:     true,
+  configurable: true,
+  enumerable:   false
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// 4) fromMinStr(): rebuild from zero
+// ────────────────────────────────────────────────────────────────────────────
+function fromMinStr(str) {
+  const { _ctor, _args = [], diff } = JSON.parse(str);
+  const C   = window[_ctor] || Object;
+  const obj = new C(..._args);
+  if (diff) applyPatch(obj, diff);
+  return obj;
+}
+String.prototype.toMinObject = function() {
+  return fromMinStr(this);
+};
+
+String.prototype.toObject = function() {
+  // 1. JSON string'ini parse et
+  const parsed = JSON.parse(this);
+  
+  // 2. Constructor'ı bul
+  const Ctor = window[parsed._ctor] || Object;
+  
+  // 3. Yeni nesne oluştur (yapıcı argümanlarıyla)
+  const instance = new Ctor(...(parsed._args || []));
+  
+  // 4. Değişiklikleri uygula
+  if (parsed.diff) {
+    applyPatch(instance, parsed.diff);
+  }
+  
+  // 5. Yeni nesneyi döndür
+  return instance;
+};
+
+/*************************************************************************
+*  5.  Dışa aktarma                                                     *
+*************************************************************************/
+window.Serializer={ serialize, diff, applyPatch, track:o=>BASELINE.set(o,serialize(o)) };
+
+
+
     Object.prototype.assign = function (obj, full = false, visited = new WeakSet()) {
         // Döngüsel referans kontrolü
         if (visited.has(obj)) return;
@@ -780,77 +1109,6 @@ var OID = 0;
             if (!(val in this) && obj.hasOwnProperty(val))
                 this[val] = obj[val];
     };
-
-    // Recursive Deserialize (String -> Object)
-    String.prototype.toObject = function () {
-        const data = JSON.parse(this);
-        const refMap = new WeakMap();
-
-        function deserialize(val) {
-            if (typeof val === 'string' && val.startsWith('__func__')) {
-                return new Function(`return (${val.slice(8)})`)();
-            }
-
-            if (val && typeof val === 'object') {
-                if (val._$type === 'Element') {
-                    const el = document.createElement(val.tag);
-                    val.attrs.forEach(([name, value]) => el.setAttribute(name, value));
-                    if (val.style) el.style.cssText = val.style;
-                    if (val.html !== null) el.textContent = val.html;
-
-                    // Olay listener'ları yeniden ekleme:
-                    val.events.forEach(evt => {
-                        // Listener metinsel temsili ile asıl fonksiyonu oluşturuyoruz:
-
-                        if (evt.methodStr) {
-                            const method = new Function(`return (${evt.methodStr})`)();
-                            method.bindToEvent(el, evt.event, evt.objId > 0 ? getObjectById(evt.objId) : null, ...evt.args);
-
-                        } else {
-                            const realMethod = new Function(`return (${evt.listenerStr})`)();
-                            el.addEventListener(evt.event, realMethod, evt.options);
-                        }
-                    });
-
-                    val.children
-                        .map(deserialize)
-                        .filter(child => child instanceof Node)
-                        .forEach(child => el.appendChild(child));
-                    return el;
-                }
-
-                if (val._$type === 'Text') {
-                    return document.createTextNode(val.content);
-                }
-
-                if (val._$type === 'Comment') {
-                    return document.createComment(val.content);
-                }
-
-                if (val._$type === 'Array' && Array.isArray(val.items)) {
-                    const ctor = val._$ctor && typeof window[val._$ctor] === 'function' ? window[val._$ctor] : Array;
-                    const arr = new ctor();
-                    val.items.forEach((item, i) => arr[i] = deserialize(item));
-                    return arr;
-                }
-
-                const ctor = val._$ctor && typeof window[val._$ctor] === 'function' ? window[val._$ctor] : null;
-                const instance = ctor ? Object.create(ctor.prototype) : eval("new " + val._$ctor + '("' + (val.htmlObject ? val.htmlObject._$TagName : "") + '")');;
-
-                Object.keys(val).forEach(k => {
-                    if (k !== '_$ctor') instance[k] = deserialize(val[k]);
-                });
-
-                return instance;
-            }
-
-            return val;
-        }
-
-        return deserialize(data);
-    };
-
-
     Object.prototype.compare = function (Obj) {
         if (this.__proto__.constructor.name == "ajax") { return; }
         var rtn = true;
@@ -1123,7 +1381,7 @@ var OID = 0;
     }
 
 
-    class Tord extends Number {
+    Tord = class Tord extends Number {
         constructor(o) {
             super(o);
             this.index = 0;
@@ -1205,7 +1463,7 @@ var OID = 0;
         };
         //Object.freeze(s);
     }
-    class Tenum extends Number {
+    Tenum = class Tenum extends Number {
 
         constructor() {
             super();
@@ -1227,6 +1485,19 @@ var OID = 0;
                 }
             }
             return "[" + keys.join(",") + "]";
+        }
+         toStr() {
+            return {
+            _ctor : 'Tenum',
+            value : this.value,
+            list  : this._$list,
+            };
+        }
+        fromStr( patch, parentObj ,isNew, parentKey = null,base){
+            if(isNew) 
+          { window[patch.list].bindTo(parentKey, parentObj);}
+            else
+            parentObj[parentKey].value = patch.value;
         }
         _$toStr() {
             return '{"_$parent":' + quote(this._$list) + ',"value":' + this.value + "}";
@@ -1633,28 +1904,9 @@ var OID = 0;
         this.rect = Ealign.alignToRect([0, 0, innerWidth, innerHeight], this.offsetWidth ? this.offsetWidth : this.computedStyle.offsetWidth, this.offsetHeight ? this.offsetHeight : this.computedStyle.offsetHeight, align);
     };
 
-    const EVENT_LIST = Symbol('eventList');
-    Object.defineProperty(HTMLElement.prototype, 'eventList', {
-        get() {
-            if (!this[EVENT_LIST]) this[EVENT_LIST] = [];
-            return this[EVENT_LIST];
-        },
-        set(val) {
-            this[EVENT_LIST] = Array.isArray(val) ? val : [val];
-        },
-        enumerable: false           // zaten sembol; yine de saklamak isterseniz
-    });
 
-    Object.defineProperty(document, 'eventList', {
-        get() {
-            if (!this[EVENT_LIST]) this[EVENT_LIST] = [];
-            return this[EVENT_LIST];
-        },
-        set(val) {
-            this[EVENT_LIST] = Array.isArray(val) ? val : [val];
-        },
-        enumerable: false           // zaten sembol; yine de saklamak isterseniz
-    });
+
+
 
     defineProp.call(HTMLElement.prototype, "computedStyle", { get: function () { return getComputedStyle(this) } });
 
@@ -1695,105 +1947,105 @@ var OID = 0;
         };
     };
 
-  class SelectionManager extends EventTarget {
-  constructor() {
-    super();
-    this._selected = new Set();
-  }
+    class SelectionManager extends EventTarget {
+        constructor() {
+            super();
+            this._selected = new Set();
+        }
 
-  /**
-   * Select an item.
-   * @param {Telement} item
-   * @param {Object} options
-   *   @param {boolean} [options.multi=false]          — Add to existing selection?
-   *   @param {boolean} [options.silent=false]         — Don't fire change events?
-   *   @param {boolean} [options.scrollIntoView=false]— Scroll into view?
-   *   @param {Function} [options.onSelect]            — Callback when selected
-   *   @param {string}   [options.cssClass='selected']— CSS sınıfı
-   *   @param {boolean}  [options.animate=false]       — Basıldığında kısa animasyon
-   *   @param {Function} [options.filter]              — Sadece filter(item)===true ise seç
-   */
-  select(item, {
-    multi = false,
-    silent = false,
-    scrollIntoView = false,
-    onSelect,
-    cssClass = 'selected',
-    animate = false,
-    filter
-  } = {}) {
-    if (filter && !filter(item)) return;
+        /**
+         * Select an item.
+         * @param {Telement} item
+         * @param {Object} options
+         *   @param {boolean} [options.multi=false]          — Add to existing selection?
+         *   @param {boolean} [options.silent=false]         — Don't fire change events?
+         *   @param {boolean} [options.scrollIntoView=false]— Scroll into view?
+         *   @param {Function} [options.onSelect]            — Callback when selected
+         *   @param {string}   [options.cssClass='selected']— CSS sınıfı
+         *   @param {boolean}  [options.animate=false]       — Basıldığında kısa animasyon
+         *   @param {Function} [options.filter]              — Sadece filter(item)===true ise seç
+         */
+        select(item, {
+            multi = false,
+            silent = false,
+            scrollIntoView = false,
+            onSelect,
+            cssClass = 'selected',
+            animate = false,
+            filter
+        } = {}) {
+            if (filter && !filter(item)) return;
 
-    // multi değilse, tıklananı hariç tutup diğerlerini temizle
-    if (!multi) this.clear({ silent, except: item });
+            // multi değilse, tıklananı hariç tutup diğerlerini temizle
+            if (!multi) this.clear({ silent, except: item });
 
-    if (!this._selected.has(item)) {
-      this._selected.add(item);
+            if (!this._selected.has(item)) {
+                this._selected.add(item);
 
-      if (typeof onSelect === 'function') onSelect(item);
+                if (typeof onSelect === 'function') onSelect(item);
 
-      if (!silent) {
-        this.dispatchEvent(new CustomEvent('change', {
-          detail: { action: 'select', item, cssClass }
-        }));
-      }
+                if (!silent) {
+                    this.dispatchEvent(new CustomEvent('change', {
+                        detail: { action: 'select', item, cssClass }
+                    }));
+                }
 
-      if (scrollIntoView) {
-        item.htmlObject.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
-      }
+                if (scrollIntoView) {
+                    item.htmlObject.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+                }
 
-      if (animate) {
-        item.htmlObject.classList.add('select-animate');
-        setTimeout(() => item.htmlObject.classList.remove('select-animate'), 300);
-      }
+                if (animate) {
+                    item.htmlObject.classList.add('select-animate');
+                    setTimeout(() => item.htmlObject.classList.remove('select-animate'), 300);
+                }
+            }
+        }
+
+        /**
+         * Deselect a single item.
+         * @param {Telement} item
+         * @param {Object} options
+         *   @param {boolean} [options.silent=false]
+         */
+        deselect(item, { silent = false } = {}) {
+            if (this._selected.delete(item) && !silent) {
+                this.dispatchEvent(new CustomEvent('change', {
+                    detail: { action: 'deselect', item }
+                }));
+            }
+        }
+
+        /**
+         * Clear all selection, but optionally keep one item.
+         * @param {Object} options
+         *   @param {boolean}   [options.silent=false]
+         *   @param {Telement}  [options.except] — Hariç tutulacak öğe
+         */
+        clear({ silent = false, except = null } = {}) {
+            for (let item of [...this._selected]) {
+                if (item === except) continue;
+                if (!silent) {
+                    this.dispatchEvent(new CustomEvent('change', {
+                        detail: { action: 'deselect', item }
+                    }));
+                }
+                this._selected.delete(item);
+            }
+        }
+
+        toggle(item, opts = {}) {
+            if (this._selected.has(item)) this.deselect(item, opts);
+            else this.select(item, opts);
+        }
+
+        has(item) {
+            return this._selected.has(item);
+        }
+
+        get selection() {
+            return [...this._selected];
+        }
     }
-  }
-
-  /**
-   * Deselect a single item.
-   * @param {Telement} item
-   * @param {Object} options
-   *   @param {boolean} [options.silent=false]
-   */
-  deselect(item, { silent = false } = {}) {
-    if (this._selected.delete(item) && !silent) {
-      this.dispatchEvent(new CustomEvent('change', {
-        detail: { action: 'deselect', item }
-      }));
-    }
-  }
-
-  /**
-   * Clear all selection, but optionally keep one item.
-   * @param {Object} options
-   *   @param {boolean}   [options.silent=false]
-   *   @param {Telement}  [options.except] — Hariç tutulacak öğe
-   */
-  clear({ silent = false, except = null } = {}) {
-    for (let item of [...this._selected]) {
-      if (item === except) continue;
-      if (!silent) {
-        this.dispatchEvent(new CustomEvent('change', {
-          detail: { action: 'deselect', item }
-        }));
-      }
-      this._selected.delete(item);
-    }
-  }
-
-  toggle(item, opts = {}) {
-    if (this._selected.has(item)) this.deselect(item, opts);
-    else this.select(item, opts);
-  }
-
-  has(item) {
-    return this._selected.has(item);
-  }
-
-  get selection() {
-    return [...this._selected];
-  }
-}
     // ── Hook it up ────────────────────────────────────────────────────────────────
     globs.selectionManager = new SelectionManager();
 
@@ -1879,77 +2131,77 @@ var OID = 0;
     // ==== Seçim Yöneticisi (multi-drag için) ====
 
     let Telementstyles = false;
-   const INTERACTION_STATE = new WeakMap();
-/**
- * Gelişmiş Temel Telement Sınıfı
- *
- * @param {string|HTMLElement} tagOrEl
- *   Oluşturulacak tag’ın adı veya var olan bir HTMLElement.
- * @param {Object} [options]
- *   Yapılandırma objesi. İçerdiği alanlar:
- *   @param {string}                     [options.id]               — HTML id
- *   @param {string|string[]}            [options.className]        — Ek CSS sınıfları
- *   @param {Object}                     [options.style]            — inline CSS stilleri ({ left, top, width, … })
- *   @param {Object}                     [options.attrs]            — diğer HTML attribute’ları ({ title, 'data-*', … })
- *   @param {Object.<string,Function>}   [options.events]          — event handler’lar ({ click: fn, mouseover: fn, … })
- *   @param {Telement|HTMLElement}       [options.parent]           — parent konteyner (Telement ya da raw HTMLElement)
- *   @param {Array.<Telement>}           [options.children]         — başlangıç çocukları
- *   @param {EelementStatus|Object}      [options.status]           — başlangıç status flag’leri
- *
- *   @param {Object}                     [options.resizeOptions]    — resize ayarları
- *   @param {number}                     [options.resizeOptions.flags]       — Eborder bitmask (hangi kenarlardan resize yapılır)
- *   @param {number}                     [options.resizeOptions.minWidth]    — minimum width (px)
- *   @param {number}                     [options.resizeOptions.maxWidth]    — maximum width (px)
- *   @param {number}                     [options.resizeOptions.minHeight]   — minimum height (px)
- *   @param {number}                     [options.resizeOptions.maxHeight]   — maximum height (px)
- *   @param {boolean}                    [options.resizeOptions.useHelper]   — görsel handle’lar çizilsin mi
- *
- *   @param {Object}                     [options.dragOptions]      — native HTML5 drag ayarları
- *   @param {HTMLElement|string|null}    [options.dragOptions.handle]          — drag başlatma handle’ı (selector veya HTMLElement)
- *   @param {string|null}                [options.dragOptions.group]           — drag grup etiketi (aynı gruptakiler arasında drop)
- *   @param {string}                     [options.dragOptions.type]            — drag tipi (örn. 'default')
- *   @param {boolean}                    [options.dragOptions.revertIfNotDropped] — drop olmazsa geri dönsün mü
- *   @param {string}                     [options.dragOptions.dragClass]       — sürüklenirken eklenen CSS sınıfı
- *   @param {Function}                   [options.dragOptions.onDragStart]     — dragstart tetiklendiğinde çağrılır
- *   @param {Function}                   [options.dragOptions.onDragEnd]       — dragend tetiklendiğinde çağrılır
- *
- *   @param {Object}                     [options.moveOptions]      — pointer tabanlı taşıma ayarları
- *   @param {HTMLElement|string|null}    [options.moveOptions.handle]         — taşımayı başlatan handle (selector veya HTMLElement)
- *   @param {boolean|DOMRect|HTMLElement}[options.moveOptions.bound]          — hareket sınırı (true=body tüm alan, DOMRect ya da HTML element)
- *   @param {boolean}                    [options.moveOptions.xable]          — yatayda taşınabilir mi
- *   @param {boolean}                    [options.moveOptions.yable]          — dikeyde taşınabilir mi
- *   @param {Function}                   [options.moveOptions.onMoveStart]    — taşımaya başlandığında çağrılır
- *   @param {Function}                   [options.moveOptions.onMove]         — taşınırken her hareket anında çağrılır
- *   @param {Function}                   [options.moveOptions.onDrop]         — drop anında çağrılır ({x,y} objesi parametre)
- *
- *   @param {Object}                     [options.dropOptions]      — drop hedef ayarları
- *   @param {string[]}                   [options.dropOptions.acceptTypes]     — kabul edilecek drag tipleri
- *   @param {string}                     [options.dropOptions.hoverClass]      — üzerine gelince eklenen CSS sınıfı
- *   @param {string}                     [options.dropOptions.placeHolderClass] — placeholder için CSS sınıfı
- *   @param {boolean}                    [options.dropOptions.showPlaceHolder] — placeholder gözüksün mü
- *   @param {Function}                   [options.dropOptions.onDrop]         — drop gerçekleştiğinde çağrılır (event parametreli)
- *
- *   @param {Object}                     [options.historyOptions]   — undo/redo takibi için ayarlar
- *   @param {boolean}                    [options.historyOptions.trackStyle]    — style değişikliklerini kaydet
- *   @param {boolean}                    [options.historyOptions.trackResize]   — resize değişikliklerini kaydet
- *   @param {boolean}                    [options.historyOptions.trackChildren] — çocuk ekleme/çıkarma
- *   @param {boolean}                    [options.historyOptions.trackAttr]     — attribute değişikliklerini kaydet
- *   @param {boolean}                    [options.historyOptions.trackEvents]   — event binding değişikliklerini kaydet
- * 
- *   @param {Object}                     [options.selectOptions]       
- *   @param {boolean}                    [options.selectOptions.multi]            — ctrl/meta ile çoklu seçim
- *   @param {boolean}                    [options.selectOptions.silent]           — seçilirken change event’i atılmasın
- *   @param {boolean}                    [options.selectOptions.scroll]  — seçince elemana scroll etsin
- *   @param {string}                     [options.selectOptions.selectClass]      — seçildiğinde eklenecek CSS sınıfı
- *   @param {string}                     [options.selectOptions.deselectClass]    — seçim kaldırıldığında eklenecek CSS sınıfı
- *   @param {Function}                   [options.selectOptions.onSelect]         — seçildiğinde çağrılır (this parametreli)
- *   @param {Function}                   [options.selectOptions.onDeselect]       — kaldırıldığında çağrılır (this parametreli)
+    const INTERACTION_STATE = new WeakMap();
+    /**
+     * Gelişmiş Temel Telement Sınıfı
+     *
+     * @param {string|HTMLElement} tagOrEl
+     *   Oluşturulacak tag’ın adı veya var olan bir HTMLElement.
+     * @param {Object} [options]
+     *   Yapılandırma objesi. İçerdiği alanlar:
+     *   @param {string}                     [options.id]               — HTML id
+     *   @param {string|string[]}            [options.className]        — Ek CSS sınıfları
+     *   @param {Object}                     [options.style]            — inline CSS stilleri ({ left, top, width, … })
+     *   @param {Object}                     [options.attrs]            — diğer HTML attribute’ları ({ title, 'data-*', … })
+     *   @param {Object.<string,Function>}   [options.events]          — event handler’lar ({ click: fn, mouseover: fn, … })
+     *   @param {Telement|HTMLElement}       [options.parent]           — parent konteyner (Telement ya da raw HTMLElement)
+     *   @param {Array.<Telement>}           [options.children]         — başlangıç çocukları
+     *   @param {EelementStatus|Object}      [options.status]           — başlangıç status flag’leri
+     *
+     *   @param {Object}                     [options.resizeOptions]    — resize ayarları
+     *   @param {number}                     [options.resizeOptions.flags]       — Eborder bitmask (hangi kenarlardan resize yapılır)
+     *   @param {number}                     [options.resizeOptions.minWidth]    — minimum width (px)
+     *   @param {number}                     [options.resizeOptions.maxWidth]    — maximum width (px)
+     *   @param {number}                     [options.resizeOptions.minHeight]   — minimum height (px)
+     *   @param {number}                     [options.resizeOptions.maxHeight]   — maximum height (px)
+     *   @param {boolean}                    [options.resizeOptions.useHelper]   — görsel handle’lar çizilsin mi
+     *
+     *   @param {Object}                     [options.dragOptions]      — native HTML5 drag ayarları
+     *   @param {HTMLElement|string|null}    [options.dragOptions.handle]          — drag başlatma handle’ı (selector veya HTMLElement)
+     *   @param {string|null}                [options.dragOptions.group]           — drag grup etiketi (aynı gruptakiler arasında drop)
+     *   @param {string}                     [options.dragOptions.type]            — drag tipi (örn. 'default')
+     *   @param {boolean}                    [options.dragOptions.revertIfNotDropped] — drop olmazsa geri dönsün mü
+     *   @param {string}                     [options.dragOptions.dragClass]       — sürüklenirken eklenen CSS sınıfı
+     *   @param {Function}                   [options.dragOptions.onDragStart]     — dragstart tetiklendiğinde çağrılır
+     *   @param {Function}                   [options.dragOptions.onDragEnd]       — dragend tetiklendiğinde çağrılır
+     *
+     *   @param {Object}                     [options.moveOptions]      — pointer tabanlı taşıma ayarları
+     *   @param {HTMLElement|string|null}    [options.moveOptions.handle]         — taşımayı başlatan handle (selector veya HTMLElement)
+     *   @param {boolean|DOMRect|HTMLElement}[options.moveOptions.bound]          — hareket sınırı (true=body tüm alan, DOMRect ya da HTML element)
+     *   @param {boolean}                    [options.moveOptions.xable]          — yatayda taşınabilir mi
+     *   @param {boolean}                    [options.moveOptions.yable]          — dikeyde taşınabilir mi
+     *   @param {Function}                   [options.moveOptions.onMoveStart]    — taşımaya başlandığında çağrılır
+     *   @param {Function}                   [options.moveOptions.onMove]         — taşınırken her hareket anında çağrılır
+     *   @param {Function}                   [options.moveOptions.onDrop]         — drop anında çağrılır ({x,y} objesi parametre)
+     *
+     *   @param {Object}                     [options.dropOptions]      — drop hedef ayarları
+     *   @param {string[]}                   [options.dropOptions.acceptTypes]     — kabul edilecek drag tipleri
+     *   @param {string}                     [options.dropOptions.hoverClass]      — üzerine gelince eklenen CSS sınıfı
+     *   @param {string}                     [options.dropOptions.placeHolderClass] — placeholder için CSS sınıfı
+     *   @param {boolean}                    [options.dropOptions.showPlaceHolder] — placeholder gözüksün mü
+     *   @param {Function}                   [options.dropOptions.onDrop]         — drop gerçekleştiğinde çağrılır (event parametreli)
+     *
+     *   @param {Object}                     [options.historyOptions]   — undo/redo takibi için ayarlar
+     *   @param {boolean}                    [options.historyOptions.trackStyle]    — style değişikliklerini kaydet
+     *   @param {boolean}                    [options.historyOptions.trackResize]   — resize değişikliklerini kaydet
+     *   @param {boolean}                    [options.historyOptions.trackChildren] — çocuk ekleme/çıkarma
+     *   @param {boolean}                    [options.historyOptions.trackAttr]     — attribute değişikliklerini kaydet
+     *   @param {boolean}                    [options.historyOptions.trackEvents]   — event binding değişikliklerini kaydet
+     * 
+     *   @param {Object}                     [options.selectOptions]       
+     *   @param {boolean}                    [options.selectOptions.multi]            — ctrl/meta ile çoklu seçim
+     *   @param {boolean}                    [options.selectOptions.silent]           — seçilirken change event’i atılmasın
+     *   @param {boolean}                    [options.selectOptions.scroll]  — seçince elemana scroll etsin
+     *   @param {string}                     [options.selectOptions.selectClass]      — seçildiğinde eklenecek CSS sınıfı
+     *   @param {string}                     [options.selectOptions.deselectClass]    — seçim kaldırıldığında eklenecek CSS sınıfı
+     *   @param {Function}                   [options.selectOptions.onSelect]         — seçildiğinde çağrılır (this parametreli)
+     *   @param {Function}                   [options.selectOptions.onDeselect]       — kaldırıldığında çağrılır (this parametreli)
+    
+     *
+     *   @param {...object}                 other             — diğer custom parametreler
+     */
 
- *
- *   @param {...object}                 other             — diğer custom parametreler
- */
-
-   let _$dragObj=null;
+const _ctorArgs = Symbol('ctorArgs');
     Telement = class Telement extends extendsClass(TClass, EventTarget) {
         #dropIndicator = null;
         #moveHandlers = null;
@@ -1965,7 +2217,7 @@ var OID = 0;
         #touchHandlers = null;
         #dragState = {};
         loaded = false;
-        constructor(tagOrEl, opts = {}) {
+        constructor(tagOrEl, opts = {},...extra) {
             const safeCloneOptions = (src) => {
                 if (src === null || typeof src !== "object") return src;
                 if (Array.isArray(src)) return src.map(safeCloneOptions);
@@ -1981,35 +2233,33 @@ var OID = 0;
                 }
                 return clone;
             };
-            super();
+            super(tagOrEl, opts, extra);
+            
             const html = (tagOrEl instanceof HTMLElement)
                 ? tagOrEl
                 : document.createElement(typeof tagOrEl === 'string' ? tagOrEl : 'div');
             this.htmlObject = html;
             html.owner = this;
 
-            // Yardımcı fonksiyonlar
-
-
-            // Opsiyonları ayıkla
             let {
                 id, className, style = {}, attrs = {}, events = {},
                 parent, children = [],
                 status = EelementStatus.visible,
-                resizeOptions={},
-                selectOptions={},
+                resizeOptions = {},
+                selectOptions = {},
                 dragOptions = {}, moveOptions = {}, dropOptions = {}, historyOptions = {},
                 ...other
             } = opts;
-    this.selectOptions = Object.assign({
-  multiKey: e => e.ctrlKey || e.metaKey,
-  silent:    false,
-  scroll:    false,
-  selectClass: 'selected',
-  deselectClass: null,
-  onSelect:  null,
-  onDeselect:null
-}, opts.selectOptions);
+            this.selectOptions = Object.assign({
+                multiKey: e => e.ctrlKey || e.metaKey,
+                silent: false,
+                scroll: false,
+                selectClass: 'selected',
+                deselectClass: null,
+                onSelect: null,
+                onDeselect: null
+            }, opts.selectOptions);
+            
             // HTML nitelikleri
             html.id = html.id || id || this.id;
             const clsDef = this.constructor.name;
@@ -2020,7 +2270,7 @@ var OID = 0;
             Object.entries(events).forEach(([e, h]) => html.addEventListener(e, h));
 
             // Drag/Move/Drop ayarları
-            this.moveOptions = Object.assign({ handle: null, bound: true,xable:true,yable:true }, moveOptions);
+            this.moveOptions = Object.assign({ handle: null, bound: true, xable: true, yable: true }, moveOptions);
             this.dragOptions = Object.assign({
                 handle: null, group: null, type: 'default',
                 revertIfNotDropped: true, dragClass: 'dragging'
@@ -2029,14 +2279,14 @@ var OID = 0;
                 acceptTypes: ['default'], hoverClass: 'droppable-hover',
                 placeHolderClass: 'drop-placeholder', showPlaceHolder: true
             }, dropOptions);
-this.resizeOptions = Object.assign({
-  borders: Eborder.all,
-  useHelper: false,
-  minWidth: 20,
-  maxWidth: Infinity,
-  minHeight: 20,
-  maxHeight: Infinity
-}, resizeOptions);
+            this.resizeOptions = Object.assign({
+                borders: Eborder.all,
+                useHelper: false,
+                minWidth: 20,
+                maxWidth: Infinity,
+                minHeight: 20,
+                maxHeight: Infinity
+            }, resizeOptions);
 
             const resolveHandle = h => {
                 if (!h) return null;
@@ -2079,41 +2329,46 @@ this.resizeOptions = Object.assign({
                     if (thisRef.status.movable) thisRef.#toggleFeature('movable', true);
                 }
             });
-     let dragStartX = 0;
+            let dragStartX = 0;
             let dragStartY = 0;
             let dragThreshold = 0;
-            this.htmlObject.addEventListener('mousedown', e => {
-            
-    if (e.button !== 0 ) return;
-    e.stopPropagation();
+            this.htmlObject.addEventListener('pointerdown', e => {
 
-   if(this.status.selectable)
-{
-     const { multiKey, silent, scroll, selectClass, deselectClass, onSelect, onDeselect } = this.selectOptions;
-  const multi = multiKey(e);    // ctrl/meta’yu otomatik alır
+                if (e.button !== 0) return;
 
-  if (multi) {
-    globs.selectionManager.toggle(this, { silent });
-  } else {
-    // except: this ile diğerlerini temizle, kendini koru
-    globs.selectionManager.clear({ silent, except: this });
-    if (!globs.selectionManager.has(this)) {
-      globs.selectionManager.select(this, { multi: false, silent });
-    }
-  }
 
-  // sınıfları uygula
-  this.htmlObject.classList.add(selectClass);
-  if (deselectClass) this.htmlObject.classList.remove(deselectClass);
+                if (this.status.selectable) {
+                    e.stopPropagation();
+                    const { multiKey, silent, scroll, selectClass, deselectClass, onSelect, onDeselect } = this.selectOptions;
+                    const multi = multiKey(e);    // ctrl/meta’yu otomatik alır
 
-  // callback
-  if (onSelect) onSelect.call(this);
+                    if (multi) {
+                        globs.selectionManager.toggle(this, { silent });
+                    } else {
+                        // except: this ile diğerlerini temizle, kendini koru
+                        globs.selectionManager.clear({ silent, except: this });
+                        if (!globs.selectionManager.has(this)) {
+                            globs.selectionManager.select(this, { multi: false, silent });
+                        }
+                    }
 
-  // otomatik scroll
-  if (scroll) this.htmlObject.scrollIntoView({ behavior:'smooth', block:'center' });
-}
+                    // sınıfları uygula
+                    this.htmlObject.classList.add(selectClass);
+                    if (deselectClass) this.htmlObject.classList.remove(deselectClass);
 
-             dragStartX = e.clientX;
+                    // callback
+                    if (onSelect) onSelect.call(this);
+
+                    // otomatik scroll
+                    if (scroll) this.htmlObject.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                else
+                    if (this.htmlObject.parentElement === document.body) {
+                        globs.selectionManager.clear();
+                    }
+
+
+                dragStartX = e.clientX;
                 dragStartY = e.clientY;
                 const onMove = mv => {
                     const dx = Math.abs(mv.clientX - dragStartX);
@@ -2128,23 +2383,23 @@ this.resizeOptions = Object.assign({
                     window.removeEventListener("mousemove", onMove);
                     window.removeEventListener("mouseup", cleanup);
                 };
-                 window.addEventListener("mousemove", onMove);
-                window.addEventListener("mouseup", cleanup);
- 
+                window.addEventListener("pointermove", onMove);
+                window.addEventListener("pointerup", cleanup);
 
-  
-  });
 
-  // deselect olaylarını dinle
-  globs.selectionManager.addEventListener('change', ({ detail }) => {
-    if (detail.action === 'deselect' && detail.item === this) {
-      if (this.selectOptions.deselectClass) {
-        this.htmlObject.classList.add(this.selectOptions.deselectClass);
-      }
-      this.htmlObject.classList.remove(this.selectOptions.selectClass);
-      this.selectOptions.onDeselect?.call(this);
-    }
-  });
+
+            });
+
+            // deselect olaylarını dinle
+            globs.selectionManager.addEventListener('change', ({ detail }) => {
+                if (detail.action === 'deselect' && detail.item === this) {
+                    if (this.selectOptions.deselectClass) {
+                        this.htmlObject.classList.add(this.selectOptions.deselectClass);
+                    }
+                    this.htmlObject.classList.remove(this.selectOptions.selectClass);
+                    this.selectOptions.onDeselect?.call(this);
+                }
+            });
 
 
             this.children = [];
@@ -2173,93 +2428,100 @@ this.resizeOptions = Object.assign({
 
             if (this.status.selectable) {
                 this.htmlObject.classList.add('selectable');
-            }
+            } 
 
             // Kopyalama için başlangıç durumu
             this.#initOpts = safeCloneOptions(opts);
+
             this.#initialKeys = new Set(Object.getOwnPropertyNames(this));
-       
+
             const defaultHist = { trackStyle: false, trackResize: false, trackChildren: false, trackAttr: false, trackEvents: false };
             this.historyOptions = { ...defaultHist, ...historyOptions };
-                 if (globs.historyManager) globs.historyManager.addTrack(this, this.historyOptions);
+           this[_ctorArgs] = [ tagOrEl ].concat(Object.keys(opts).length ? [ opts ] : []);
+  
         }
 
 
-#enableMove() {
-  if (this.#moveHandlers) return;
-  const h = this.moveOptions.handle;
-  if (!(h instanceof HTMLElement)) return;
+        #enableMove() {
+            if (this.#moveHandlers) return;
+            const h = this.moveOptions.handle;
+            if (!(h instanceof HTMLElement)) return;
 
-  let boundRect = null;
-  if (this.moveOptions.bound === true) {
-    boundRect = new DOMRect(
-      0,
-      0,
-      document.documentElement.clientWidth,
-      document.documentElement.clientHeight
-    );
-  } else if (this.moveOptions.bound instanceof HTMLElement) {
-    const r = this.moveOptions.bound.getBoundingClientRect();
-    boundRect = new DOMRect(r.left, r.top, r.width, r.height);
-  } else if (this.moveOptions.bound instanceof DOMRect) {
-    boundRect = this.moveOptions.bound;
-  }
+            let boundRect = null;
+            if (this.moveOptions.bound === true) {
+                boundRect = new DOMRect(
+                    0,
+                    0,
+                    document.documentElement.clientWidth,
+                    document.documentElement.clientHeight
+                );
+            } else if (this.moveOptions.bound instanceof HTMLElement) {
+                const r = this.moveOptions.bound.getBoundingClientRect();
+                boundRect = new DOMRect(r.left, r.top, r.width, r.height);
+            } else if (this.moveOptions.bound instanceof DOMRect) {
+                boundRect = this.moveOptions.bound;
+            }
 
-  const onDown = e => {
-    if (e.button !== 0) return;
-    e.preventDefault();
-    if (INTERACTION_STATE.get(this.htmlObject)) return;
-    INTERACTION_STATE.set(this.htmlObject, 'moving');
+            const onDown = e => {
+                if (e.button !== 0) return;
+                e.preventDefault();
+                if (INTERACTION_STATE.get(this.htmlObject)) return;
+                INTERACTION_STATE.set(this.htmlObject, 'moving');
 
-    const startX = e.clientX, startY = e.clientY;
-    const origLeft = parseInt(getComputedStyle(this.htmlObject).left, 10) || 0;
-    const origTop  = parseInt(getComputedStyle(this.htmlObject).top, 10)  || 0;
+                const startX = e.clientX, startY = e.clientY;
+                const origLeft = parseInt(getComputedStyle(this.htmlObject).left, 10) || 0;
+                const origTop = parseInt(getComputedStyle(this.htmlObject).top, 10) || 0;
 
-    this.moveOptions.onMoveStart?.call(this, e);
+                this.moveOptions.onMoveStart?.call(this, e);
 
-    const onMove = ev => {
-      let newLeft = origLeft + (ev.clientX - startX);
-      let newTop  = origTop  + (ev.clientY - startY);
+                const onMove = ev => {
+                    let newLeft = origLeft + (ev.clientX - startX);
+                    let newTop = origTop + (ev.clientY - startY);
 
-      // Bound kontrolü:
-      if (boundRect) {
-        // Yatay sınır
-        newLeft = Math.max(boundRect.x,
-                  Math.min(boundRect.x + boundRect.width  - this.htmlObject.offsetWidth,
-                           newLeft));
-        // Dikey sınır
-        newTop  = Math.max(boundRect.y,
-                  Math.min(boundRect.y + boundRect.height - this.htmlObject.offsetHeight,
-                           newTop));
-      }
+                    // Bound kontrolü:
+                    if (boundRect) {
+                        // Yatay sınır
+                        newLeft = Math.max(boundRect.x,
+                            Math.min(boundRect.x + boundRect.width - this.htmlObject.offsetWidth,
+                                newLeft));
+                        // Dikey sınır
+                        newTop = Math.max(boundRect.y,
+                            Math.min(boundRect.y + boundRect.height - this.htmlObject.offsetHeight,
+                                newTop));
+                    }
 
-      if (this.moveOptions.xable) this.htmlObject.style.left = `${newLeft}px`;
-      if (this.moveOptions.yable) this.htmlObject.style.top  = `${newTop}px`;
+                    if (this.moveOptions.xable) this.htmlObject.style.left = `${newLeft}px`;
+                    if (this.moveOptions.yable) this.htmlObject.style.top = `${newTop}px`;
 
-      this.moveOptions.onMove?.call(this, ev);
-    };
+                    this.moveOptions.onMove?.call(this, ev);
+                    if (this.#hybridDrag) this.#updatePlaceholder(ev);
+                };
 
-    const onUp = ev => {
-      document.removeEventListener('pointermove', onMove);
-      document.removeEventListener('pointerup', onUp);
-      INTERACTION_STATE.delete(this.htmlObject);
-      this.moveOptions.onDrop?.call(this, { x: ev.clientX, y: ev.clientY });
-    };
+                const onUp = ev => {
+                    onMove.unBindEvent(document, 'pointermove');
+                    onUp.unBindEvent(document, 'pointerup');
+                    INTERACTION_STATE.delete(this.htmlObject);
+                    this.moveOptions.onDrop?.call(this, { x: ev.clientX, y: ev.clientY });
+                    if (this.#hybridDrag) {
+                        const targetContainer = this.#findDropTarget({ x: ev.clientX, y: ev.clientY });
+                        this.#performDrop(targetContainer);
+                    }
 
-    document.addEventListener('pointermove', onMove);
-    document.addEventListener('pointerup', onUp, { once: true });
-  };
+                }
+                onMove.bindToEvent(document, 'pointermove', this);
+                onUp.bindToEvent(document, 'pointerup', this);
+            };
 
-  h.addEventListener('pointerdown', onDown);
-  this.#moveHandlers = { onDown };
-}
+            onDown.bindToEvent(h, 'pointerdown', this);
+            this.#moveHandlers = { onDown };
+        }
 
-#disableMove() {
-  if (!this.#moveHandlers) return;
-  const h = this.moveOptions.handle;
-  h.removeEventListener('pointerdown', this.#moveHandlers.onDown);
-  this.#moveHandlers = null;
-}
+        #disableMove() {
+            if (!this.#moveHandlers) return;
+            const h = this.moveOptions.handle;
+            this.#moveHandlers.onDown.unBindEvent(h, 'pointerdown');
+            this.#moveHandlers = null;
+        }
         // --- Yardımcı Metotlar ---
         #refreshDragListeners() {
             this.#disableDrag();
@@ -2302,7 +2564,7 @@ this.resizeOptions = Object.assign({
             let draggedArr;
             draggedArr = globs.selectionManager.selection;
             if (draggedArr.length === 0 && this.status.draggable) {
-                draggedArr = [_$dragObj];
+                draggedArr = [this];
             }
             draggedArr.forEach(te => te.htmlObject.style.pointerEvents = 'none');
             let el = document.elementFromPoint(pt.x, pt.y);
@@ -2497,7 +2759,7 @@ this.resizeOptions = Object.assign({
             e.dataTransfer.setData('text/plain', this.id); // Tarayıcı uyumluluğu için
 
             // Sürükleme başladığında orijinali gizle
-            _$dragObj=this;
+
             setTimeout(() => { this.htmlObject.style.visibility = 'hidden'; console.log("hideHtml"); }, 0);
         }
 
@@ -2530,14 +2792,15 @@ this.resizeOptions = Object.assign({
                 dragstart: e => this.#onDragStart(e),
                 dragend: e => this.#onDragEnd(e)
             };
-            h.addEventListener('dragstart', this.#dragHandlers.dragstart);
-            h.addEventListener('dragend', this.#dragHandlers.dragend);
+            this.#dragHandlers.dragstart.bindToEvent(h, 'dragstart');
+            this.#dragHandlers.dragend.bindToEvent(h, 'dragend');
+
         }
         #disableDrag() {
             if (!this.#dragHandlers) return;
             const h = this.dragOptions.handle;
-            h?.removeEventListener('dragstart', this.#dragHandlers.dragstart);
-            h?.removeEventListener('dragend', this.#dragHandlers.dragend);
+            this.#dragHandlers.dragstart.unBindEvent(h, 'dragstart');
+            this.#dragHandlers.dragend.unBindEvent(h, 'dragend');
             this.#dragHandlers = null;
             this.htmlObject.setAttribute('draggable', 'false');
         }
@@ -2571,19 +2834,19 @@ this.resizeOptions = Object.assign({
             }
         }
         #enableSizing(isOn) {
-              DOM.makeResizable?.(
-    this.htmlObject,
-    this.status.sizable
-      ? {
-          flags:      this.resizeOptions.flags,
-          useHelper:  this.resizeOptions.useHelper,
-          minWidth:   this.resizeOptions.minWidth,
-          maxWidth:   this.resizeOptions.maxWidth,
-          minHeight:  this.resizeOptions.minHeight,
-          maxHeight:  this.resizeOptions.maxHeight
-        }
-      : false
-  );
+            DOM.makeResizable?.(
+                this.htmlObject,
+                this.status.sizable
+                    ? {
+                        flags: this.resizeOptions.flags,
+                        useHelper: this.resizeOptions.useHelper,
+                        minWidth: this.resizeOptions.minWidth,
+                        maxWidth: this.resizeOptions.maxWidth,
+                        minHeight: this.resizeOptions.minHeight,
+                        maxHeight: this.resizeOptions.maxHeight
+                    }
+                    : false
+            );
         }
         #enableDrop() {
             if (this.#dropHandlers) return;
@@ -2593,21 +2856,21 @@ this.resizeOptions = Object.assign({
                 dragleave: e => this.#onDragLeave(e),
                 drop: e => this.#onDrop(e),
             };
-            Object.entries(this.#dropHandlers).forEach(([evt, h]) => this.htmlObject.addEventListener(evt, h));
+            Object.entries(this.#dropHandlers).forEach(([evt, h]) => h.bindToEvent(this.htmlObject, evt, this));
         }
 
         #disableDrop() {
             if (!this.#dropHandlers) return;
-            Object.entries(this.#dropHandlers).forEach(([evt, h]) => this.htmlObject.removeEventListener(evt, h));
+            Object.entries(this.#dropHandlers).forEach(([evt, h]) => h.unBindEvent(this.htmlObject, evt));
             this.#dropHandlers = null;
         }
         #performDrop(targetContainer) {
             if (!targetContainer) return;
-             let dragged = globs.selectionManager.selection;
-        if (dragged.length === 0) {
-            dragged = [_$dragObj];
-        }
-        
+            let dragged = globs.selectionManager.selection;
+            if (dragged.length === 0) {
+                dragged = [this];
+            }
+
             const ph = DOM.dragPlaceHolder;
             let targetParentTelement;
             let nextSiblingTelement;
@@ -2653,8 +2916,8 @@ this.resizeOptions = Object.assign({
                             this.#dragState = { isDropped: false };
                         }
                     };
-                     if (isOn) this.#enableMove();
-                    else      this.#disableMove();
+                    if (isOn) this.#enableMove();
+                    else this.#disableMove();
                     break;
                 }
                 case 'dockable': isOn ? this.#enableDrop() : this.#disableDrop(); break;
@@ -2686,6 +2949,12 @@ this.resizeOptions = Object.assign({
             if (this.loaded) return;
             if (!this.htmlObject.parentElement) document.body.appendChild(this.htmlObject);
             this.children.forEach(child => child.body(this.htmlObject));
+            if (!Telement._$firstLoad) {
+                document.addEventListener('mousedown', (e) => {
+                    globs.selectionManager.clear();
+                });
+            }
+            Telement._$firstLoad = true;
             this.dispatchEvent(new CustomEvent('load'));
             this.moveOptions.handle = this.moveOptions.handle;
             this.dragOptions.handle = this.dragOptions.handle;
@@ -2696,9 +2965,10 @@ this.resizeOptions = Object.assign({
         }
 
         copy() {
-            const LOCAL_SKIP = ["parent", "children", "htmlObject", "status", "resizeOptions.borders", "history", "_initialKeys", "_initOpts"];
+            const LOCAL_SKIP = ["parent", "children", "htmlObject", "status", "resize_flags", "history", "#initialKeys", "#initOpts", "eventList"];
             const tag = this.htmlObject.tagName.toLowerCase();
-            const opts = { ...this.#initOpts, id: undefined };
+            const { children: _initChildren, ...cloneOpts } = this.#initOpts;
+            const opts = { ...cloneOpts, id: undefined };
             const clone = new Telement(tag, opts);
 
             Object.getOwnPropertyNames(this).forEach(k => {
@@ -2712,9 +2982,42 @@ this.resizeOptions = Object.assign({
             // HTML kopyalama
             const src = this.htmlObject;
             const dst = clone.htmlObject;
-            Array.from(src.attributes).forEach(a => a.name !== "id" && dst.setAttribute(a.name, a.value));
+
+            Array.from(src.attributes).forEach(a =>
+                a.name !== 'id' && dst.setAttribute(a.name, a.value));
             dst.style.cssText = src.style.cssText;
             src.classList.forEach(cls => dst.classList.add(cls));
+
+            const srcT = this;
+            const dstT = clone;
+
+            // srcT.htmlObject'ten dinleyicileri alıyoruz
+            const map = getEventMap(srcT.htmlObject);
+
+            for (const [type, list] of map) {
+                for (const rec of list) {
+                    const L = rec.listener;
+                    if (dst.eventList.hasSameListener(type, L)) continue; // kendi duplicate filtresi
+
+                    const wrapper = getFnById(rec.id);          // id → kod
+
+                    if (wrapper?._meta?.original) {
+                        const orig = wrapper._meta.original;
+                        const args = wrapper._meta.args || [];
+                        const objId = wrapper._meta.objId ?? -1;
+
+                        let targetCtx = null;
+                        if (objId !== -1) {
+                            targetCtx = AllClass.byId[objId] || AllClass.byOrder[objId];
+                        }
+
+                        orig.bindToEvent(el, type, targetCtx, ...args);
+                    } else {
+                        dstT.bind(type, L, rec.options);
+                    }
+
+                }
+            }
 
             // Çocuklar
             this.children.forEach(ch => clone.appendChild(ch.copy?.() || deepCopy(ch, LOCAL_SKIP)));
@@ -2724,7 +3027,7 @@ this.resizeOptions = Object.assign({
 
             // Durumlar
             clone.status = Number(this.status);
-            clone.resizeOptions.borders = Number(this.resizeOptions.borders);
+            clone.resize_flags = Number(this.resize_flags);
             if (this.loaded) clone.body();
 
             return clone;
@@ -2750,28 +3053,68 @@ this.resizeOptions = Object.assign({
             if (this.parent) return this.parent.isVisible();
             return true;
         }
-        bind(event, handler, options = {}) {
-            const wrappedHandler = (e) => {
-                const result = handler.call(this, e);
-                if (result === false) e.preventDefault();
-                return result;
+        bind(eventName, handler, options = {}, ...boundArgs) {
+            const el = this.htmlObject;
+            const map = getEventMap(el);
+            const list = map.get(eventName) || [];
+
+            /* zaten ekli mi? -------------------------------------------------- */
+            if (list.some(rec =>
+                rec.listener === handler ||                 // doğrudan wrapper verilmiş olabilir
+                rec.listener?._meta?.original === handler)) // orijinal fn
+            {
+                return handler;
+            }
+
+            const wrapper = (e, ...rt) => {
+                const res = handler.call(this, e, ...boundArgs, ...rt);
+                if (res === false) { e.preventDefault(); e.stopPropagation(); }
+                return res;
             };
 
-            if (!this.eventList.has(handler)) {
-                this.eventList.set(handler, { event, wrappedHandler, options });
-                this.htmlObject?.addEventListener(event, wrappedHandler, options);
-            }
+            /* 🔹  META EKLE 🔹 */
+            wrapper._meta = {
+                original: handler,      // ← kopya sırasında lazım
+                args: boundArgs,    // ← varsa ek arg.
+                objId: this.id ?? -1 // ← isteğe bağlı (target context)
+            };
+
+            el.addEventListener(eventName, wrapper, options);
             return handler;
         }
+        /* ------------------------------------------------------------------ */
+        /*  unbind(eventName [, handler])                                     */
+        /*  - handler verilmezse: o event tipindeki TÜM dinleyicileri siler   */
+        /*  - handler varsa        : sadece eşleşeni siler                    */
+        /* ------------------------------------------------------------------ */
+        unbind(eventName, handler) {
+            const el = this.htmlObject;
+            const map = getEventMap(el);
+            if (!map.has(eventName)) return;
 
-        unbind(event, handler) {
-            const listener = this.eventList?.get(handler);
-            if (listener && listener.event === event) {
-                this.htmlObject?.removeEventListener(event, listener.wrappedHandler, listener.options);
-                this.eventList.delete(handler);
+            /* --- tümünü sil -------------------------------------------------- */
+            if (typeof handler !== 'function') {
+                for (const rec of map.get(eventName)) {
+                    el.removeEventListener(eventName, rec.listener, rec.options);
+                }
+                /* removeEventListener override’ı Map’i boşaltacağı için
+                   buradan ayrıca delete etmeye gerek yok – ama zararı da yok */
+                return;
+            }
+
+            /* --- tekini sil -------------------------------------------------- */
+            const list = map.get(eventName);
+            for (const rec of [...list]) {                       // kopya üzerinde döngü
+                const same =
+                    rec.listener === handler ||                     // wrapper referansı
+                    rec.listener?._meta?.original === handler;      // orijinal fonk.
+
+                if (same) {
+                    el.removeEventListener(eventName, rec.listener, rec.options);
+                    break;                                          // ilk eşleşme yeterli
+                }
             }
         }
-
         // --- Diğer Genel Metotlar ---
         appendChild(child) {
             if (!(child instanceof Telement)) {
@@ -2817,13 +3160,8 @@ this.resizeOptions = Object.assign({
                 this.htmlObject.innerHTML = content;
             }
         }
-        addEvent(eventType, handler) {
-            this.htmlObject.addEventListener(eventType, handler);
-        }
-        track(options = {}) {
-            this.historyOptions = { ...this.historyOptions, ...options };
-            if (globs.historyManager) globs.historyManager.addTrack(this, this.historyOptions);
-        }
+
+        
         // now `opts` can include multi, silent, scrollIntoView,onSelect, cssClass, animate, filter…
         select(opts = {}) {
             globs.selectionManager.select(this, opts);
@@ -2888,7 +3226,7 @@ this.resizeOptions = Object.assign({
     Tlayer = class Tlayer extends Telement {
         #changeListeners = [];
 
-  
+
 
         /**
          * Katman (Layer) nesnesi oluşturur.
@@ -3228,10 +3566,10 @@ this.resizeOptions = Object.assign({
             this.#setupDragAndDrop();
 
             this.refreshTree();
-     
-            let onselectionchange=(e)=> {
-               let [action, item] = [e.detail.action, e.detail.item];
-           this.treeElement.querySelector(`[data-id="${item.id}"]`).classList.toggle("selected", action === 'select');
+
+            let onselectionchange = (e) => {
+                let [action, item] = [e.detail.action, e.detail.item];
+                this.treeElement.querySelector(`[data-id="${item.id}"]`).classList.toggle("selected", action === 'select');
             }
             globs.selectionManager.addEventListener('change', onselectionchange);
         }
@@ -3309,7 +3647,7 @@ this.resizeOptions = Object.assign({
 
             const hasChildren = layer.children.length > 0;
             if (hasChildren) li.classList.add('expanded');
-          
+
 
             // Etiket
             const lbl = document.createElement('span');
@@ -4980,128 +5318,132 @@ this.resizeOptions = Object.assign({
         document.removeEventListener('mouseup', DOM.handleDesignDragEnd);
     };
     const INTERACTION_STATE = new WeakMap();
-  DOM.makeResizable = function (el, options) {
-  // Temizleme: Önceki resize handler’ları kaldır
-  (el.eventList || [])
-    .filter(e =>
-      (e.event === 'mousemove' || e.event === 'mousedown') &&
-      e.listener &&
-      e.listener._isResizeHandler
-    )
-    .forEach(e => el.removeEventListener(e.event, e.listener));
+    DOM.makeResizable = function (el, options) {
+        const map = getEventMap(el);                       // WeakMap<Element, Map>
 
-  // Eğer options yoksa (sizable false), cursor’u kaldır ve çık
-  if (!options) {
-    el.style.cursor = '';
-    return;
-  }
+        if (map) {
+            for (const [type, list] of map) {
+                if (type !== 'mousemove' && type !== 'mousedown') continue;
+                for (const rec of [...list]) {                 // kopya üzerinden döngü
+                    if (rec.listener && rec.listener._isResizeHandler) {
+                        el.removeEventListener(type, rec.listener, rec.options);
+                    }
+                }
+            }
+        }
 
-  // Ayarları ayıkla
-  const {
-    borders,      // Eborder bitmask: hangi kenarlardan resize edilecek
-    useHelper,    // (isteğe bağlı, eklenecekse helper çizim mantığı)
-    minWidth, maxWidth,
-    minHeight, maxHeight
-  } = options;
+        // Eğer options yoksa (sizable false), cursor’u kaldır ve çık
+        if (!options) {
+            el.style.cursor = '';
+            return;
+        }
 
-  // Kenar bitmask’ini kontrol eden fonksiyon
-  function hasBorder(flag) {
-    return ((borders & flag) === flag) ||
-           (borders === Eborder.all && flag !== 0);
-  }
+        // Ayarları ayıkla
+        const {
+            borders,      // Eborder bitmask: hangi kenarlardan resize edilecek
+            useHelper,    // (isteğe bağlı, eklenecekse helper çizim mantığı)
+            minWidth, maxWidth,
+            minHeight, maxHeight
+        } = options;
 
-  // Fare pozisyonuna göre hangi kenardan resize yapılacağını bulur
-  function hitZone(x, y, w, h) {
-    const th = 7; // eşik (px)
-    if (hasBorder(Eborder.leftTop)    && x < th   && y < th)   return 'nw';
-    if (hasBorder(Eborder.rightTop)   && x > w-th && y < th)   return 'ne';
-    if (hasBorder(Eborder.leftBottom) && x < th   && y > h-th) return 'sw';
-    if (hasBorder(Eborder.rightBottom)&& x > w-th && y > h-th) return 'se';
-    if (hasBorder(Eborder.top)        && y < th)               return 'n';
-    if (hasBorder(Eborder.bottom)     && y > h-th)             return 's';
-    if (hasBorder(Eborder.left)       && x < th)               return 'w';
-    if (hasBorder(Eborder.right)      && x > w-th)             return 'e';
-    return '';
-  }
+        // Kenar bitmask’ini kontrol eden fonksiyon
+        function hasBorder(flag) {
+            return ((borders & flag) === flag) ||
+                (borders === Eborder.all && flag !== 0);
+        }
 
-  // Fare dokununca cursor’ü güncelleyen handler
-  const mouseMoveHandler = function (e) {
-    const r = el.getBoundingClientRect();
-    const zone = hitZone(
-      e.clientX - r.left,
-      e.clientY - r.top,
-      r.width,
-      r.height
-    );
-    el.style.cursor = zone ? (zone + '-resize') : '';
-  };
-  mouseMoveHandler._isResizeHandler = true;
+        // Fare pozisyonuna göre hangi kenardan resize yapılacağını bulur
+        function hitZone(x, y, w, h) {
+            const th = 7; // eşik (px)
+            if (hasBorder(Eborder.leftTop) && x < th && y < th) return 'nw';
+            if (hasBorder(Eborder.rightTop) && x > w - th && y < th) return 'ne';
+            if (hasBorder(Eborder.leftBottom) && x < th && y > h - th) return 'sw';
+            if (hasBorder(Eborder.rightBottom) && x > w - th && y > h - th) return 'se';
+            if (hasBorder(Eborder.top) && y < th) return 'n';
+            if (hasBorder(Eborder.bottom) && y > h - th) return 's';
+            if (hasBorder(Eborder.left) && x < th) return 'w';
+            if (hasBorder(Eborder.right) && x > w - th) return 'e';
+            return '';
+        }
 
-  // Fare basılınca resize işlemini başlatan handler
-  const mouseDownHandler = function (e) {
-    const r = el.getBoundingClientRect();
-    const zone = hitZone(
-      e.clientX - r.left,
-      e.clientY - r.top,
-      r.width,
-      r.height
-    );
-    if (!zone) return;  // kenarda değilse resize başlatılmaz
+        // Fare dokununca cursor’ü güncelleyen handler
+        const mouseMoveHandler = function (e) {
+            const r = el.getBoundingClientRect();
+            const zone = hitZone(
+                e.clientX - r.left,
+                e.clientY - r.top,
+                r.width,
+                r.height
+            );
+            el.style.cursor = zone ? (zone + '-resize') : '';
+        };
+        mouseMoveHandler._isResizeHandler = true;
 
-    e.preventDefault();
-    e.stopPropagation();
-    if (INTERACTION_STATE.get(el)) return;
-    INTERACTION_STATE.set(el, 'resizing');
+        // Fare basılınca resize işlemini başlatan handler
+        const mouseDownHandler = function (e) {
+            const r = el.getBoundingClientRect();
+            const zone = hitZone(
+                e.clientX - r.left,
+                e.clientY - r.top,
+                r.width,
+                r.height
+            );
+            if (!zone) return;  // kenarda değilse resize başlatılmaz
 
-    // Başlangıç değerlerini al
-    const start = {
-      x: e.clientX, y: e.clientY,
-      left: el.offsetLeft,
-      top: el.offsetTop,
-      width: r.width,
-      height: r.height
+            e.preventDefault();
+            e.stopPropagation();
+            if (INTERACTION_STATE.get(el)) return;
+            INTERACTION_STATE.set(el, 'resizing');
+
+            // Başlangıç değerlerini al
+            const start = {
+                x: e.clientX, y: e.clientY,
+                left: el.offsetLeft,
+                top: el.offsetTop,
+                width: r.width,
+                height: r.height
+            };
+
+            // Fare hareket ettikçe boyut ve konum günceller
+            function onDrag(ev) {
+                const dx = ev.clientX - start.x;
+                const dy = ev.clientY - start.y;
+                let newW = start.width, newH = start.height;
+                let newL = start.left, newT = start.top;
+
+                if (zone.includes('e')) newW = start.width + dx;
+                if (zone.includes('s')) newH = start.height + dy;
+                if (zone.includes('w')) { newW = start.width - dx; newL = start.left + dx; }
+                if (zone.includes('n')) { newH = start.height - dy; newT = start.top + dy; }
+
+                // Min/max sınırlarını uygula
+                if (newW >= minWidth && newW <= maxWidth) {
+                    el.style.width = newW + 'px';
+                    if (zone.includes('w')) el.style.left = newL + 'px';
+                }
+                if (newH >= minHeight && newH <= maxHeight) {
+                    el.style.height = newH + 'px';
+                    if (zone.includes('n')) el.style.top = newT + 'px';
+                }
+            }
+
+            // Mouse up’da cleanup
+            function onUp() {
+                document.removeEventListener('mousemove', onDrag);
+                document.removeEventListener('mouseup', onUp);
+                INTERACTION_STATE.delete(el);
+            }
+
+            // Listener’ları ekle
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', onUp, { once: true });
+        };
+        mouseDownHandler._isResizeHandler = true;
+
+        // Olayları ekle
+        el.addEventListener('mousemove', mouseMoveHandler);
+        el.addEventListener('mousedown', mouseDownHandler);
     };
-
-    // Fare hareket ettikçe boyut ve konum günceller
-    function onDrag(ev) {
-      const dx = ev.clientX - start.x;
-      const dy = ev.clientY - start.y;
-      let newW = start.width, newH = start.height;
-      let newL = start.left,  newT = start.top;
-
-      if (zone.includes('e')) newW = start.width  + dx;
-      if (zone.includes('s')) newH = start.height + dy;
-      if (zone.includes('w')) { newW = start.width  - dx; newL = start.left + dx; }
-      if (zone.includes('n')) { newH = start.height - dy; newT = start.top  + dy; }
-
-      // Min/max sınırlarını uygula
-      if (newW >= minWidth && newW <= maxWidth) {
-        el.style.width  = newW + 'px';
-        if (zone.includes('w')) el.style.left = newL + 'px';
-      }
-      if (newH >= minHeight && newH <= maxHeight) {
-        el.style.height = newH + 'px';
-        if (zone.includes('n')) el.style.top  = newT + 'px';
-      }
-    }
-
-    // Mouse up’da cleanup
-    function onUp() {
-      document.removeEventListener('mousemove', onDrag);
-      document.removeEventListener('mouseup', onUp);
-      INTERACTION_STATE.delete(el);
-    }
-
-    // Listener’ları ekle
-    document.addEventListener('mousemove', onDrag);
-    document.addEventListener('mouseup', onUp, { once: true });
-  };
-  mouseDownHandler._isResizeHandler = true;
-
-  // Olayları ekle
-  el.addEventListener('mousemove', mouseMoveHandler);
-  el.addEventListener('mousedown', mouseDownHandler);
-};
 
     const css = `
         [data-layer] {
@@ -5635,21 +5977,42 @@ this.resizeOptions = Object.assign({
 
 
 
-    DOM.makeDraggable = function (element, handle = null, enable = true, customDragging = false) {
+    DOM.makeDraggable = function (
+        element,
+        handle = null,
+        enable = true,
+        customDragging = false
+    ) {
         const target = handle || element;
 
-        // Önce eski eventleri temizle
-        (target.eventList || []).filter(e =>
-            (
-                // Custom
-                ((e.event === 'pointerdown' || e.event === 'pointermove' || e.event === 'pointerup') && e.listener && e.listener._isCustomDraggableHandler)
-            ) ||
-            (
-                // Native
-                ((e.event === 'dragstart' || e.event === 'dragend') && e.listener && e.listener._isNativeDraggableHandler)
-            )
-        ).forEach(e => target.removeEventListener(e.event, e.listener));
-        target.removeAttribute('draggable');
+        /* ── 1. ÖNCEKİ draggable dinleyicilerini temizle ─────────────── */
+        const map = getEventMap(target);                     // WeakMap<Element, Map>
+        if (map) {
+            for (const [type, list] of map) {
+                const isPointer = type === 'pointerdown' ||
+                    type === 'pointermove' ||
+                    type === 'pointerup';
+
+                const isDrag = type === 'dragstart' ||
+                    type === 'dragend';
+
+                if (!isPointer && !isDrag) continue;             // ilgisiz tür
+
+                for (const rec of [...list]) {                   // kopya üzerinde döngü
+                    const L = rec.listener;
+                    if (!L) continue;
+
+                    const shouldRemove =
+                        (isPointer && L._isCustomDraggableHandler) ||
+                        (isDrag && L._isNativeDraggableHandler);
+
+                    if (shouldRemove) {
+                        target.removeEventListener(type, L, rec.options);
+                        /* removeEventListener override’ı listeden silmeyi kendisi yapar */
+                    }
+                }
+            }
+        }
 
         if (!enable) return;
 
@@ -5704,18 +6067,28 @@ this.resizeOptions = Object.assign({
             target.addEventListener('dragend', dragEnd);
         }
     };
-    DOM.makeMovable = function (element, handle = null, movableRect = null,
-        xable = true, yable = true,
+    DOM.makeMovable = function (
+        element,
+        handle = null,
+        movableRect = null,
+        xable = true,
+        yable = true,
         onMoveStartCb = null,
         onMoveCb = null,
         onDropCb = null
     ) {
         if (!handle) return;
 
-        // Eski dinleyicileri temizle
-        (handle.eventList || []).filter(e =>
-            e.event === 'pointerdown' && e.listener?._isMovableHandler
-        ).forEach(e => handle.removeEventListener('pointerdown', e.listener));
+        /* ── 1. ÖNCE eski movable dinleyicilerini temizle ─────────────── */
+        const map = getEventMap(handle);                   // WeakMap<Element, Map>
+        if (map && map.has('pointerdown')) {
+            for (const rec of [...map.get('pointerdown')]) { // kopya üzerinde döngü
+                if (rec.listener?._isMovableHandler) {
+                    handle.removeEventListener('pointerdown', rec.listener, rec.options);
+                    /* removeEventListener override’ı listeden de siler */
+                }
+            }
+        }
 
         const onPointerDown = e => {
             if (e.target !== handle) return;

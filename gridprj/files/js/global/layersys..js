@@ -161,46 +161,85 @@ class ChildRemoveCommand extends ChildCommand {
 /***********************************************************************/
 class EventCommand extends Command {
   constructor(name, telement, eventType, listener, options){
-    super(name); this.telement=telement; this.eventType=eventType; this.listener=listener; this.options=options; }
+    super(name);
+
+    this.telement  = telement;          // ⬅︎ hangi Telement?
+    this.eventType = eventType;         // ⬅︎ 'pointerdown' vb.
+    this.id        = getOrAddId(listener); // ⬅︎ (*) yalnızca ID
+    this.options   = options;
+  }
   static origAdd   = ()=>{};
   static origRemove= ()=>{};
 }
 class EventAddCommand extends EventCommand {
-  constructor(...args){ super('Olay Ekle',...args);} 
-  do(){ const el=this.telement.htmlObject; EventCommand.origAdd.call(el,this.eventType,this.listener,this.options); el.eventList??=[]; el.eventList.push({event:this.eventType,listener:this.listener,options:this.options}); }
-  undo(){ const el=this.telement.htmlObject; EventCommand.origRemove.call(el,this.eventType,this.listener,this.options); if(el.eventList) el.eventList = el.eventList.filter(e=>!(e.event===this.eventType&&e.listener===this.listener)); }
+  do () {
+    const fn = getFnById(this.id);
+    EventCommand.origAdd.call(this.t.htmlObject, this.type, fn, this.options);
+  }
+  undo () {
+    const fn = getFnById(this.id);
+    EventCommand.origRemove.call(this.t.htmlObject, this.type, fn, this.options);
+  }
 }
+
 class EventRemoveCommand extends EventCommand {
-  constructor(...args){ super('Olay Sil',...args);} 
-  do(){ const el=this.telement.htmlObject; EventCommand.origRemove.call(el,this.eventType,this.listener,this.options); if(el.eventList) el.eventList = el.eventList.filter(e=>!(e.event===this.eventType&&e.listener===this.listener)); }
-  undo(){ const el=this.telement.htmlObject; EventCommand.origAdd.call(el,this.eventType,this.listener,this.options); el.eventList??=[]; el.eventList.push({event:this.eventType,listener:this.listener,options:this.options}); }
+  do ()   {
+    const fn = getFnById(this.id);
+    EventCommand.origRemove.call(this.t.htmlObject, this.type, fn, this.options);
+  }
+  undo () {
+    const fn = getFnById(this.id);
+    EventCommand.origAdd.call(this.t.htmlObject, this.type, fn, this.options);
+  }
 }
 function setupEventTracking(history){
-  if(Element.prototype._eventTrackPatched) return; // tek sefer
-  Element.prototype._eventTrackPatched=true;
+  if (EventTarget.prototype._eventTrackPatched) return;   // tek sefer
+  EventTarget.prototype._eventTrackPatched = true;
 
-  const origAdd = Element.prototype.addEventListener;
-  const origRem = Element.prototype.removeEventListener;
+  const origAdd = EventTarget.prototype.addEventListener;
+  const origRem = EventTarget.prototype.removeEventListener;
   let   inCmd   = false;
 
-  Element.prototype.addEventListener=function(type,listener,options){
-    if(inCmd) return origAdd.call(this,type,listener,options);
-    const t=this.owner;
-    if(!t){ return origAdd.call(this,type,listener,options);} // sahip değilse izlemez
-    const cmd=new EventAddCommand(t,type,listener,options);
-    inCmd=true; history.execute(cmd); inCmd=false;
+  /* 1) addEventListener override ---------------------------------- */
+  EventTarget.prototype.addEventListener = function(type, listener, options){
+    // a) History sessizdeyse veya iç işlemdeyse yönlendirme
+    if (inCmd || history.muted){
+      return origAdd.call(this, type, listener, options);
+    }
+
+    // b) Telement sahibi yoksa (ham DOM) history'ye sokma
+    const t = this.owner;
+    if (!t){
+      return origAdd.call(this, type, listener, options);
+    }
+
+    // c) Komut üret → history.execute
+    const cmd = new EventAddCommand(t, type, listener, options);
+    inCmd = true;
+    history.execute(cmd);
+    inCmd = false;
   };
-  Element.prototype.removeEventListener=function(type,listener,options){
-    if(inCmd) return origRem.call(this,type,listener,options);
-    const t=this.owner;
-    if(!t){ return origRem.call(this,type,listener,options);} 
-    const cmd=new EventRemoveCommand(t,type,listener,options);
-    inCmd=true; history.execute(cmd); inCmd=false;
+
+  /* 2) removeEventListener override -------------------------------- */
+  EventTarget.prototype.removeEventListener = function(type, listener, options){
+    if (inCmd || history.muted){
+      return origRem.call(this, type, listener, options);
+    }
+    const t = this.owner;
+    if (!t){
+      return origRem.call(this, type, listener, options);
+    }
+
+    const cmd = new EventRemoveCommand(t, type, listener, options);
+    inCmd = true;
+    history.execute(cmd);
+    inCmd = false;
   };
-  // Orijinal metot referanslarını komutlara geçir
-  EventCommand.origAdd    = function(...a){ inCmd=true; origAdd.apply(this,a); inCmd=false; };
-  EventCommand.origRemove = function(...a){ inCmd=true; origRem.apply(this,a); inCmd=false; };
-}
+
+  /* 3) Komutlar core fonksiyonlara erişebilsin --------------------- */
+  EventCommand.origAdd    = function(...args){ inCmd = true; origAdd.apply(this, args); inCmd = false; };
+  EventCommand.origRemove = function(...args){ inCmd = true; origRem.apply(this, args); inCmd = false; };
+} 
 class SelectCommand extends BaseCommand {
   constructor(manager, item, multi) {
     super("Select");
