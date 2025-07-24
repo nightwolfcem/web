@@ -311,5 +311,6 @@ str += "float:left;";
 return str;
 }
 Object.freeze(Ealign);
-createEnumList("TBicons", "none,systemMenu,minimize,maximize");
-Object.freeze(TBicons);
+createEnumList("EcaptionButton", "none,close,maximize,minizime,restore,help");
+Object.freeze(EcaptionButton);
+export { Ealign, Olayers, Obutton, Omonth, Oday, OdragMode, EcaptionButton };
