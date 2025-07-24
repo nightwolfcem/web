@@ -1,6 +1,6 @@
-import { TaseGradientPicker } from './TaseGradientPicker.js';
+import { TbaseGradientPicker } from './TbaseGradientPicker.js';
 
-export class TgradientPicker extends TaseGradientPicker {
+export class TgradientPicker extends TbaseGradientPicker {
     static #inst;
 
     static getInstance(opts = {}) {
