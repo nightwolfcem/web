@@ -1,4 +1,4 @@
-﻿import './objectPrototypes.js'; // For defineProp
+﻿import './protptypes.js'; // For defineProp
 class Tord extends Number {
 constructor(o) {
 super(o);
