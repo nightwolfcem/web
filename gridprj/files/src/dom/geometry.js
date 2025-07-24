@@ -1,4 +1,4 @@
-﻿import { Ealign } from '../core/enums.js';
+﻿import {} from '../core/enums.js';
 export class Tpoint {
 constructor(x = 0, y = 0) {
 this.x = x;
