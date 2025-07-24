@@ -313,4 +313,3 @@ return str;
 Object.freeze(Ealign);
 createEnumList("EcaptionButton", "none,close,maximize,minizime,restore,help");
 Object.freeze(EcaptionButton);
-export { Ealign, Olayers, Obutton, Omonth, Oday, OdragMode, EcaptionButton };
