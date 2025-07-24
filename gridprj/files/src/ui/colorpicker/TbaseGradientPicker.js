@@ -3,7 +3,7 @@ import { TbasePicker } from './TbasePicker.js';
 import { TsingleColorPicker } from './TsingleColorPicker.js';
 import { translayer } from './utils.js';
 
-export class TaseGradientPicker extends TbasePicker {
+export class TbaseGradientPicker extends TbasePicker {
     initData() {
         this.gradientAngle = 0;
         this.centerPos = { x: 50, y: 50 };
