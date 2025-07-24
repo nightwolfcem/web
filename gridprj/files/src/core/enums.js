@@ -1,5 +1,5 @@
 ﻿import './prototypes.js'; // For defineProp
-class Tord extends Number {
+export class Tord extends Number {
 constructor(o) {
 super(o);
 this.index = 0;
@@ -98,7 +98,7 @@ if (f && x.onchange) x.onchange(ov, v);
 );
 };
 }
-class Tenum extends Number {
+export class Tenum extends Number {
 constructor() {
 super();
 this.onchange = null;
