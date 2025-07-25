@@ -1,4 +1,4 @@
-﻿import { Tclass } from '../core/Tclass.js';
+﻿import { TClass } from '../core/Tclass.js';
 import { extendsClass } from '../core/classUtils.js';
 import { selectionManager } from '../core/globals.js';
 import { deepCopy } from '../utils/objectUtils.js';
@@ -11,7 +11,7 @@ let Telementstyles = false;
 const INTERACTION_STATE = new WeakMap();
 export const _ctorArgs = Symbol('ctorArgs');
 
-export class Telement extends extendsClass(Tclass, EventTarget) {
+export class Telement extends extendsClass(TClass, EventTarget) {
     #moveHandlers = null;
     #dragHandlers = null;
     #dropHandlers = null;
@@ -109,7 +109,7 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
                 if (thisRef.status.movable) thisRef.#toggleFeature('movable', true);
             }
         });
-         EelementStatus.bindTo('status', this);
+
         this.moveOptions.handle = moveOptions.handle;
         this.dragOptions.handle = dragOptions.handle;
 
@@ -129,22 +129,38 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
         children.forEach(ch => this.appendChild(ch));
         if (parent) (parent instanceof Telement ? parent.appendChild(this) : parent.appendChild(html));
 
-       
+        EelementStatus.bindTo('status', this);
         this.status.onchange = ch => this.#handleStatusChange(ch);
         if (typeof status === 'object') {
             this.status.assign(status);
         } else {
             this.status = status;
         }
+
+        this.#injectStyles();
         const defaultHist = { trackStyle: false, trackResize: false, trackChildren: false, trackAttr: false, trackEvents: false };
         this.historyOptions = { ...defaultHist, ...historyOptions };
         this.#initOpts = safeCloneOptions(opts);
         this.#initialKeys = new Set(Object.getOwnPropertyNames(this));
         this[_ctorArgs] = [tagOrEl].concat(Object.keys(opts).length ? [opts] : []);
-        
     }
 
-  
+    #injectStyles() {
+        if (Telementstyles) return;
+        const styles = `
+            .telement:focus { outline: 2px solid #0078d4; outline-offset: 1px; }
+            .dragging { opacity: 0.4; }
+            .selectable:hover { background-color: rgba(0, 102, 255, 0.08); cursor: pointer; }
+            .selected { border: 2px solid #0066FF; box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.5); }
+            .disabled { opacity: 0.5; pointer-events: none; }
+            .locked { pointer-events: none; }
+            .hidden { display: none !important; }
+            .droppable-hover { background-color: rgba(0, 120, 212, 0.15); box-shadow: inset 0 0 0 2px #0078d4; }
+            .dock-highlight { outline: 2px dashed #0078d4 !important; background-color: rgba(0, 120, 212, 0.1) !important; }
+        `;
+        DOM.addStyle(styles);
+        Telementstyles = true;
+    }
 
     #handleStatusChange(changes) {
         for (const [flag, value] of Object.entries(changes)) {
@@ -158,7 +174,11 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
 
         switch (flag) {
             case 'draggable':
-                DOM.makeDraggable(this.htmlObject, this.dragOptions.handle, isOn);
+                this.#refreshDragListeners();
+                break;
+            case 'dockable': // YENİ: Bırakma özelliğini aç/kapa
+                if (isOn) this.#enableDrop();
+                else this.#disableDrop();
                 break;
             case 'movable':
                 DOM.makeMovable(this.htmlObject, this.moveOptions.handle, this.moveOptions.bound, this.moveOptions.xable, this.moveOptions.yable);
@@ -175,10 +195,10 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
     #updateHybridFlag() {
         this.#hybridDrag = (this.moveOptions.handle === this.dragOptions.handle && this.status.movable && this.status.draggable);
     }
-
+    
     #refreshDragListeners() {
         this.#disableDrag();
-        if (!this.#hybridDrag && this.status?.draggable) this.#enableDrag();
+        if (this.status?.draggable) this.#enableDrag();
     }
 
     #enableDrag() {
@@ -200,8 +220,89 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
         this.#dragHandlers = null;
     }
 
-    #onDragStart(e) { /* ... */ }
-    #onDragEnd(e) { /* ... */ }
+    #onDragStart(e) {
+        e.stopPropagation();
+        this.#dragState.isDropped = false;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', this.id);
+        
+        // Sürüklenen tüm seçili elementleri sakla
+        this.#dragState.draggedElements = selectionManager.has(this) ? [...selectionManager.selection] : [this];
+        e.dataTransfer.setData('application/json', JSON.stringify(this.#dragState.draggedElements.map(el => el.id)));
+
+        setTimeout(() => {
+            this.#dragState.draggedElements.forEach(el => el.htmlObject.classList.add('dragging'));
+        }, 0);
+    }
+
+    #onDragEnd(e) {
+        this.#dragState.draggedElements.forEach(el => el.htmlObject.classList.remove('dragging'));
+        this.#dragState = {};
+    }
+
+    // --- YENİ EKLENEN BIRAKMA (DROP) METOTLARI ---
+
+    #enableDrop() {
+        if (this.#dropHandlers) return;
+        this.#dropHandlers = {
+            dragenter: (e) => this.#onDragEnter(e),
+            dragover: (e) => this.#onDragOver(e),
+            dragleave: (e) => this.#onDragLeave(e),
+            drop: (e) => this.#onDrop(e),
+        };
+        Object.entries(this.#dropHandlers).forEach(([evt, h]) => this.htmlObject.addEventListener(evt, h));
+    }
+
+    #disableDrop() {
+        if (!this.#dropHandlers) return;
+        Object.entries(this.#dropHandlers).forEach(([evt, h]) => this.htmlObject.removeEventListener(evt, h));
+        this.#dropHandlers = null;
+    }
+
+    #onDragEnter(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.htmlObject.classList.add(this.dropOptions.hoverClass);
+    }
+
+    #onDragOver(e) {
+        e.preventDefault(); // Drop işleminin gerçekleşebilmesi için bu gerekli.
+        e.stopPropagation();
+    }
+
+    #onDragLeave(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        // Sadece elementin dışına çıkıldığında stili kaldır
+        if (e.target === this.htmlObject) {
+            this.htmlObject.classList.remove(this.dropOptions.hoverClass);
+        }
+    }
+
+    #onDrop(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.htmlObject.classList.remove(this.dropOptions.hoverClass);
+
+        const draggedIds = JSON.parse(e.dataTransfer.getData('application/json') || '[]');
+        const draggedElements = draggedIds.map(id => AllClass.byId[id]).filter(Boolean);
+
+        // Bırakma işlemi hakkında detayları içeren özel bir olay oluştur
+        const dropEvent = new CustomEvent('telement-drop', {
+            bubbles: true,
+            cancelable: true,
+            detail: {
+                dropTarget: this, // Bırakılan hedef
+                draggedElements: draggedElements, // Sürüklenen elementler
+                originalEvent: e
+            }
+        });
+        
+        // Olayı yayınla
+        this.htmlObject.dispatchEvent(dropEvent);
+    }
+
+    // --- SINIFIN DİĞER METOTLARI ---
 
     body(parent) {
         if (this.loaded) return;
@@ -244,6 +345,8 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
     }
 
     destroy() {
+        this.#disableDrag();
+        this.#disableDrop();
         this.children.forEach(child => child.destroy?.());
         this.htmlObject?.parentNode?.removeChild(this.htmlObject);
         if (this.htmlObject) this.htmlObject.owner = null;
@@ -267,6 +370,7 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
         this.status.visible = val;
     }
 }
+
     const styles = `
 .telement:focus { outline: 2px solid #0078d4; outline-offset: 1px; }
  .dragging { opacity: 0.4; }
