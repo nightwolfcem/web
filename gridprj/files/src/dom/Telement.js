@@ -1,9 +1,7 @@
 ﻿import { Tclass } from '../core/Tclass.js';
 import { extendsClass } from '../core/classUtils.js';
 import { selectionManager } from '../core/globals.js';
-import { deepCopy } from '../utils/objectUtils.js';
 import { EelementStatus, Eborder, Tenum } from '../core/enums.js';
-import { getEventMap } from './eventHandling.js';
 import { TelementRect } from './geometry.js';
 import { DOM } from './dom.js';
 
@@ -11,7 +9,7 @@ let Telementstyles = false;
 const INTERACTION_STATE = new WeakMap();
 export const _ctorArgs = Symbol('ctorArgs');
 
-export class Telement extends extendsClass(TClass, EventTarget) {
+export class Telement extends extendsClass(Tclass, EventTarget) {
     #moveHandlers = null;
     #dragHandlers = null;
     #dropHandlers = null;
@@ -369,6 +367,102 @@ export class Telement extends extendsClass(TClass, EventTarget) {
     set visible(val) {
         this.status.visible = val;
     }
+     copy() {
+            const LOCAL_SKIP = ["parent", "children", "htmlObject", "status", "resize_flags", "history", "#initialKeys", "#initOpts", "eventList"];
+            const tag = this.htmlObject.tagName.toLowerCase();
+            const { children: _initChildren, ...cloneOpts } = this.#initOpts;
+            const opts = { ...cloneOpts, id: undefined };
+            const clone = new Telement(tag, opts);
+
+            Object.getOwnPropertyNames(this).forEach(k => {
+                if (this.#initialKeys.has(k) || LOCAL_SKIP.includes(k) ||
+                    k.startsWith("_") || k.startsWith("#")) return;
+                const v = this[k];
+                if (v instanceof Telement || v instanceof EventTarget) return;
+                clone[k] = deepCopy(v, LOCAL_SKIP);
+            });
+
+            // HTML kopyalama
+            const src = this.htmlObject;
+            const dst = clone.htmlObject;
+
+            Array.from(src.attributes).forEach(a =>
+                a.name !== 'id' && dst.setAttribute(a.name, a.value));
+            dst.style.cssText = src.style.cssText;
+            src.classList.forEach(cls => dst.classList.add(cls));
+
+            const srcT = this;
+            const dstT = clone;
+
+            // srcT.htmlObject'ten dinleyicileri alıyoruz
+            const map = getEventMap(srcT.htmlObject);
+
+            for (const [type, list] of map) {
+                for (const rec of list) {
+                    const L = rec.listener;
+                    if (dst.eventList.hasSameListener(type, L)) continue; // kendi duplicate filtresi
+
+                    const wrapper = getFnById(rec.id);          // id → kod
+
+                    if (wrapper?._meta?.original) {
+                        const orig = wrapper._meta.original;
+                        const args = wrapper._meta.args || [];
+                        const objId = wrapper._meta.objId ?? -1;
+
+                        let targetCtx = null;
+                        if (objId !== -1) {
+                            targetCtx = AllClass.byId[objId] || AllClass.byOrder[objId];
+                        }
+
+                        orig.bindToEvent(el, type, targetCtx, ...args);
+                    } else {
+                        dstT.bind(type, L, rec.options);
+                    }
+
+                }
+            }
+
+            // Çocuklar
+            this.children.forEach(ch => clone.appendChild(ch.copy?.() || deepCopy(ch, LOCAL_SKIP)));
+            Array.from(this.htmlObject.childNodes)
+                .filter(node => !node.owner)
+                .forEach(node => clone.htmlObject.appendChild(deepCopy(node, LOCAL_SKIP)));
+
+            // Durumlar
+            clone.status = Number(this.status);
+            clone.resize_flags = Number(this.resize_flags);
+            if (this.loaded) clone.body();
+
+            return clone;
+        }
+
+        prevCss() {
+            this.htmlObject.style.cssText = this.htmlObject._prevCss || "";
+        }
+        nextCss = function () {
+            if (this.htmlObject._nextCss)
+                this.htmlObject.style.cssText = this.htmlObject._nextCss;
+        }
+        isVisible() {
+            if (!this.visible) return false;
+            if (this.parent) return this.parent.isVisible();
+            return true;
+        }
+         bind(eventName, handler, ...boundArgs) {
+        bindEvent(handler, this.htmlObject, eventName, this, ...boundArgs);
+    }
+
+    unbind(eventName, handler) {
+        unbindEvent(handler, this.htmlObject, eventName);
+    }
+    isRendered() {
+        return this.htmlObject.offsetParent !== null;
+    }
+
+    select(opts = {}) { selectionManager.select(this, opts); }
+    deselect(opts = {}) { selectionManager.deselect(this, opts); }
+    get isSelected() { return selectionManager.has(this); }
+
 }
 
     const styles = `
