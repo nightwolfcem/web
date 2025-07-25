@@ -97,6 +97,7 @@ export function createOrdList(listName, listitems) {
             }
         );
     };
+    Object.freeze(s);
 }
 export class Tenum extends Number {
     constructor() {
@@ -176,7 +177,7 @@ export class Tenum extends Number {
     }
 }
 export function createEnumList(listName, listitems) {
-    var s = window[listName] = {};;
+    var s = window[listName] = {};
     if (typeof listitems == "string") {
         var arr = listitems.split(/[,|;]/).map(x => x.trim());
         for (var i = 0; i < arr.length; i++) {
@@ -247,6 +248,7 @@ export function createEnumList(listName, listitems) {
             }
         );
     };
+    Object.freeze(s);
 };
 createOrdList("Omonth", "January,February,March,April,May,June,July,August,September,October,November,December");
 createOrdList("Oday", "Sunday,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday");
@@ -309,9 +311,9 @@ window.Ealign.alignToStyle = function (align) {
     }
     return str;
 }
-Object.freeze(Ealign);
+
 createEnumList("EcaptionButton", "none,close,maximize,minizime,restore,help");
-Object.freeze(EcaptionButton);
+Object.freeze(window.EcaptionButton);
 export const Omonth = window.Omonth;
 export const Oday = window.Oday;
 export const OdragMode = window.OdragMode;
