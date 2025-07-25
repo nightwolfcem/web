@@ -87,6 +87,7 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
         };
 
         const thisRef = this;
+        EelementStatus.bindTo('status', this);
         Object.defineProperty(this.dragOptions, 'handle', {
             enumerable: true,
             get() { return thisRef.#dragHandle || html; },
@@ -123,7 +124,7 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
         children.forEach(ch => this.appendChild(ch));
         if (parent) (parent instanceof Telement ? parent.appendChild(this) : parent.appendChild(html));
 
-        EelementStatus.bindTo('status', this);
+        
         this.status.onchange = ch => this.#handleStatusChange(ch);
         if (typeof status === 'object') {
             this.status.assign(status);
