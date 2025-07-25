@@ -109,7 +109,7 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
                 if (thisRef.status.movable) thisRef.#toggleFeature('movable', true);
             }
         });
-
+         EelementStatus.bindTo('status', this);
         this.moveOptions.handle = moveOptions.handle;
         this.dragOptions.handle = dragOptions.handle;
 
@@ -129,7 +129,7 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
         children.forEach(ch => this.appendChild(ch));
         if (parent) (parent instanceof Telement ? parent.appendChild(this) : parent.appendChild(html));
 
-        EelementStatus.bindTo('status', this);
+       
         this.status.onchange = ch => this.#handleStatusChange(ch);
         if (typeof status === 'object') {
             this.status.assign(status);
