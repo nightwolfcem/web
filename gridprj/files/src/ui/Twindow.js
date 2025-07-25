@@ -3,7 +3,7 @@ import { extendsClass } from '../core/classUtils.js';
 import { EcaptionButton, Ealign } from '../core/enums.js';
 import { DOM } from '../dom/dom.js';
 
-const FrameMixin = class FrameMixin {
+const TframeMixin = class TframeMixin {
     _initFrame({
         title = 'Window',
         buttons = [EcaptionButton.close],
@@ -92,8 +92,8 @@ const FrameMixin = class FrameMixin {
         return b;
     };
 };
-
-const DialogMixin = class DialogMixin {
+window.TframeMixin = TframeMixin;
+const TdialogMixin = class TdialogMixin {
     _initDialog({ mode = 'window', inputType = 'text' } = {}) {
         this.mode = mode;
         if (mode !== 'window') {
@@ -136,8 +136,8 @@ const DialogMixin = class DialogMixin {
         else if (!e.shiftKey && document.activeElement === last) { first.focus(); e.preventDefault(); }
     }
 };
-
-export class Twindow extends extendsClass(DialogMixin, FrameMixin, TpositionedElement) {
+window.TdialogMixin = TdialogMixin;
+export class Twindow extends extendsClass(TdialogMixin, TframeMixin, TpositionedElement) {
     #isModal = false;
     #overlay = null;
     #modalPromise = null;
