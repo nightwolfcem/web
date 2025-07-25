@@ -1,7 +1,8 @@
 ﻿import { Tclass } from '../core/Tclass.js';
-import { extendsClass } from '../core/classUtils.js';
+import { extendsClass, AllClass } from '../core/classUtils.js';
 import { selectionManager } from '../core/globals.js';
 import { EelementStatus, Eborder, Tenum } from '../core/enums.js';
+import { getEventMap, bindEvent, unbindEvent } from './eventHandling.js';
 import { TelementRect } from './geometry.js';
 import { DOM } from './dom.js';
 
@@ -18,7 +19,6 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
     #hybridDrag = null;
     #initOpts = null;
     #initialKeys = null;
-    #lastDropTarget = null;
     #dragState = {};
     loaded = false;
 
@@ -61,9 +61,6 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
             silent: false,
             scroll: false,
             selectClass: 'selected',
-            deselectClass: null,
-            onSelect: null,
-            onDeselect: null
         }, opts.selectOptions);
 
         html.id = html.id || id || this.id;
@@ -72,12 +69,13 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
         html.classList.add(clsDef, ...clsUsr.filter(Boolean));
         Object.assign(html.style, style);
         Object.entries(attrs).forEach(([k, v]) => html.setAttribute(k, v));
-        Object.entries(events).forEach(([e, h]) => html.addEventListener(e, h));
+        Object.entries(events).forEach(([e, h]) => this.bind(e, h)); // Use our bind method
+
         if (!Tenum.inEnum(status, EelementStatus.visible)) html.classList.add('hidden');
 
         this.moveOptions = Object.assign({ handle: null, bound: true, xable: true, yable: true }, moveOptions);
         this.dragOptions = Object.assign({ handle: null, group: null, type: 'default', revertIfNotDropped: true, dragClass: 'dragging' }, dragOptions);
-        this.dropOptions = Object.assign({ acceptTypes: ['default'], hoverClass: 'droppable-hover', placeHolderClass: 'drop-placeholder', showPlaceHolder: true }, dropOptions);
+        this.dropOptions = Object.assign({ acceptTypes: ['default'], hoverClass: 'droppable-hover' }, dropOptions);
         this.resizeOptions = Object.assign({ borders: Eborder.all, useHelper: false, minWidth: 20, maxWidth: Infinity, minHeight: 20, maxHeight: Infinity }, resizeOptions);
         this.rect = new TelementRect(this.htmlObject);
 
@@ -111,15 +109,13 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
         this.moveOptions.handle = moveOptions.handle;
         this.dragOptions.handle = dragOptions.handle;
 
-        this.htmlObject.addEventListener('pointerdown', e => {
+        this.bind('pointerdown', e => {
             if (e.button !== 0) return;
             if (this.status.selectable) {
                 e.stopPropagation();
                 const { multiKey, silent } = this.selectOptions;
                 const multi = multiKey(e);
                 selectionManager.toggle(this, { multi, silent });
-            } else if (this.htmlObject.parentElement === document.body) {
-                selectionManager.clear();
             }
         });
 
@@ -135,29 +131,10 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
             this.status = status;
         }
 
-        this.#injectStyles();
-        const defaultHist = { trackStyle: false, trackResize: false, trackChildren: false, trackAttr: false, trackEvents: false };
-        this.historyOptions = { ...defaultHist, ...historyOptions };
+        
         this.#initOpts = safeCloneOptions(opts);
         this.#initialKeys = new Set(Object.getOwnPropertyNames(this));
         this[_ctorArgs] = [tagOrEl].concat(Object.keys(opts).length ? [opts] : []);
-    }
-
-    #injectStyles() {
-        if (Telementstyles) return;
-        const styles = `
-            .telement:focus { outline: 2px solid #0078d4; outline-offset: 1px; }
-            .dragging { opacity: 0.4; }
-            .selectable:hover { background-color: rgba(0, 102, 255, 0.08); cursor: pointer; }
-            .selected { border: 2px solid #0066FF; box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.5); }
-            .disabled { opacity: 0.5; pointer-events: none; }
-            .locked { pointer-events: none; }
-            .hidden { display: none !important; }
-            .droppable-hover { background-color: rgba(0, 120, 212, 0.15); box-shadow: inset 0 0 0 2px #0078d4; }
-            .dock-highlight { outline: 2px dashed #0078d4 !important; background-color: rgba(0, 120, 212, 0.1) !important; }
-        `;
-        DOM.addStyle(styles);
-        Telementstyles = true;
     }
 
     #handleStatusChange(changes) {
@@ -171,22 +148,11 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
         if (flag === 'draggable' || flag === 'movable') this.#updateHybridFlag();
 
         switch (flag) {
-            case 'draggable':
-                this.#refreshDragListeners();
-                break;
-            case 'dockable': // YENİ: Bırakma özelliğini aç/kapa
-                if (isOn) this.#enableDrop();
-                else this.#disableDrop();
-                break;
-            case 'movable':
-                DOM.makeMovable(this.htmlObject, this.moveOptions.handle, this.moveOptions.bound, this.moveOptions.xable, this.moveOptions.yable);
-                break;
-            case 'sizable':
-                DOM.makeResizable(this.htmlObject, isOn ? this.resizeOptions : false);
-                break;
-            case 'visible':
-                this.htmlObject.classList.toggle('hidden', !isOn);
-                break;
+            case 'draggable': this.#refreshDragListeners(); break;
+            case 'dockable': if (isOn) this.#enableDrop(); else this.#disableDrop(); break;
+            case 'movable': DOM.makeMovable?.(this.htmlObject, this.moveOptions.handle, this.moveOptions.bound, this.moveOptions.xable, this.moveOptions.yable); break;
+            case 'sizable': DOM.makeResizable?.(this.htmlObject, isOn ? this.resizeOptions : false); break;
+            case 'visible': this.htmlObject.classList.toggle('hidden', !isOn); break;
         }
     }
 
@@ -224,7 +190,6 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', this.id);
         
-        // Sürüklenen tüm seçili elementleri sakla
         this.#dragState.draggedElements = selectionManager.has(this) ? [...selectionManager.selection] : [this];
         e.dataTransfer.setData('application/json', JSON.stringify(this.#dragState.draggedElements.map(el => el.id)));
 
@@ -234,11 +199,9 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
     }
 
     #onDragEnd(e) {
-        this.#dragState.draggedElements.forEach(el => el.htmlObject.classList.remove('dragging'));
+        this.#dragState.draggedElements?.forEach(el => el.htmlObject.classList.remove('dragging'));
         this.#dragState = {};
     }
-
-    // --- YENİ EKLENEN BIRAKMA (DROP) METOTLARI ---
 
     #enableDrop() {
         if (this.#dropHandlers) return;
@@ -257,61 +220,27 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
         this.#dropHandlers = null;
     }
 
-    #onDragEnter(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        this.htmlObject.classList.add(this.dropOptions.hoverClass);
-    }
-
-    #onDragOver(e) {
-        e.preventDefault(); // Drop işleminin gerçekleşebilmesi için bu gerekli.
-        e.stopPropagation();
-    }
-
-    #onDragLeave(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        // Sadece elementin dışına çıkıldığında stili kaldır
-        if (e.target === this.htmlObject) {
-            this.htmlObject.classList.remove(this.dropOptions.hoverClass);
-        }
-    }
-
+    #onDragEnter(e) { e.preventDefault(); e.stopPropagation(); this.htmlObject.classList.add(this.dropOptions.hoverClass); }
+    #onDragOver(e) { e.preventDefault(); e.stopPropagation(); }
+    #onDragLeave(e) { e.preventDefault(); e.stopPropagation(); if (e.target === this.htmlObject) this.htmlObject.classList.remove(this.dropOptions.hoverClass); }
     #onDrop(e) {
         e.preventDefault();
         e.stopPropagation();
         this.htmlObject.classList.remove(this.dropOptions.hoverClass);
-
         const draggedIds = JSON.parse(e.dataTransfer.getData('application/json') || '[]');
         const draggedElements = draggedIds.map(id => AllClass.byId[id]).filter(Boolean);
-
-        // Bırakma işlemi hakkında detayları içeren özel bir olay oluştur
-        const dropEvent = new CustomEvent('telement-drop', {
-            bubbles: true,
-            cancelable: true,
-            detail: {
-                dropTarget: this, // Bırakılan hedef
-                draggedElements: draggedElements, // Sürüklenen elementler
-                originalEvent: e
-            }
-        });
-        
-        // Olayı yayınla
-        this.htmlObject.dispatchEvent(dropEvent);
+        this.htmlObject.dispatchEvent(new CustomEvent('telement-drop', { bubbles: true, cancelable: true, detail: { dropTarget: this, draggedElements, originalEvent: e } }));
     }
-
-    // --- SINIFIN DİĞER METOTLARI ---
 
     body(parent) {
         if (this.loaded) return;
         parent = parent ?? this.htmlObject.parentElement ?? document.body;
-        if (parent.owner && typeof parent.owner.appendChild === 'function') {
+        if (parent.owner?.appendChild) {
             parent.owner.appendChild(this);
         } else {
             parent.appendChild(this.htmlObject);
         }
         this.children.forEach(child => child.body(this.htmlObject));
-
         this.dispatchEvent(new CustomEvent('load'));
         const sts = Number(this.status);
         this.status = 0;
@@ -325,7 +254,7 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
             this.htmlObject.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
             return;
         }
-        if (child.parent) child.parent.removeChild(child);
+        child.parent?.removeChild(child);
         this.children.push(child);
         child.parent = this;
         this.htmlObject.appendChild(child.htmlObject);
@@ -345,116 +274,54 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
     destroy() {
         this.#disableDrag();
         this.#disableDrop();
-        this.children.forEach(child => child.destroy?.());
+        [...this.children].forEach(child => child.destroy?.());
         this.htmlObject?.parentNode?.removeChild(this.htmlObject);
         if (this.htmlObject) this.htmlObject.owner = null;
         this.dispatchEvent(new CustomEvent('destroy'));
         super.destroy();
     }
-
-    select(opts = {}) {
-        selectionManager.select(this, opts);
-    }
-    deselect(opts = {}) {
-        selectionManager.deselect(this, opts);
-    }
-    get isSelected() {
-        return selectionManager.has(this);
-    }
-    get visible() {
-        return this.status.visible;
-    }
-    set visible(val) {
-        this.status.visible = val;
-    }
-     copy() {
-            const LOCAL_SKIP = ["parent", "children", "htmlObject", "status", "resize_flags", "history", "#initialKeys", "#initOpts", "eventList"];
-            const tag = this.htmlObject.tagName.toLowerCase();
-            const { children: _initChildren, ...cloneOpts } = this.#initOpts;
-            const opts = { ...cloneOpts, id: undefined };
-            const clone = new Telement(tag, opts);
-
-            Object.getOwnPropertyNames(this).forEach(k => {
-                if (this.#initialKeys.has(k) || LOCAL_SKIP.includes(k) ||
-                    k.startsWith("_") || k.startsWith("#")) return;
-                const v = this[k];
-                if (v instanceof Telement || v instanceof EventTarget) return;
-                clone[k] = deepCopy(v, LOCAL_SKIP);
-            });
-
-            // HTML kopyalama
-            const src = this.htmlObject;
-            const dst = clone.htmlObject;
-
-            Array.from(src.attributes).forEach(a =>
-                a.name !== 'id' && dst.setAttribute(a.name, a.value));
-            dst.style.cssText = src.style.cssText;
-            src.classList.forEach(cls => dst.classList.add(cls));
-
-            const srcT = this;
-            const dstT = clone;
-
-            // srcT.htmlObject'ten dinleyicileri alıyoruz
-            const map = getEventMap(srcT.htmlObject);
-
-            for (const [type, list] of map) {
-                for (const rec of list) {
-                    const L = rec.listener;
-                    if (dst.eventList.hasSameListener(type, L)) continue; // kendi duplicate filtresi
-
-                    const wrapper = getFnById(rec.id);          // id → kod
-
-                    if (wrapper?._meta?.original) {
-                        const orig = wrapper._meta.original;
-                        const args = wrapper._meta.args || [];
-                        const objId = wrapper._meta.objId ?? -1;
-
-                        let targetCtx = null;
-                        if (objId !== -1) {
-                            targetCtx = AllClass.byId[objId] || AllClass.byOrder[objId];
-                        }
-
-                        orig.bindToEvent(el, type, targetCtx, ...args);
+    
+    copy() {
+        const { children: _initChildren, ...cloneOpts } = this.#initOpts;
+        const opts = { ...cloneOpts, id: undefined, parent: undefined };
+        const clone = new this.constructor(this.htmlObject.tagName, opts);
+        
+        Object.getOwnPropertyNames(this).forEach(key => {
+            if (this.#initialKeys.has(key) || key.startsWith('_') || key.startsWith('#') || ['parent', 'children', 'htmlObject', 'status'].includes(key)) return;
+            const value = this[key];
+            clone[key] = value?.copy ? value.copy() : value;
+        });
+        
+        const sourceEventMap = getEventMap(this.htmlObject);
+        if (sourceEventMap) {
+            for (const [type, listeners] of sourceEventMap.entries()) {
+                listeners.forEach(info => {
+                    const listener = info.listener || info.wrapper;
+                    if (listener._meta) {
+                        const meta = listener._meta;
+                        const context = AllClass.byId[meta.objId] === this ? clone : AllClass.byId[meta.objId];
+                        clone.bind(type, meta.original, ...meta.args);
                     } else {
-                        dstT.bind(type, L, rec.options);
+                        clone.htmlObject.addEventListener(type, listener, info.options);
                     }
-
-                }
+                });
             }
-
-            // Çocuklar
-            this.children.forEach(ch => clone.appendChild(ch.copy?.() || deepCopy(ch, LOCAL_SKIP)));
-            Array.from(this.htmlObject.childNodes)
-                .filter(node => !node.owner)
-                .forEach(node => clone.htmlObject.appendChild(deepCopy(node, LOCAL_SKIP)));
-
-            // Durumlar
-            clone.status = Number(this.status);
-            clone.resize_flags = Number(this.resize_flags);
-            if (this.loaded) clone.body();
-
-            return clone;
         }
+        
+        this.children.forEach(child => child instanceof Telement && clone.appendChild(child.copy()));
+        Array.from(this.htmlObject.childNodes).forEach(node => !node.owner && clone.htmlObject.appendChild(node.cloneNode(true)));
+        clone.status = Number(this.status);
+        return clone;
+    }
 
-        prevCss() {
-            this.htmlObject.style.cssText = this.htmlObject._prevCss || "";
-        }
-        nextCss = function () {
-            if (this.htmlObject._nextCss)
-                this.htmlObject.style.cssText = this.htmlObject._nextCss;
-        }
-        isVisible() {
-            if (!this.visible) return false;
-            if (this.parent) return this.parent.isVisible();
-            return true;
-        }
-         bind(eventName, handler, ...boundArgs) {
+    bind(eventName, handler, ...boundArgs) {
         bindEvent(handler, this.htmlObject, eventName, this, ...boundArgs);
     }
 
     unbind(eventName, handler) {
         unbindEvent(handler, this.htmlObject, eventName);
     }
+
     isRendered() {
         return this.htmlObject.offsetParent !== null;
     }
@@ -462,7 +329,8 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
     select(opts = {}) { selectionManager.select(this, opts); }
     deselect(opts = {}) { selectionManager.deselect(this, opts); }
     get isSelected() { return selectionManager.has(this); }
-
+    get visible() { return this.status.visible; }
+    set visible(val) { this.status.visible = val; }
 }
 
     const styles = `
