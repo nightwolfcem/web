@@ -280,37 +280,7 @@ createEnumList("Eborder", {
     all: 1 | 2 | 4 | 8
 });
 createEnumList("Ealign", "none,left,right,top,bottom,center,middle,client,inner,offset");
-Object.unfreeze(window.Ealign);
-window.Ealign.alignToStyle = function (align) {
-    let str = "";
-    let Ealign = this == window ? Ealign : this;
-    let kln = align ? align : Number(this);
-    if (kln >= Ealign.middle) {
-        kln %= Ealign.middle;
-        str += "vertical-align:middle;";
-    }
-    if (kln >= Ealign.bottom) {
-        kln %= Ealign.bottom;
-        str += "vertical-align:bottom;";
-    }
-    if (kln >= Ealign.top) {
-        kln %= Ealign.top;
-        str += "vertical-align:top;";
-    }
-    if (kln >= Ealign.center) {
-        kln %= Ealign.center;
-        str += "text-align:center;";
-    }
-    if (kln >= Ealign.right) {
-        kln %= Ealign.right;
-        str += "float:right;";
-    }
-    if (kln >= Ealign.left) {
-        kln %= Ealign.left;
-        str += "float:left;";
-    }
-    return str;
-}
+
 createEnumList("EcaptionButton", "none,close,maximize,minizime,restore,help");
 export const Omonth = window.Omonth;
 export const Oday = window.Oday;
