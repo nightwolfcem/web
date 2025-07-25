@@ -280,7 +280,7 @@ createEnumList("Eborder", {
     all: 1 | 2 | 4 | 8
 });
 createEnumList("Ealign", "none,left,right,top,bottom,center,middle,client,inner,offset");
-
+Object.unfreeze(window.Ealign);
 window.Ealign.alignToStyle = function (align) {
     let str = "";
     let Ealign = this == window ? Ealign : this;
@@ -311,9 +311,7 @@ window.Ealign.alignToStyle = function (align) {
     }
     return str;
 }
-
 createEnumList("EcaptionButton", "none,close,maximize,minizime,restore,help");
-Object.freeze(window.EcaptionButton);
 export const Omonth = window.Omonth;
 export const Oday = window.Oday;
 export const OdragMode = window.OdragMode;
