@@ -332,6 +332,25 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
     get isSelected() { return selectionManager.has(this); }
     get visible() { return this.status.visible; }
     set visible(val) { this.status.visible = val; }
+      show() {
+        this.status.visible = true;
+        this.dispatchEvent(new CustomEvent('show'));
+    }
+
+    hide() {
+        this.status.visible = false;
+        this.dispatchEvent(new CustomEvent('hide'));
+    }
+
+    lock() {
+        this.status.lockable = true;
+        this.dispatchEvent(new CustomEvent('lock'));
+    }
+
+    unlock() {
+        this.status.lockable = false;
+        this.dispatchEvent(new CustomEvent('unlock'));
+    }
 }
 
     const styles = `
