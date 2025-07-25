@@ -1,4 +1,4 @@
-﻿import { TClass } from '../core/Tclass.js';
+﻿import { Tclass } from '../core/Tclass.js';
 import { extendsClass } from '../core/classUtils.js';
 import { selectionManager } from '../core/globals.js';
 import { deepCopy } from '../utils/objectUtils.js';
