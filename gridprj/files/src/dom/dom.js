@@ -1,9 +1,7 @@
 ﻿import { globs } from '../core/globals.js';
 import { onDOMLoad } from '../core/loader.js';
 import { Telement } from './Telement.js';
-import { TabsoluteElement } from './TabsoluteElement.js';
 import { Tlayer } from './Tlayer.js';
-import { Ealign } from '../core/enums.js';
 import { getEventMap } from './eventHandling.js';
 
 let _styleEl = null;
