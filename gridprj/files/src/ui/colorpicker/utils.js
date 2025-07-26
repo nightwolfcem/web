@@ -39,16 +39,9 @@ export const translayer = {
     setForeColor: function(colorOrGradient, element) {
         if (typeof colorOrGradient !== 'string') return;
 
-        // DÜZELTME: Değerin gradyan olup olmadığını kontrol et
-        if (colorOrGradient.includes('gradient')) {
-            // Gradyan ise, background-image olarak ayarla
-            element.style.backgroundImage = `${colorOrGradient}, ${transparencyPatternUrl}`;
+        element.style.backgroundImage = `${colorOrGradient}, ${transparencyPatternUrl}`;
             element.style.backgroundColor = ''; // Düz rengi temizle
-        } else {
-            // Düz renk ise, background-color olarak ayarla
-            element.style.backgroundImage = transparencyPatternUrl; // Sadece deseni göster
-            element.style.background = colorOrGradient;
-        }
+    
     }
 };
 
