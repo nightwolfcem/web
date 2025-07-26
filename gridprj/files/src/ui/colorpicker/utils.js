@@ -37,11 +37,15 @@ export const translayer = {
      * @param {HTMLElement} element - Stil uygulanacak element.
      */
     setForeColor: function(colorOrGradient, element) {
-        if (typeof colorOrGradient !== 'string') return;
-
-        element.style.backgroundImage = `${colorOrGradient}, ${transparencyPatternUrl}`;
-            element.style.backgroundColor = ''; // Düz rengi temizle
-    
+        if (typeof colorOrGradient !== 'string' || !colorOrGradient) return;
+        let colorLayer;
+        if (colorOrGradient.includes('gradient')) {
+            colorLayer = colorOrGradient;
+        } else {
+            colorLayer = `linear-gradient(to right, ${colorOrGradient}, ${colorOrGradient})`;
+        }
+        element.style.backgroundImage = `${colorLayer}, ${transparencyPatternUrl}`;
+        element.style.backgroundColor = ''; 
     }
 };
 
