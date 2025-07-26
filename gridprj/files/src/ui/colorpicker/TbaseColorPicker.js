@@ -2,8 +2,9 @@ import { TbasePicker } from './TbasePicker.js';
 import { Tcolor } from '../../utils/colorUtils.js';
 import { TabsoluteElement } from '../../dom/TabsoluteElement.js';
 import { Ealign } from '../../core/enums.js';
-import { getContrastColor, translayer } from './utils.js';
+import { getContrastColor, translayer, colorNameToHex } from './utils.js';
 import { cssProps } from '../../data/cssProperties.js';
+
 export class TbaseColorPicker extends TbasePicker {
 
     initData(hex) { 
@@ -148,21 +149,21 @@ export class TbaseColorPicker extends TbasePicker {
         return canvas;
     }
 
-    _wireHexRgbaEvents() {
+   _wireHexRgbaEvents() {
         const upd = () => {
             const r = +this.rInput.value || 0, g = +this.gInput.value || 0, b = +this.bInput.value || 0;
-            const a = parseFloat(this.aInput.value) || 1;
-            this.hsva = Tcolor.rgbToHsva(r, g, b, a);
+            const a = parseFloat(this.aInput.value);
+            this.hsva = Tcolor.rgbToHsva(r, g, b, isNaN(a) ? 1 : a);
             this.updatePreview();
             this._drawSVCanvas();
             this._drawHueSlider();
-            this.alphaSlider.value = a;
         };
         [this.rInput, this.gInput, this.bInput, this.aInput].forEach(inp => inp.onchange = upd);
 
         this.hexInput.addEventListener('change', () => {
-            const hex = this.hexInput.value.trim();
-            if (!hex) return;
+            const val = this.hexInput.value.trim();
+            if (!val) return;
+            const hex = colorNameToHex(val); // Renk ismini HEX'e çevir
             this.hsva = Tcolor.hexToHsva(hex);
             this.updatePreview(); this._drawSVCanvas(); this._drawHueSlider();
         });
@@ -170,16 +171,18 @@ export class TbaseColorPicker extends TbasePicker {
         this.hexInput.addEventListener('blur', () => setTimeout(() => this.suggestionBox.hide(), 200));
     }
 
-       _updateHexSuggestions() {
+    _updateHexSuggestions() {
         const q = this.hexInput.value.trim().toLowerCase();
         if (!q) { this.suggestionBox.hide(); return; }
+        
         const sug = cssProps.colorNames.filter(color => color.toLowerCase().startsWith(q));
+        
         this.suggestionBox.htmlObject.innerHTML = '';
         sug.forEach(col => {
             const div = document.createElement('div');
             div.textContent = col;
             div.style.cssText = 'padding:4px; cursor:pointer;';
-            const hex = this.colorNameToHex(col);
+            const hex = colorNameToHex(col);
             div.style.background = hex;
             div.style.color = getContrastColor(hex);
             div.onmousedown = e => {
@@ -194,55 +197,36 @@ export class TbaseColorPicker extends TbasePicker {
         sug.length ? this.suggestionBox.popup() : this.suggestionBox.hide();
     }
 
-   _drawSVCanvas() {
+    _drawSVCanvas() {
         const ctx = this.svCanvas.getContext('2d');
         const w = this.svCanvas.width, h = this.svCanvas.height;
         ctx.fillStyle = `hsl(${this.hsva.h},100%,50%)`;
         ctx.fillRect(0, 0, w, h);
         const white = ctx.createLinearGradient(0, 0, w, 0);
-        white.addColorStop(0, '#fff');
-        white.addColorStop(1, 'transparent');
-        ctx.fillStyle = white;
-        ctx.fillRect(0, 0, w, h);
+        white.addColorStop(0, '#fff'); white.addColorStop(1, 'transparent');
+        ctx.fillStyle = white; ctx.fillRect(0, 0, w, h);
         const black = ctx.createLinearGradient(0, 0, 0, h);
-        black.addColorStop(0, 'transparent');
-        black.addColorStop(1, '#000');
-        ctx.fillStyle = black;
-        ctx.fillRect(0, 0, w, h);
+        black.addColorStop(0, 'transparent'); black.addColorStop(1, '#000');
+        ctx.fillStyle = black; ctx.fillRect(0, 0, w, h);
     }
     
     updatePreview() {
         const rgbaStr = Tcolor.hsvaToRgba(this.hsva);
         translayer.setForeColor(rgbaStr, this.previewBox);
 
-        if (this.targetElement && this.targetStyle)
+        if (this.targetElement && this.targetStyle) {
             this.targetElement.style[this.targetStyle] = rgbaStr;
-        if (this.targetInput)
-            this.targetInput.value = rgbaStr;
-
+        }
+        
         const rgb = Tcolor.hsvaToRgb(this.hsva);
         this.rInput.value = rgb.r;
         this.gInput.value = rgb.g;
         this.bInput.value = rgb.b;
-        this.aInput.value = this.hsva.a;
+        this.aInput.value = this.hsva.a.toFixed(2);
         this.alphaSlider.value = this.hsva.a;
         this.hexInput.value = Tcolor.rgbToHex(rgb.r, rgb.g, rgb.b);
+        
         this.onChange(rgbaStr);
-    }
-
-    colorNameToHex(colorName) {
-        const dummy = document.createElement("div");
-        dummy.style.color = colorName;
-        document.body.appendChild(dummy);
-        const computed = getComputedStyle(dummy).color;
-        document.body.removeChild(dummy);
-        const rgb = computed.match(/\d+/g);
-        if (rgb) {
-            return "#" + parseInt(rgb[0]).toString(16).padStart(2, "0") +
-                parseInt(rgb[1]).toString(16).padStart(2, "0") +
-                parseInt(rgb[2]).toString(16).padStart(2, "0");
-        }
-        return colorName;
     }
 }
 window.TbaseColorPicker = TbaseColorPicker;

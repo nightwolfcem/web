@@ -3,33 +3,51 @@ import { TsingleColorPicker } from './TsingleColorPicker.js';
 import { translayer } from './utils.js';
 
 export class TmultiRadialGradientPicker extends TbasePicker {
-    constructor(opts = {}) {
-        const defaultOptions = {
-            defaultPoints: [{
-                x: 50, y: 50,
-                stops: [
-                    { color: "#ffd3fb", position: 0 },
-                    { color: "rgba(255,211,251,0)", position: 35 }
-                ]
-            }],
-            title: "Multi Radial Gradient Picker",
-            selectedIdx: 0,
-            ...opts
-        };
+     static #inst;
 
-        super(defaultOptions);
-
-        this.points = JSON.parse(JSON.stringify(defaultOptions.defaultPoints));
-        this.selectedIdx = defaultOptions.selectedIdx;
+    static getInstance(opts = {}) {
+        if (!this.#inst || (opts.parent && this.#inst.parent !== opts.parent)) {
+           this.#inst = new TmultiRadialGradientPicker(opts);
+        } else {
+           Object.assign(this.#inst, opts);
+        }
+        return this.#inst;
     }
 
-    // TbasePicker'dan gelen bu metodu dolduruyoruz.
+    static pick(opts = {}) {
+        const p = this.getInstance(opts);
+        if (opts.targetInput) p.attach(opts.targetInput);
+        if (opts.targetElement) p.targetElement = opts.targetElement;
+        
+        p.popup(opts.targetElement || opts.targetInput || null);
+        p.show();
+        return p;
+    }
+
+    constructor(opts = {}) {
+        super({
+            title: "Çoklu Radyal Gradyan Seçici",
+            width: 420,
+            height: 320,
+            ...opts
+        });
+
+        this.points = opts.defaultPoints ? JSON.parse(JSON.stringify(opts.defaultPoints)) : [{
+            x: 50, y: 50,
+            stops: [
+                { color: "#ffd3fb", position: 0 },
+                { color: "rgba(255,211,251,0)", position: 35 }
+            ]
+        }];
+        this.selectedIdx = 0;
+    }
+
     buildSpecificUI() {
         this.previewBox.style.width = 'calc(100% - 20px)';
         this.previewBox.style.height = '150px';
         this.previewBox.style.margin = '10px';
         this.previewBox.style.cursor = 'crosshair';
-        this.contentPanel.prepend(this.previewBox); // Ana previewBox'ı başa al
+        this.contentPanel.prepend(this.previewBox);
 
         this.previewBox.onclick = e => this.handlePreviewClick(e);
 
@@ -43,27 +61,16 @@ export class TmultiRadialGradientPicker extends TbasePicker {
         this.renderStopButtons();
     }
 
-    // TbasePicker'dan gelen bu metodu dolduruyoruz.
     updatePreview() {
         const css = this.getGradientCSS();
-        // Ana previewBox'ı (büyük olanı) güncelliyoruz
-        this.previewBox.style.background = css;
-
-        // Hedef elementleri ve input'u güncelle
-        if (this.targetElement && this.targetStyle) this.targetElement.style[this.targetStyle] = css;
-        if (this.targetInput) this.targetInput.value = css;
-        
-        // Callback'i çağır
+        translayer.setForeColor(css, this.previewBox);
+        if (this.targetElement) this.targetElement.style[this.targetStyle] = css;
         this.onChange(css);
-
-        // Diğer UI elemanlarını güncelle
         this.updateLinerBar();
     }
     
     renderPoints() {
-        // Nokta işaretçilerini previewBox'ın içine çizmek için, önce eski işaretçileri temizle
         Array.from(this.previewBox.querySelectorAll('.picker-dot')).forEach(dot => dot.remove());
-
         this.points.forEach((pt, i) => {
             const dot = document.createElement("div");
             dot.className = 'picker-dot';
@@ -74,10 +81,8 @@ export class TmultiRadialGradientPicker extends TbasePicker {
                 e.stopPropagation();
                 const box = this.previewBox.getBoundingClientRect();
                 const move = ev => {
-                    let x = ((ev.clientX - box.left) / box.width) * 100;
-                    let y = ((ev.clientY - box.top) / box.height) * 100;
-                    pt.x = Math.max(0, Math.min(100, x));
-                    pt.y = Math.max(0, Math.min(100, y));
+                    pt.x = Math.max(0, Math.min(100, ((ev.clientX - box.left) / box.width) * 100));
+                    pt.y = Math.max(0, Math.min(100, ((ev.clientY - box.top) / box.height) * 100));
                     dot.style.left = `${pt.x}%`; dot.style.top = `${pt.y}%`;
                     this.updatePreview();
                 };
@@ -95,9 +100,7 @@ export class TmultiRadialGradientPicker extends TbasePicker {
                 if (this.points.length > 1) {
                     this.points.splice(i, 1);
                     if (this.selectedIdx >= this.points.length) this.selectedIdx = this.points.length - 1;
-                    this.renderPoints();
-                    this.renderStopButtons();
-                    this.updatePreview();
+                    this.renderPoints(); this.renderStopButtons(); this.updatePreview();
                 }
             };
             this.previewBox.appendChild(dot);
@@ -105,30 +108,19 @@ export class TmultiRadialGradientPicker extends TbasePicker {
     }
 
     handlePreviewClick(e) {
-        // Sadece preview kutusunun kendisine tıklandıysa (noktaların üzerine değil)
         if (e.target !== this.previewBox) return;
-
         const rect = this.previewBox.getBoundingClientRect();
         const x = ((e.clientX - rect.left) / rect.width) * 100;
         const y = ((e.clientY - rect.top) / rect.height) * 100;
-        this.points.push({
-            x, y, stops: [
-                { color: "#ffffff", position: 0 },
-                { color: "rgba(255,255,255,0)", position: 50 }
-            ]
-        });
+        this.points.push({ x, y, stops: [{ color: "#ffffff", position: 0 }, { color: "rgba(255,255,255,0)", position: 50 }] });
         this.selectedIdx = this.points.length - 1;
-        this.renderPoints();
-        this.renderStopButtons();
-        this.updatePreview();
+        this.renderPoints(); this.renderStopButtons(); this.updatePreview();
     }
 
     renderStopButtons() {
         this.linerBar.innerHTML = "";
         if (!this.points[this.selectedIdx]) return;
-        let stops = this.points[this.selectedIdx].stops;
-        
-        stops.forEach((stop, idx) => {
+        this.points[this.selectedIdx].stops.forEach((stop, idx) => {
             const btn = document.createElement("div");
             btn.style.cssText = `position: absolute; left: calc(${stop.position}% - 8px); top: 5px; width: 16px; height: 20px; cursor: pointer; z-index:2;`;
             btn.innerHTML = `<div style="width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 8px solid #333;"></div><div style="width: 100%; height: 12px; background: ${stop.color}; border: 1px solid #333; box-sizing: border-box;"></div>`;
@@ -137,16 +129,13 @@ export class TmultiRadialGradientPicker extends TbasePicker {
                 e.stopPropagation();
                 TsingleColorPicker.pick({
                     defaultColor: stop.color,
-                    targetElement: e.currentTarget,
-                    targetStyle: 'backgroundColor', // Sadece görsel amaçlı
                     onChange: col => {
                         stop.color = col;
-                        rect.style.background = col; // Düğme rengini anında güncelle
+                        btn.querySelector('div:last-child').style.background = col;
                         this.updatePreview();
                     }
                 });
             };
-            // ... (diğer olaylar: onmousedown for drag)
             this.linerBar.appendChild(btn);
         });
         this.updateLinerBar();
@@ -154,9 +143,7 @@ export class TmultiRadialGradientPicker extends TbasePicker {
 
     updateLinerBar() {
         if (!this.points[this.selectedIdx]) return;
-        let stops = [...this.points[this.selectedIdx].stops]
-            .sort((a, b) => a.position - b.position)
-            .map(s => `${s.color} ${Math.round(s.position)}%`).join(", ");
+        let stops = [...this.points[this.selectedIdx].stops].sort((a, b) => a.position - b.position).map(s => `${s.color} ${s.position.toFixed(1)}%`).join(", ");
         translayer.setForeColor(`linear-gradient(90deg, ${stops})`, this.linerBar);
     }
     
@@ -170,11 +157,15 @@ export class TmultiRadialGradientPicker extends TbasePicker {
     
     getGradientCSS() {
         return this.points.map(pt => {
-            const stops = pt.stops
-                .sort((a, b) => a.position - b.position)
-                .map(s => `${s.color} ${Math.round(s.position)}%`).join(", ");
-            return `radial-gradient(circle at ${pt.x.toFixed(2)}% ${pt.y.toFixed(2)}%, ${stops})`;
+            const stops = pt.stops.sort((a, b) => a.position - b.position).map(s => `${s.color} ${s.position.toFixed(1)}%`).join(", ");
+            return `radial-gradient(circle at ${pt.x.toFixed(1)}% ${pt.y.toFixed(1)}%, ${stops})`;
         }).join(", ");
+    }
+    
+    set(cssValue) {
+        // Bu kısım, çoklu radyal gradyanları ayrıştırmak için daha karmaşık bir mantık gerektirir.
+        // Şimdilik, sadece ilk gradyanı ayrıştırmaya çalışalım.
+        console.warn("TmultiRadialGradientPicker.set() henüz tam olarak uygulanmadı.");
     }
 }
 window.TmultiRadialGradientPicker = TmultiRadialGradientPicker;
