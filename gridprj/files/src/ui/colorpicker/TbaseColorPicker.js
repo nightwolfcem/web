@@ -86,6 +86,10 @@ export class TbaseColorPicker extends TbasePicker {
         row.innerHTML = '<label style="width:32px">Alpha:</label>';
         this.alphaSlider = Object.assign(document.createElement('input'), { type: 'range', min: 0, max: 1, step: 0.01, style: 'width:100px' });
         row.appendChild(this.alphaSlider);
+         this.alphaSlider.oninput = _=>{
+      this.hsva.a = parseFloat(this.alphaSlider.value);
+      this.updatePreview(); this._drawSVCanvas();
+    };
         return row;
     }
     _wireSVEvents() {
