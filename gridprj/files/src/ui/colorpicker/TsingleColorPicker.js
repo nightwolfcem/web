@@ -1,5 +1,5 @@
 import { TbaseColorPicker } from './TbaseColorPicker.js';
-import { Tcolor } from '../../utils/colorUtils.js';
+import { colorNameToHex } from './utils.js';
 
 export class TsingleColorPicker extends TbaseColorPicker {
  static #inst; // Singleton örneğini tutmak için özel statik alan
