@@ -4,52 +4,47 @@ import { TsingleColorPicker } from './TsingleColorPicker.js';
 import { translayer } from './utils.js';
 
 export class TbaseGradientPicker extends TbasePicker {
+   constructor(opts = {}) {
+        super({ width: 420, height: 280, ...opts });
+        this.initData();
+    }
+
     initData() {
-        this.gradientAngle = 0;
+        this.gradientAngle = 90;
         this.centerPos = { x: 50, y: 50 };
-        this.selectedFunction = 'linear-gradient()';
+        this.selectedFunction = 'linear-gradient';
         this.stops = [
-            { color: '#f00', position: 0 },
-            { color: '#00f', position: 100 }
+            { color: '#ff0000', position: 0 },
+            { color: '#0000ff', position: 100 }
         ];
     }
 
     buildSpecificUI() {
         const topContainer = document.createElement('div');
-        topContainer.style.cssText = 'display: flex; gap: 10px; align-items: flex-start;';
+        topContainer.style.cssText = 'display: flex; gap: 10px; align-items: flex-start; padding: 10px;';
 
         this.previewBox.style.width = '110px';
         this.previewBox.style.height = '110px';
         this.previewBox.style.margin = '0';
         topContainer.appendChild(this.previewBox);
 
-        this._buildFunctionGrid(); // Fonksiyon seçici grid'i
+        this._buildFunctionGrid();
         topContainer.appendChild(this.altPanel);
-
+        
         this.contentPanel.appendChild(topContainer);
 
         this.linerBar = Object.assign(document.createElement('div'), {
-            style: 'position:relative; width:calc(100% - 20px); height:30px; margin:10px auto; cursor:pointer;'
+            style: 'position:relative; width:calc(100% - 20px); height:30px; margin:10px auto; cursor:pointer; border-radius: 4px;'
         });
         this.contentPanel.appendChild(this.linerBar);
         this.linerBar.onclick = e => { if (e.target === this.linerBar) this.addStop(e); };
-
-        this._buildAngleSelector();
-        this._buildPosSelector();
 
         this.renderStopButtons();
     }
 
     _buildFunctionGrid() {
-        if (!this.altPanel) {
-            this.altPanel = Object.assign(document.createElement('div'), {
-                style: 'display:inline-block; vertical-align:top; margin-left:8px;'
-            });
-        }
-        this.functions = [
-            "linear-gradient()", "radial-gradient()", "conic-gradient()",
-            "repeating-linear-gradient()", "repeating-radial-gradient()", "repeating-conic-gradient()"
-        ];
+        this.altPanel = document.createElement('div');
+        this.functions = [ "linear-gradient", "radial-gradient", "conic-gradient", "repeating-linear-gradient", "repeating-radial-gradient", "repeating-conic-gradient" ];
         this.fnPanel = Object.assign(document.createElement('div'), {
             style: 'display:grid; grid-template-columns:repeat(3, 1fr); gap:5px;'
         });
@@ -57,30 +52,63 @@ export class TbaseGradientPicker extends TbasePicker {
 
         this.functions.forEach(fn => {
             const btn = Object.assign(document.createElement('div'), {
-                style: 'width:50px; height:50px; border:1px solid #ccc; cursor:pointer;'
+                style: 'width:50px; height:50px; border:1px solid #ccc; cursor:pointer; border-radius: 4px;'
             });
             btn.onclick = () => {
                 this.selectedFunction = fn;
                 this.updatePreview();
-                this.updateAltPanel();
             };
             this.fnPanel.appendChild(btn);
         });
-        this.updateAltPanel();
+
+        this._buildAngleSelector();
+        this._buildPosSelector();
+        this.altPanel.append(this.dirSelector, this.posSelector);
     }
 
-    updateAltPanel() {
-        if (!this.fnPanel) return;
-        Array.from(this.fnPanel.children).forEach((btn, i) => {
-            const css = this.toCss(this.functions[i]);
-            translayer.setForeColor(`linear-gradient(${this.toCss(this.functions[i])})`, btn);
+    _buildAngleSelector() {
+        this.dirSelector = document.createElement('div');
+        this.dirSelector.style.cssText = 'width: 50px; height: 50px; border: 1px solid black; border-radius: 50%; position: relative; margin-top: 10px;';
+        const handle = document.createElement('div');
+        handle.style.cssText = 'width: 4px; height: 25px; background: black; position: absolute; left: 23px; top: 0; transform-origin: 50% 25px;';
+        this.dirSelector.appendChild(handle);
 
-            btn.style.border = this.functions[i] === this.selectedFunction ?
-                "3px solid aquamarine" :
-                "1px solid #ccc";
-        });
+        const updateAngle = (e) => {
+            const rect = this.dirSelector.getBoundingClientRect();
+            const x = e.clientX - (rect.left + rect.width / 2);
+            const y = e.clientY - (rect.top + rect.height / 2);
+            this.gradientAngle = (Math.atan2(y, x) * 180 / Math.PI + 90 + 360) % 360;
+            this.updatePreview();
+        };
+        this.dirSelector.onmousedown = e => {
+            updateAngle(e);
+            const onMove = ev => updateAngle(ev);
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup', () => window.removeEventListener('mousemove', onMove), { once: true });
+        };
     }
 
+    _buildPosSelector() {
+        this.posSelector = document.createElement('div');
+        this.posSelector.style.cssText = 'width: 50px; height: 50px; border: 1px solid black; position: relative; margin-top: 10px; background: #eee;';
+        const handle = document.createElement('div');
+        handle.style.cssText = 'width: 6px; height: 6px; background: black; border-radius: 50%; position: absolute;';
+        this.posSelector.appendChild(handle);
+        
+        const updatePos = (e) => {
+            const rect = this.posSelector.getBoundingClientRect();
+            this.centerPos.x = Math.max(0, Math.min(100, (e.clientX - rect.left) / rect.width * 100));
+            this.centerPos.y = Math.max(0, Math.min(100, (e.clientY - rect.top) / rect.height * 100));
+            this.updatePreview();
+        };
+        this.posSelector.onmousedown = e => {
+            updatePos(e);
+            const onMove = ev => updatePos(ev);
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup', () => window.removeEventListener('mousemove', onMove), { once: true });
+        };
+    }
+    
     renderStopButtons() {
         this.linerBar.innerHTML = "";
         this.stops.forEach((stop, idx) => {
@@ -91,23 +119,17 @@ export class TbaseGradientPicker extends TbasePicker {
             btn.onmousedown = e => {
                 e.stopPropagation();
                 const rect = this.linerBar.getBoundingClientRect();
-                const sx = e.clientX, sy = e.clientY, init = stop.position;
+                const sx = e.clientX, init = stop.position;
                 const mv = ev => {
-                    const dX = ev.clientX - sx, dY = ev.clientY - sy;
-                    if (Math.abs(dY) > 20 && this.stops.length > 2) {
+                    if (Math.abs(ev.clientY - rect.top) > 30 && this.stops.length > 2) {
                         this.stops.splice(idx, 1);
-                        this.renderStopButtons();
-                        this.updatePreview();
-                        window.removeEventListener("mousemove", mv);
-                        return;
+                        this.renderStopButtons(); this.updatePreview();
+                        window.removeEventListener("mousemove", mv); return;
                     }
-                    let p = init + (dX / rect.width) * 100;
-                    p = Math.max(0, Math.min(100, p));
-                    stop.position = p;
-                    btn.style.left = `calc(${p}% - 8px)`;
-                    this.updateLinerBar();
+                    let p = init + (ev.clientX - sx) / rect.width * 100;
+                    stop.position = Math.max(0, Math.min(100, p));
+                    btn.style.left = `calc(${stop.position}% - 8px)`;
                     this.updatePreview();
-                    this.updateAltPanel();
                 };
                 window.addEventListener("mousemove", mv);
                 window.addEventListener("mouseup", () => window.removeEventListener("mousemove", mv), { once: true });
@@ -120,9 +142,7 @@ export class TbaseGradientPicker extends TbasePicker {
                     onChange: c => {
                         stop.color = c;
                         btn.querySelector('div:last-child').style.background = c;
-                        this.updateLinerBar();
                         this.updatePreview();
-                        this.updateAltPanel();
                     }
                 });
             };
@@ -132,87 +152,8 @@ export class TbaseGradientPicker extends TbasePicker {
     }
 
     updateLinerBar() {
-        if (!this.linerBar) return;
-        const stopsStr = [...this.stops]
-            .sort((a, b) => a.position - b.position)
-            .map(s => `${s.color} ${Math.round(s.position)}%`).join(", ");
+        const stopsStr = [...this.stops].sort((a, b) => a.position - b.position).map(s => `${s.color} ${s.position.toFixed(1)}%`).join(", ");
         translayer.setForeColor(`linear-gradient(90deg, ${stopsStr})`, this.linerBar);
-    }
-
-    _buildAngleSelector() {
-        this.dirSelector = Object.assign(document.createElement("div"), {
-            style: `
-position:absolute;left:50%;top:50%;
-width:40px;height:40px;margin:-20px 0 0 -20px;
-border:3px solid rgba(0,0,0,.6);border-radius:50%;
-background:rgba(255,255,255,.4);backdrop-filter:blur(2px);
-cursor:pointer;user-select:none;`
-        });
-        this.dirDot = Object.assign(document.createElement("div"), {
-            style: `position:absolute;width:8px;height:8px;border-radius:50%;
-background:#4cc;border:2px solid #fff;`
-        });
-        this.dirLabel = Object.assign(document.createElement("div"), {
-            style: `position:relative;font-size:10px;color:#000;pointer-events:none;
-left:10px;top:14px;width:20px;text-align:center;`
-        });
-        this.dirSelector.append(this.dirDot, this.dirLabel);
-        this.previewBox.appendChild(this.dirSelector);
-
-        const cen = 20, r = 20;
-        const refresh = () => {
-            const rad = this.gradientAngle * Math.PI / 180;
-            this.dirDot.style.left = `${cen + r * Math.cos(rad) - 6}px`;
-            this.dirDot.style.top = `${cen + r * Math.sin(rad) - 6}px`;
-            this.dirLabel.textContent = `${Math.round(this.gradientAngle)}°`;
-        };
-        refresh();
-
-        this.dirSelector.onmousedown = e => {
-            const box = this.previewBox.getBoundingClientRect();
-            const cx = box.left + box.width / 2;
-            const cy = box.top + box.height / 2;
-            const mv = ev => {
-                let ang = Math.atan2(ev.clientY - cy, ev.clientX - cx) * 180 / Math.PI;
-                if (ang < 0) ang += 360;
-                this.gradientAngle = ang;
-                refresh();
-                this.updatePreview(); this.updateAltPanel();
-            };
-            window.addEventListener("mousemove", mv);
-            window.addEventListener("mouseup", _ => window.removeEventListener("mousemove", mv), { once: true });
-            e.stopPropagation();
-        };
-    }
-
-    _buildPosSelector() {
-        this.posSelector = Object.assign(document.createElement("div"), {
-            style: `position:absolute;width:8px;height:8px;border:2px solid #fff;
-border-radius:50%;background:rgba(0,0,0,.6);cursor:crosshair;
-transform:translate( -50% , -50%);`
-        });
-        this.previewBox.appendChild(this.posSelector);
-
-        const start = e => {
-            const box = this.previewBox.getBoundingClientRect();
-            const mv = ev => {
-                const x = Math.max(0, Math.min(ev.clientX - box.left, box.width));
-                const y = Math.max(0, Math.min(ev.clientY - box.top, box.height));
-                this.centerPos.x = (x / box.width) * 100;
-                this.centerPos.y = (y / box.height) * 100;
-                this.posSelector.style.left = `${this.centerPos.x}%`;
-                this.posSelector.style.top = `${this.centerPos.y}%`;
-                this.updatePreview(); this.updateAltPanel();
-            };
-            window.addEventListener("mousemove", mv);
-            window.addEventListener("mouseup", _ => window.removeEventListener("mousemove", mv), { once: true });
-        };
-
-        this.posSelector.onmousedown = start;
-        this.previewBox.onmousedown = e => { if (e.target === this.previewBox) start(e); };
-
-        this.posSelector.style.left = `${this.centerPos.x}%`;
-        this.posSelector.style.top = `${this.centerPos.y}%`;
     }
 
     addStop(e) {
@@ -223,83 +164,41 @@ transform:translate( -50% , -50%);`
         this.updatePreview();
     }
 
-    toCss(fnOverride) {
-        const fn = fnOverride || this.selectedFunction;
-        const stopsStr = [...this.stops]
-            .sort((a, b) => a.position - b.position)
-            .map(s => `${s.color} ${Math.round(s.position)}%`).join(", ");
-
-        if (/linear/.test(fn))
-            return fn.replace("()", `(${this.gradientAngle.toFixed(1)}deg, ${stopsStr})`);
-        if (/conic/.test(fn))
-            return fn.replace("()", `(from ${this.gradientAngle.toFixed(1)}deg at ${this.centerPos.x.toFixed(1)}% ${this.centerPos.y.toFixed(1)}%, ${stopsStr})`);
-        if (/radial/.test(fn))
-            return fn.replace("()", `(circle at ${this.centerPos.x.toFixed(1)}% ${this.centerPos.y.toFixed(1)}%, ${stopsStr})`);
-        return fn.replace("()", `(${stopsStr})`);
+    toCss() {
+        const fn = this.selectedFunction;
+        const stopsStr = [...this.stops].sort((a, b) => a.position - b.position).map(s => `${s.color} ${s.position.toFixed(1)}%`).join(", ");
+        if (/linear/.test(fn)) return `${fn}(${this.gradientAngle.toFixed(1)}deg, ${stopsStr})`;
+        if (/conic/.test(fn)) return `${fn}(from ${this.gradientAngle.toFixed(1)}deg at ${this.centerPos.x.toFixed(1)}% ${this.centerPos.y.toFixed(1)}%, ${stopsStr})`;
+        if (/radial/.test(fn)) return `${fn}(circle at ${this.centerPos.x.toFixed(1)}% ${this.centerPos.y.toFixed(1)}%, ${stopsStr})`;
+        return `${fn}(${stopsStr})`;
     }
 
     updatePreview() {
         const css = this.toCss();
         translayer.setForeColor(css, this.previewBox);
-        if (this.targetElement && this.targetStyle) this.targetElement.style[this.targetStyle] = css;
-
+        if (this.targetElement) this.targetElement.style[this.targetStyle] = css;
+        
         this._refreshSelectors();
+        this.updateFunctionGrid();
         this.onChange(css);
+    }
+    
+    updateFunctionGrid() {
+        Array.from(this.fnPanel.children).forEach((btn, i) => {
+            translayer.setForeColor(this.toCss(this.functions[i]), btn);
+            btn.style.border = this.functions[i] === this.selectedFunction ? "2px solid #007bff" : "1px solid #ccc";
+        });
     }
 
     _refreshSelectors() {
         const f = this.selectedFunction;
-        const angle = /linear|conic/.test(f);
-        const pos = /radial|conic/.test(f);
-        if (this.dirSelector) this.dirSelector.style.display = angle ? "block" : "none";
-        if (this.posSelector) this.posSelector.style.display = pos ? "block" : "none";
-    }
-
-    _parseGradientCss(cssStr) {
-        if (!cssStr) return null;
-        const fnMatch = cssStr.match(/^([a-z\-]+-gradient)\s*\((.*)\)$/i);
-        if (!fnMatch) return null;
-
-        const func = fnMatch[1] + "()";
-        let args = fnMatch[2].trim();
-        let angle = 0,
-            center = { x: 50, y: 50 },
-            stops = [];
-
-        if (/^linear-gradient/.test(func)) {
-            const m = args.match(/^([0-9.]+)deg\s*,\s*/);
-            if (m) { angle = +m[1]; args = args.slice(m[0].length); }
+        this.dirSelector.style.display = /linear|conic/.test(f) ? "block" : "none";
+        this.posSelector.style.display = /radial|conic/.test(f) ? "block" : "none";
+        if (this.dirSelector.style.display === 'block') this.dirSelector.children[0].style.transform = `rotate(${this.gradientAngle}deg)`;
+        if (this.posSelector.style.display === 'block') {
+            this.posSelector.children[0].style.left = `calc(${this.centerPos.x}% - 3px)`;
+            this.posSelector.children[0].style.top = `calc(${this.centerPos.y}% - 3px)`;
         }
-        else if (/^conic-gradient/.test(func)) {
-            const m = args.match(/from\s+([0-9.]+)deg\s+at\s+([0-9.]+)%\s+([0-9.]+)%,\s*/);
-            if (m) {
-                angle = +m[1];
-                center = { x: +m[2], y: +m[3] };
-                args = args.slice(m[0].length);
-            }
-        }
-        else if (/^radial-gradient/.test(func)) {
-            const m = args.match(/at\s+([0-9.]+)%\s+([0-9.]+)%,\s*/);
-            if (m) {
-                center = { x: +m[1], y: +m[2] };
-                args = args.slice(m[0].length);
-            }
-        }
-
-        stops = args.split(/\s*,\s*/).map(s => {
-            const p = s.match(/^(.+?)(?:\s+([0-9.]+)%?)?$/);
-            return {
-                color: p[1].trim(),
-                position: p[2] !== undefined ? +p[2] : undefined
-            };
-        });
-
-        const n = stops.length;
-        stops.forEach((s, i) => {
-            if (s.position === undefined) s.position = (i / (n - 1)) * 100;
-        });
-
-        return { func, angle, center, stops };
     }
 }
 
