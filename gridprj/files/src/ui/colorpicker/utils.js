@@ -47,7 +47,7 @@ export const translayer = {
         } else {
             // Düz renk ise, background-color olarak ayarla
             element.style.backgroundImage = transparencyPatternUrl; // Sadece deseni göster
-            element.style.backgroundColor = colorOrGradient;
+            element.style.background = colorOrGradient;
         }
     }
 };
