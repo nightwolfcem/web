@@ -142,6 +142,7 @@ export class Twindow extends extendsClass(TdialogMixin, TframeMixin, Tpositioned
     #overlay = null;
     #modalPromise = null;
     #resolveModal = null;
+    #savedParent = null;
 
     constructor(opts = {}) {
         super('div', opts);
@@ -189,13 +190,59 @@ export class Twindow extends extendsClass(TdialogMixin, TframeMixin, Tpositioned
             this.#resolveModal = res;
         });
     };
-    
+
+    #rememberParent() {
+        if (!this.#savedParent) {
+            this.#savedParent = this.parent || this.htmlObject.parentElement;
+        }
+    }
+
+    #restoreParent() {
+        if (this.#savedParent) {
+            if (this.#savedParent.appendChild) {
+                this.#savedParent.appendChild(this);
+            } else {
+                this.#savedParent.appendChild(this.htmlObject);
+            }
+        } else if (this.parent) {
+            this.parent.removeChild(this);
+        }
+        this.#savedParent = null;
+    }
+
+    #ensurePlacement(names) {
+        names = Array.isArray(names) ? names : [names];
+        let node = this.parent;
+        while (node) {
+            for (const n of names) {
+                if (node.subLayers?.[n]) {
+                    if (this.parent !== node.subLayers[n]) {
+                        this.#rememberParent();
+                        node.subLayers[n].appendChild(this);
+                    }
+                    return;
+                }
+            }
+            node = node.parent;
+        }
+        for (const n of names) {
+            if (DOM.baseLayer.subLayers[n]) {
+                if (this.parent !== DOM.baseLayer.subLayers[n]) {
+                    this.#rememberParent();
+                    DOM.baseLayer.subLayers[n].appendChild(this);
+                }
+                return;
+            }
+        }
+    }
+
     showModal(target = null, align = Ealign.center | Ealign.middle, dx = 0, dy = 0) {
-        if(this.htmlObject.parentElement.owner?.subLayers?.modal) 
+        this.#ensurePlacement('modal');
         return this.#open(true, DOM.getHtmlElement(target), align, dx, dy);
     }
 
     showDialog(target = null, align, dx, dy) {
+        this.#ensurePlacement(['popup', 'windows']);
         return this.#open(false, DOM.getHtmlElement(target), align, dx, dy);
     }
     
@@ -204,6 +251,7 @@ export class Twindow extends extendsClass(TdialogMixin, TframeMixin, Tpositioned
         this.#removeBackdrop();
         this.#resolveModal?.(result);
         this.#modalPromise = null;
+        this.#restoreParent();
     }
 
     close(result) {
