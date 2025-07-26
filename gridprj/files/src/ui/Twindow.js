@@ -35,7 +35,7 @@ const TframeMixin = class TframeMixin {
         });
 
         if (showCaption) {
-            this.captionBar = document. Element('div');
+            this.captionBar = document.createElement('div');
             this.captionBar.className = 'twindow-caption';
             this.captionBar.style.cssText = `display:flex;align-items:center;justify-content:space-between;background:linear-gradient(#ececec,#e3e8f2 90%);height:30px;padding:0 10px 0 12px;user-select:none;cursor:${movable && !parent ? 'move' : 'default'};font-weight:bold;border-bottom:1px solid #c5c5c5`;
 
