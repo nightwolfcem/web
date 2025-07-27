@@ -31,4 +31,4 @@ export class TautoCompleteControl extends TbaseControl {
         return container;
     }
 }
-
+window.TautoCompleteControl = TautoCompleteControl;

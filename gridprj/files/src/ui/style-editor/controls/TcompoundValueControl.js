@@ -90,3 +90,4 @@ export class TcompoundValueControl extends TbaseControl {
         return container;
     }
 }
+window.TcompoundValueControl = TcompoundValueControl;

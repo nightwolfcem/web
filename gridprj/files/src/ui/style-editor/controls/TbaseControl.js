@@ -11,3 +11,4 @@ export  class TbaseControl {
         throw new Error("Render metodu alt sınıfta tanımlanmalıdır.");
     }
 }
+window.TbaseControl = TbaseControl;

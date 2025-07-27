@@ -47,3 +47,4 @@ export class TnumericControl extends TbaseControl {
         return [...new Set(units)];
     }
 }
+window.TnumericControl = TnumericControl;

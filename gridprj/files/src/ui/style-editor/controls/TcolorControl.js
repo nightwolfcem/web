@@ -39,3 +39,4 @@ export class TcolorControl extends TbaseControl {
         return container;
     }
 }
+window.TcolorControl = TcolorControl;
