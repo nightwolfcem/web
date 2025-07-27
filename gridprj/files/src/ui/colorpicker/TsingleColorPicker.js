@@ -1,5 +1,6 @@
 import { TbaseColorPicker } from './TbaseColorPicker.js';
 import { colorNameToHex } from './utils.js';
+import { Tcolor } from '../../utils/colorUtils.js';
 
 export class TsingleColorPicker extends TbaseColorPicker {
  static #inst; // Singleton örneğini tutmak için özel statik alan
@@ -58,9 +59,15 @@ export class TsingleColorPicker extends TbaseColorPicker {
         if (!value || typeof value !== 'string') {
             value = '#000000';
         }
-        // Renk ismini HEX'e çevir, HEX ise dokunma.
-        const startHex = colorNameToHex(value);
-        this.initData(startHex); // initData, BaseColorPicker'dan gelir ve hsva'yı ayarlar.
+        const rgba = value.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/i);
+        if (rgba) {
+            const r = parseInt(rgba[1]), g = parseInt(rgba[2]), b = parseInt(rgba[3]);
+            const a = rgba[4] !== undefined ? parseFloat(rgba[4]) : 1;
+            this.hsva = Tcolor.rgbToHsva(r, g, b, a);
+        } else {
+            const hex = Tcolor.toHex(colorNameToHex(value));
+            this.initData(hex);
+        }
         
         // Eğer UI daha önce oluşturulmuşsa (loaded=true), görsel elemanları güncelle.
         if (this.loaded) {

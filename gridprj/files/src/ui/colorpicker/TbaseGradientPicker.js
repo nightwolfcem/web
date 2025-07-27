@@ -107,6 +107,8 @@ renderStopButtons() {
     /* --- DRAG ------------------------------------------------------- */
     btn.onmousedown = e => {
       e.stopPropagation();
+      e.preventDefault();
+      document.body.style.userSelect = 'none';
       const rect = bar.getBoundingClientRect();
       const sx = e.clientX, sy = e.clientY, init = stop.position;
 
@@ -131,8 +133,10 @@ renderStopButtons() {
       };
 
       window.addEventListener("mousemove", mv);
-      window.addEventListener("mouseup",
-        _=> window.removeEventListener("mousemove", mv), { once:true });
+      window.addEventListener("mouseup", _ => {
+        window.removeEventListener("mousemove", mv);
+        document.body.style.userSelect = '';
+      }, { once:true });
     };
 
     /* --- ÇİFT TIK → renk seçici ------------------------------------ */
@@ -154,20 +158,19 @@ renderStopButtons() {
 }
 
   openColorPicker(idx,x,y,initCol){
-
-  let clrpckr=  new TsingleColorPicker({
-      defaultColor:initCol,
+    const cp = TsingleColorPicker.getInstance({
       layerName:'modal',
       align:"center+middle+inset",
-      title:`Stop ${idx+1} Color`,
-      onChange:c=>{
-        this.getStops()[idx].color=c;
-        this.renderStopButtons(); this.updatePreview();
-      },
-      onClose:()=>clrpckr.destroy()
+      title:`Stop ${idx+1} Color`
     });
-    clrpckr.body();
-    clrpckr.showModal("screen");
+    cp.onChange = c => {
+      this.getStops()[idx].color = c;
+      this.renderStopButtons();
+      this.updatePreview();
+    };
+    cp.onClose = () => cp.hide();
+    cp.set(initCol);
+    cp.showModal("screen");
   }
 
   updatePreview(){
@@ -240,6 +243,8 @@ buildAngleSelector() {
   refresh();
 
   this.dirSelector.onmousedown = e => {
+    e.preventDefault();
+    document.body.style.userSelect = 'none';
     const box = this.previewBox.getBoundingClientRect();
     const cx = box.left + box.width / 2;
     const cy = box.top + box.height / 2;
@@ -251,7 +256,10 @@ buildAngleSelector() {
       this.updatePreview(); this.updateAltPanel();
     };
     window.addEventListener("mousemove", mv);
-    window.addEventListener("mouseup", _ => window.removeEventListener("mousemove", mv), { once: true });
+    window.addEventListener("mouseup", _ => {
+      window.removeEventListener("mousemove", mv);
+      document.body.style.userSelect = '';
+    }, { once: true });
     e.stopPropagation();
   };
 }
@@ -274,6 +282,8 @@ buildPosSelector() {
   this.previewBox.appendChild(this.posSelector);
 
   const start = e => {
+    e.preventDefault();
+    document.body.style.userSelect = 'none';
     const box = this.previewBox.getBoundingClientRect();
     const mv = ev => {
       const x = Math.max(0, Math.min(ev.clientX - box.left, box.width));
@@ -285,7 +295,10 @@ buildPosSelector() {
       this.updatePreview(); this.updateAltPanel();
     };
     window.addEventListener("mousemove", mv);
-    window.addEventListener("mouseup", _=> window.removeEventListener("mousemove", mv), { once:true });
+    window.addEventListener("mouseup", _=> {
+      window.removeEventListener("mousemove", mv);
+      document.body.style.userSelect = '';
+    }, { once:true });
   };
 
   this.posSelector.onmousedown = start;
