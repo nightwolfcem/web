@@ -181,7 +181,7 @@ export class TmultiRadialGradientPicker extends TbasePicker {
       // Çift tıkla renk editörü aç
       btn.ondblclick = e => {
         e.stopPropagation();
-        const box = document.createElement("div");
+             const box = document.createElement("div");
         box.style.cssText = "position:absolute;z-index:3000;top:0;left:0;";
         document.body.appendChild(box);
         let cp = new TsingleColorPicker({
@@ -194,7 +194,7 @@ export class TmultiRadialGradientPicker extends TbasePicker {
           },
           onClose: () => {
             cp.destroy();
-            document.body.removeChild(box);
+            if (box.parentNode) box.parentNode.removeChild(box);
           }
         });
         cp.body();
