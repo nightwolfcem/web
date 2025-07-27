@@ -81,6 +81,8 @@ export class TmultiRadialGradientPicker extends TbasePicker {
       // Drag & select
       dot.onmousedown = e => {
         e.stopPropagation();
+        e.preventDefault();
+        document.body.style.userSelect = 'none';
         let startX = e.clientX, startY = e.clientY;
         let box = this.previewBox.getBoundingClientRect();
         let move = ev => {
@@ -92,7 +94,10 @@ export class TmultiRadialGradientPicker extends TbasePicker {
           this.updatePreview();
         };
         window.addEventListener("mousemove", move);
-        window.addEventListener("mouseup", _ => window.removeEventListener("mousemove", move), { once: true });
+        window.addEventListener("mouseup", _ => {
+          window.removeEventListener("mousemove", move);
+          document.body.style.userSelect = '';
+        }, { once: true });
       };
       dot.onclick = e => {
         e.stopPropagation();
@@ -157,6 +162,8 @@ export class TmultiRadialGradientPicker extends TbasePicker {
       // Drag ile stop pozisyonunu değiştir
       btn.onmousedown = e => {
         e.stopPropagation();
+        e.preventDefault();
+        document.body.style.userSelect = 'none';
         const bar = this.linerBar.getBoundingClientRect();
         const sx = e.clientX, sy = e.clientY, init = stop.position;
         const move = ev => {
@@ -175,29 +182,23 @@ export class TmultiRadialGradientPicker extends TbasePicker {
           this.updatePreview();
         };
         window.addEventListener("mousemove", move);
-        window.addEventListener("mouseup", _ => window.removeEventListener("mousemove", move), { once: true });
+        window.addEventListener("mouseup", _ => {
+          window.removeEventListener("mousemove", move);
+          document.body.style.userSelect = '';
+        }, { once: true });
       };
       // Çift tıkla renk editörü aç
       btn.ondblclick = e => {
         e.stopPropagation();
-             const box = document.createElement("div");
-        box.style.cssText = "position:absolute;top:0;left:0;";
-        document.body.appendChild(box);
-        let cp = new TsingleColorPicker({
-          container: box,
-          defaultColor: stop.color,
-          onChange: col => {
-            stop.color = col;
-            this.renderStopButtons();
-            this.updatePreview();
-          },
-          onClose: () => {
-            cp.destroy();
-            if (box.parentNode) box.parentNode.removeChild(box);
-          }
-        });
-        cp.body();
-        cp.show();
+        const cp = TsingleColorPicker.getInstance({ title: `Stop ${idx+1} Color` });
+        cp.onChange = col => {
+          stop.color = col;
+          this.renderStopButtons();
+          this.updatePreview();
+        };
+        cp.onClose = () => cp.hide();
+        cp.set(stop.color);
+        cp.showModal("screen");
       };
       this.linerBar.appendChild(btn);
     });
