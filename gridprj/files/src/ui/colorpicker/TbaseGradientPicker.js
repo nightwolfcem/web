@@ -15,9 +15,9 @@ export class TbaseGradientPicker extends TbasePicker {
 
   buildSpecificUI() {
     /* ---- Liner bar -------------------------------------------------- */
-    this.linerBar = Object.assign(document.createElement('div'),{
-      style:'position:relative;width:calc(100% - 40px);left:5px;height:30px;margin:6px auto;cursor:pointer;'
-    });
+      this.linerBar = Object.assign(document.createElement("div"), {
+            style: `position:relative; width:calc(100% - 30px); height:30px; margin:0px auto; cursor:pointer; border-radius:4px;`
+        });
    
     this.contentPanel.appendChild(this.previewBox);
    

@@ -27,8 +27,6 @@ export class TmultiRadialGradientPicker extends TbasePicker {
     constructor(opts = {}) {
         super({
             title: "Çoklu Radyal Gradyan Seçici",
-            width: 420,
-            height: 320,
             ...opts
         });
 
@@ -44,15 +42,16 @@ export class TmultiRadialGradientPicker extends TbasePicker {
 
     buildSpecificUI() {
         this.previewBox.style.width = 'calc(100% - 20px)';
-        this.previewBox.style.height = '150px';
-        this.previewBox.style.margin = '10px';
+        this.previewBox.style.height = 'calc(100% - 50px)';
+        this.previewBox.style.margin = '0';
+
         this.previewBox.style.cursor = 'crosshair';
         this.contentPanel.prepend(this.previewBox);
 
         this.previewBox.onclick = e => this.handlePreviewClick(e);
 
         this.linerBar = Object.assign(document.createElement("div"), {
-            style: `position:relative; width:calc(100% - 20px); height:30px; margin:6px auto; cursor:pointer; border-radius:4px;`
+            style: `position:relative; width:calc(100% - 30px); height:30px; margin:0px auto; cursor:pointer; border-radius:4px;`
         });
         this.linerBar.onclick = e => { if (e.target === this.linerBar) this.addStopToSelected(e); };
         this.contentPanel.appendChild(this.linerBar);
@@ -78,7 +77,7 @@ export class TmultiRadialGradientPicker extends TbasePicker {
       dot.style.cssText =
         `position:absolute;left:${pt.x}%;top:${pt.y}%;width:14px;height:14px;
         margin:-7px 0 0 -7px;border-radius:50%;border:2px solid ${i===this.selectedIdx?"#0af":"#fff"};
-        background:${i===this.selectedIdx?"#cfc":"#eee"};cursor:pointer;box-shadow:0 0 2px #0004;`;
+        background:rgba(0,0,0,0.1);cursor:pointer;box-shadow:0 0 2px #0004;`;
       // Drag & select
       dot.onmousedown = e => {
         e.stopPropagation();
@@ -182,7 +181,7 @@ export class TmultiRadialGradientPicker extends TbasePicker {
       btn.ondblclick = e => {
         e.stopPropagation();
              const box = document.createElement("div");
-        box.style.cssText = "position:absolute;z-index:3000;top:0;left:0;";
+        box.style.cssText = "position:absolute;top:0;left:0;";
         document.body.appendChild(box);
         let cp = new TsingleColorPicker({
           container: box,

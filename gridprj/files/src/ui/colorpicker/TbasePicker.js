@@ -40,7 +40,7 @@ export function colorWindowOpts(opts = {}) {
 export class TbasePicker extends Twindow {
     constructor(opts = {}) {
         super({
-            width: 420, height: 300, sizable: false,
+            width: 300, height: 220, sizable: false,
             title: opts.title ?? 'Color Picker',
             buttons: [EcaptionButton.close],
             ...opts
@@ -79,6 +79,7 @@ export class TbasePicker extends Twindow {
             this.parent.appendChild(this.htmlObject);
             this.loaded = true;
         }
+         this.contentPanel.style.overflow = 'hidden';
         this.contentPanel.style.textAlign = 'center';
         this.previewBox = Object.assign(document.createElement('div'), {
             style: 'position:relative;overflow:hidden;display:inline-block;width:56px;height:56px;border:1px solid #000;margin-top:10px'
