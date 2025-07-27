@@ -1,10 +1,12 @@
 import '../files/src/main.js';
 import { TpropEditor } from '../files/src/ui/prop-editor/TpropEditor.js';
 import { Ttree } from '../files/src/ui/prop-editor/Ttree.js';
+
 import { TtreeView } from '../files/src/ui/Ttreeview.js';
 import { DOM } from '../files/src/dom/dom.js';
 import { Tlayer } from '../files/src/dom/Tlayer.js';
 import { selectionManager } from '../files/src/core/globals.js';
+
 
 document.addEventListener('DOMContentLoaded', () => {
   const app = document.getElementById('app');
@@ -35,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Tab panel
   const elementTreeContainer = document.createElement('div');
   const elementTree = new Ttree(elementTreeContainer);
-  elementTree.build({ Div:{}, P:{}, Button:{}, Input:{} }, 'HTML');
+
 
   const layerTreeContainer = document.createElement('div');
   let currentTab = null;
