@@ -740,8 +740,8 @@ export const DOM = {
             }
         }
 
-        const onPointerDown = e => {
-            if (e.target !== handle) return;
+        const onPointerDown = e => {
+            if (!handle.contains(e.target) || e.target.closest('button')) return;
             if (INTERACTION_STATE.get(element)) return;
             INTERACTION_STATE.set(element, 'moving');
             onMoveStartCb?.();

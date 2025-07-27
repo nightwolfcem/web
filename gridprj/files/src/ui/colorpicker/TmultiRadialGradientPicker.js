@@ -184,7 +184,7 @@ export class TmultiRadialGradientPicker extends TbasePicker {
         const box = document.createElement("div");
         box.style.cssText = "position:absolute;z-index:3000;top:0;left:0;";
         document.body.appendChild(box);
-        new TsingleColorPicker({
+        let cp = new TsingleColorPicker({
           container: box,
           defaultColor: stop.color,
           onChange: col => {
@@ -193,9 +193,12 @@ export class TmultiRadialGradientPicker extends TbasePicker {
             this.updatePreview();
           },
           onClose: () => {
+            cp.destroy();
             document.body.removeChild(box);
           }
         });
+        cp.body();
+        cp.show();
       };
       this.linerBar.appendChild(btn);
     });
