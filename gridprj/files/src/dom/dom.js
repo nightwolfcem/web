@@ -740,19 +740,19 @@ export const DOM = {
             }
         }
 
-        const onPointerDown = e => {
+              const onPointerDown = e => {
             if (!handle.contains(e.target) || e.target.closest('button')) return;
-            if (INTERACTION_STATE.get(element)) return;
-            INTERACTION_STATE.set(element, 'moving');
-            onMoveStartCb?.();
+            if (INTERACTION_STATE.get(element)) return;
+            INTERACTION_STATE.set(element, 'moving');
+            onMoveStartCb?.();
 
-            const te = element.owner;
-            if (te && !globs.selectionManager.has(te)) {
-                globs.selectionManager.forEach(el => el.htmlObject.classList.remove('selected'));
-                globs.selectionManager.clear();
-                globs.selectionManager.add(te);
-                te.htmlObject.classList.add('selected');
-            }
+            const te = element.owner;
+            if (te && globs.selectionManager && !globs.selectionManager.has(te)) {
+                globs.selectionManager.forEach(el => el.htmlObject.classList.remove('selected'));
+                globs.selectionManager.clear();
+                globs.selectionManager.add(te);
+                te.htmlObject.classList.add('selected');
+            }
             const threshold = 7;
             const rect = element.getBoundingClientRect();
             const nearEdge = (
