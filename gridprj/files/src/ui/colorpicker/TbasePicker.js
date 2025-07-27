@@ -54,14 +54,20 @@ export class TbasePicker extends Twindow {
 
     static #_instances = new WeakMap();
 
-    static getInstance() {
+    static getInstance(opts = {}) {
         let inst = TbasePicker.#_instances.get(this);
         if (!inst) {
-            inst = new this();
-            inst.body(DOM.baseLayer.subLayers.windows);
+            inst = new this(opts);
+            const parent = opts.parent ?? opts.container ?? DOM.baseLayer.subLayers.windows;
+            inst.body(parent);
             TbasePicker.#_instances.set(this, inst);
         } else {
-            inst.show();
+            Object.assign(inst, opts);
+            if (opts.parent && inst.parent !== opts.parent) {
+                inst.body(opts.parent);
+            } else if (opts.container && inst.parent !== opts.container) {
+                inst.body(opts.container);
+            }
         }
         return inst;
     }
