@@ -78,7 +78,7 @@ export class TmultiRadialGradientPicker extends TbasePicker {
       dot.style.cssText =
         `position:absolute;left:${pt.x}%;top:${pt.y}%;width:14px;height:14px;
         margin:-7px 0 0 -7px;border-radius:50%;border:2px solid ${i===this.selectedIdx?"#0af":"#fff"};
-        background:${i===this.selectedIdx?"#cfc":"#eee"};cursor:pointer;z-index:4;box-shadow:0 0 2px #0004;`;
+        background:${i===this.selectedIdx?"#cfc":"#eee"};cursor:pointer;box-shadow:0 0 2px #0004;`;
       // Drag & select
       dot.onmousedown = e => {
         e.stopPropagation();
