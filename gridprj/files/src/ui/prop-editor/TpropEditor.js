@@ -1,5 +1,5 @@
 import { Twindow } from '../Twindow.js';
-import { Tree } from './Tree.js';
+import { Ttree } from './Ttree.js';
 import { editorRegistry } from './editorRegistry.js';
 
 /**
@@ -41,7 +41,7 @@ export class TpropEditor extends Twindow {
 
         this.contentPanel.append(this.treeContainer, this.editorContainer);
 
-        this.tree = new Tree(this.treeContainer);
+        this.tree = new Ttree(this.treeContainer);
         this.tree.on('select', (node) => this.renderEditorForNode(node));
     }
 

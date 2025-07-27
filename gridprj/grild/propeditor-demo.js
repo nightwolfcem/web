@@ -1,26 +1,12 @@
 import '../files/src/main.js';
 import { TpropEditor } from '../files/src/ui/prop-editor/TpropEditor.js';
 import { Ttree } from '../files/src/ui/prop-editor/Ttree.js';
-import { editorRegistry, TbaseEditor } from '../files/src/ui/prop-editor/editorRegistery.js';
+
 import { TtreeView } from '../files/src/ui/Ttreeview.js';
 import { DOM } from '../files/src/dom/dom.js';
 import { Tlayer } from '../files/src/dom/Tlayer.js';
 import { selectionManager } from '../files/src/core/globals.js';
-import { elementIcons, formIcons, layoutIcons } from '../files/src/asset/icons copy.js';
 
-class TsliderEditor extends TbaseEditor {
-  render(){
-    const input = document.createElement('input');
-    input.type = 'range';
-    input.min = 0;
-    input.max = 1000;
-    input.value = this.initialValue || 0;
-    input.addEventListener('input', () => this._updateValue(parseFloat(input.value)));
-    return input;
-  }
-}
-
-editorRegistry.register((v,k) => typeof v === 'number' && /(width|height|left|top)/i.test(k), TsliderEditor);
 
 document.addEventListener('DOMContentLoaded', () => {
   const app = document.getElementById('app');
@@ -51,18 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Tab panel
   const elementTreeContainer = document.createElement('div');
   const elementTree = new Ttree(elementTreeContainer);
-  const treeData = {
-    Yapı: { Div:{}, Section:{}, Header:{}, Footer:{} },
-    Form: { Form:{}, Input:{}, Button:{} }
-  };
-  elementTree.build(treeData, 'HTML');
 
-  // Add icons to tree labels
-  elementTree.container.querySelectorAll('.tree-node').forEach(el => {
-    const tag = el.treeNodeInstance.data.key.toLowerCase();
-    const ic = elementIcons[tag]?.icon || formIcons[tag]?.icon || layoutIcons[tag]?.icon;
-    if (ic) el.querySelector('.label').innerHTML = ic + ' ' + tag;
-  });
 
   const layerTreeContainer = document.createElement('div');
   let currentTab = null;

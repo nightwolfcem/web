@@ -1,7 +1,7 @@
-import { AutoCompleteControl } from './controls/AutoCompleteControl.js';
-import { ColorControl } from './controls/ColorControl.js';
-import { NumericControl } from './controls/NumericControl.js';
-import { CompoundValueControl } from './controls/CompoundValueControl.js';
+import { TautoCompleteControl } from './controls/TautoCompleteControl.js';
+import { TcolorControl } from './controls/TcolorControl.js';
+import { TnumericControl } from './controls/TnumericControl.js';
+import { TcompoundValueControl } from './controls/TcompoundValueControl.js';
 import { cssProps } from '../../data/cssProperties.js';
 
 /**
@@ -20,7 +20,7 @@ export class ControlFactory {
         if (!meta) {
             console.warn(`"${styleProp}" için meta veri bulunamadı. Basit bir metin kutusu oluşturuluyor.`);
             // Meta veri yoksa, genel bir autocomplete kontrolü oluşturabiliriz.
-            return new AutoCompleteControl(styleProp, [], targetElement, onChange).render();
+            return new TautoCompleteControl(styleProp, [], targetElement, onChange).render();
         }
 
         const initialValue = targetElement.style[styleProp] || meta.initial;
@@ -28,20 +28,20 @@ export class ControlFactory {
 
         // 1. Bileşik Değer Kontrolü (örn: border, animation)
         if (allValues.some(v => v.startsWith('[prop:'))) {
-            return new CompoundValueControl(styleProp, meta, targetElement, onChange).render();
+            return new TcompoundValueControl(styleProp, meta, targetElement, onChange).render();
         }
 
         // 2. Renk Kontrolü
         if (allValues.includes('[color]')) {
-            return new ColorControl(styleProp, initialValue, targetElement, onChange).render();
+            return new TcolorControl(styleProp, initialValue, targetElement, onChange).render();
         }
 
         // 3. Sayısal/Uzunluk Kontrolü
         if (allValues.includes('[length]') || allValues.includes('[percent]') || allValues.includes('[time]')) {
-            return new NumericControl(styleProp, meta, targetElement, onChange).render();
+            return new TnumericControl(styleProp, meta, targetElement, onChange).render();
         }
 
         // 4. Standart Autocomplete Kontrolü (diğer tüm durumlar için)
-        return new AutoCompleteControl(styleProp, allValues, targetElement, onChange).render();
+        return new TautoCompleteControl(styleProp, allValues, targetElement, onChange).render();
     }
 }
