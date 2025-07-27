@@ -2,6 +2,7 @@
 import { extendsClass } from '../core/classUtils.js';
 import { EcaptionButton, Ealign } from '../core/enums.js';
 import { DOM } from '../dom/dom.js';
+import { Telement } from '../dom/Telement.js';
 
 const TframeMixin = class TframeMixin {
     _initFrame({
@@ -198,12 +199,14 @@ export class Twindow extends extendsClass(TdialogMixin, TframeMixin, Tpositioned
     }
 
     #restoreParent() {
-        if (this.#savedParent) {
-            if (this.#savedParent.appendChild) {
-                this.#savedParent.appendChild(this);
-            } else {
-                this.#savedParent.appendChild(this.htmlObject);
-            }
+        if (this.#savedParent instanceof Telement) {
+            this.#savedParent.appendChild(this);
+        } else if (this.#savedParent?.owner?.appendChild) {
+            this.#savedParent.owner.appendChild(this);
+        } else if (this.#savedParent) {
+            if (this.parent) this.parent.removeChild(this);
+            this.#savedParent.appendChild(this.htmlObject);
+            this.parent = null;
         } else if (this.parent) {
             this.parent.removeChild(this);
         }
