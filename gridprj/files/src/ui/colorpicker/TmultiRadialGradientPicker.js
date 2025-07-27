@@ -6,12 +6,12 @@ export class TmultiRadialGradientPicker extends TbasePicker {
      static #inst;
 
     static getInstance(opts = {}) {
-        if (!this.#inst || (opts.parent && this.#inst.parent !== opts.parent)) {
-           this.#inst = new TmultiRadialGradientPicker(opts);
-        } else {
-           Object.assign(this.#inst, opts);
+        const inst = super.getInstance(opts);
+        if (opts.defaultPoints) {
+            inst.points = JSON.parse(JSON.stringify(opts.defaultPoints));
+            inst.selectedIdx = 0;
         }
-        return this.#inst;
+        return inst;
     }
 
     static pick(opts = {}) {

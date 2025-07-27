@@ -10,20 +10,15 @@ export class TsingleColorPicker extends TbaseColorPicker {
      * @param {object} opts - Picker için yeni seçenekler.
      */
     static getInstance(opts = {}) {
-        if (!this.#inst || (opts.parent && this.#inst.parent !== opts.parent)) {
-            this.#inst = new TsingleColorPicker(opts);
-        } else {
-            // DÜZELTME: Mevcut singleton'ı yeni seçeneklerle yeniden yapılandır.
-            // Bu, .pick() metodunun her çağrıldığında doğru çalışmasını sağlar.
-            this.#inst.targetElement = opts.targetElement ?? null;
-            this.#inst.targetInput = opts.targetInput ?? null;
-            this.#inst.onChange = typeof opts.onChange === 'function' ? opts.onChange : () => {};
-            this.#inst.onClose = typeof opts.onClose === 'function' ? opts.onClose : () => {};
-            
-            // Yeni rengi ayarla, bu UI'ı da güncelleyecektir.
-            this.#inst.set(opts.defaultColor || '#ff0000');
+        const inst = super.getInstance(opts);
+        inst.targetElement = opts.targetElement ?? inst.targetElement ?? null;
+        inst.targetInput = opts.targetInput ?? inst.targetInput ?? null;
+        inst.onChange = typeof opts.onChange === 'function' ? opts.onChange : inst.onChange;
+        inst.onClose = typeof opts.onClose === 'function' ? opts.onClose : inst.onClose;
+        if (opts.defaultColor) {
+            inst.set(opts.defaultColor);
         }
-        return this.#inst;
+        return inst;
     }
 
     /**

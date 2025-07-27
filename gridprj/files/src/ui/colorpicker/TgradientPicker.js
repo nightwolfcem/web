@@ -4,12 +4,11 @@ export class TgradientPicker extends TbaseGradientPicker {
  static #inst;
 
     static getInstance(opts = {}) {
-        if (!this.#inst || (opts.parent && this.#inst.parent !== opts.parent)) {
-           this.#inst = new TgradientPicker(opts);
-        } else {
-           Object.assign(this.#inst, opts);
+        const inst = super.getInstance(opts);
+        if (opts.defaultCss) {
+            inst.set(opts.defaultCss);
         }
-        return this.#inst;
+        return inst;
     }
 
     static pick(opts = {}) {
