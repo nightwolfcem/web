@@ -90,6 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
       el.querySelector('.label').innerHTML = info.icon + ' ' + tag;
     }
   });
+  updateTreeDisabled();
 
   const layerTreeContainer = document.createElement('div');
   let currentTab = null;
@@ -122,6 +123,16 @@ document.addEventListener('DOMContentLoaded', () => {
     return parents.map(p => (p || '').toLowerCase()).includes(parentTag.toLowerCase());
   }
 
+  function updateTreeDisabled(){
+    const selected = selectionManager.selection.slice(-1)[0];
+    const selTag = selected === rootLayer ? 'body' : selected?.htmlObject?.tagName?.toLowerCase();
+    elementTree.container.querySelectorAll('.tree-node').forEach(el => {
+      const tag = el.treeNodeInstance.data.key.toLowerCase();
+      const allowed = allowedParent(tag, selTag || 'body');
+      el.classList.toggle('disabled', !allowed);
+    });
+  }
+
   elementTree.container.addEventListener('dblclick', e => {
     const nodeEl = e.target.closest('.tree-node');
     if (!nodeEl || !nodeEl.treeNodeInstance) return;
@@ -129,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let parentLayer = rootLayer;
     const selected = selectionManager.selection.slice(-1)[0];
-    const selTag = selected === rootLayer ? 'body' : selected?.tagName?.toLowerCase();
+    const selTag = selected === rootLayer ? 'body' : selected?.htmlObject?.tagName?.toLowerCase();
     if (selected && allowedParent(tag, selTag)) {
       parentLayer = selected;
     } else if (selected) {
@@ -146,17 +157,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const layer = new Tlayer(tag, { parent: parentLayer });
+    const info = HTML_TAGS[tag];
+    const isLayout = info?.groupName?.includes('Layout');
     layer.htmlObject.classList.add('design-item');
+    if (isLayout) {
+      layer.htmlObject.classList.add('layout-item');
+      layer.moveOptions.handle = null;
+      DOM.makeMovable(layer.htmlObject, null, designArea);
+      layer.htmlObject.style.left = '10px';
+      layer.htmlObject.style.top = '10px';
+    }
     layer.htmlObject.textContent = tag;
-    layer.moveOptions.handle = null;
-    DOM.makeMovable(layer.htmlObject, null, designArea);
-    layer.htmlObject.style.left = '10px';
-    layer.htmlObject.style.top = '10px';
     layer.htmlObject.addEventListener('pointerdown', ev => {
       ev.stopPropagation();
       layer.select();
       propEditor.setTarget(layer, layer.layerName);
     });
+    updateTreeDisabled();
   });
 
   // Update prop editor on selection change
@@ -164,6 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (detail.action === 'select') {
       propEditor.setTarget(detail.item, detail.item.layerName || 'Element');
     }
+    updateTreeDisabled();
   });
 
   designArea.addEventListener('pointerdown', () => selectionManager.clear());
