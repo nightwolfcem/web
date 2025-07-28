@@ -54,7 +54,7 @@ export class Tlayer extends Telement {
         if (this._isLayer) return;
         Object.defineProperty(this, '_isLayer', { value: true, writable: false, enumerable: false });
 
-        this.htmlObject.dataset.layerID= this.id;
+        this.htmlObject.dataset.layerId = this.id;
        this.htmlObject.dataset.layerName=  options.layerName || this.name;
         this.subLayers = {};
         this.#changeListeners = [];

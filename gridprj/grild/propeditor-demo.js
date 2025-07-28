@@ -56,16 +56,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const elementTreeContainer = document.createElement('div');
   const elementTree = new Ttree(elementTreeContainer);
 
-  // Build tree from HTML_TAGS groups
-  const groups = {};
-  for (const [tag, info] of Object.entries(HTML_TAGS)) {
-    const grps = info.groupName || ['Other'];
-    grps.forEach(g => {
-      if (!groups[g]) groups[g] = {};
-      groups[g][tag] = {};
-    });
+  // Build tree using parent relationships for better hierarchy
+  function buildTree(parent) {
+    const branch = {};
+    for (const [tag, info] of Object.entries(HTML_TAGS)) {
+      let parents = info.parentTag;
+      if (!parents) parents = ['html'];
+      if (!Array.isArray(parents)) parents = [parents];
+      if (parents.some(p => (p || 'html').toLowerCase() === parent.toLowerCase())) {
+        branch[tag] = buildTree(tag);
+      }
+    }
+    return branch;
   }
-  elementTree.build(groups, 'HTML');
+  const treeData = { html: buildTree('html') };
+  elementTree.build(treeData, 'HTML');
 
   // Decorate labels with icons (if any)
   elementTree.container.querySelectorAll('.tree-node').forEach(el => {
@@ -100,11 +105,33 @@ document.addEventListener('DOMContentLoaded', () => {
   propEditor.show();
 
   // Add item when double clicked in element tree
+  function allowedParent(childTag, parentTag) {
+    const info = HTML_TAGS[childTag];
+    if (!info || !info.parentTag) return true;
+    const parents = Array.isArray(info.parentTag) ? info.parentTag : [info.parentTag];
+    return parents.map(p => (p || '').toLowerCase()).includes(parentTag.toLowerCase());
+  }
+
   elementTree.container.addEventListener('dblclick', e => {
     const nodeEl = e.target.closest('.tree-node');
     if (!nodeEl || !nodeEl.treeNodeInstance) return;
     const tag = nodeEl.treeNodeInstance.data.key.toLowerCase();
-    const layer = new Tlayer(tag, { parent: rootLayer });
+
+    let parentLayer = rootLayer;
+    const selected = selectionManager.selection.slice(-1)[0];
+    if (selected && allowedParent(tag, selected.tagName.toLowerCase())) {
+      parentLayer = selected;
+    } else if (selected) {
+      const parent = selected.parent;
+      if (parent && allowedParent(tag, parent.tagName.toLowerCase())) {
+        parentLayer = parent;
+      } else if (!allowedParent(tag, 'body')) {
+        // not allowed anywhere sensible
+        return;
+      }
+    }
+
+    const layer = new Tlayer(tag, { parent: parentLayer });
     layer.htmlObject.classList.add('design-item');
     layer.htmlObject.textContent = tag;
     layer.moveOptions.handle = null;
