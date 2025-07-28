@@ -90,7 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
       el.querySelector('.label').innerHTML = info.icon + ' ' + tag;
     }
   });
-  updateTreeDisabled();
 
   const layerTreeContainer = document.createElement('div');
   let currentTab = null;
@@ -109,6 +108,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Root layer for design items
   const rootLayer = new Tlayer(designArea, { layerName: 'root' });
   const layerTree = new TtreeView(layerTreeContainer, rootLayer);
+
+  updateTreeDisabled();
 
   // Prop editor
   const propEditor = new TpropEditor();
