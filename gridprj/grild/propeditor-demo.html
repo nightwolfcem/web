@@ -10,10 +10,16 @@
     #app{display:flex;height:100%;}
     #app button.active{font-weight:bold;}
     .design-item{position:absolute;padding:4px;border:1px solid #333;background:#fff;cursor:move;}
+        .tree-view{font:13px sans-serif;user-select:none;}
+    .tree-node{display:flex;align-items:center;white-space:nowrap;cursor:pointer;}
+    .tree-node .toggle{width:1em;display:inline-block;text-align:center;user-select:none;}
+    .tree-node .label{margin-left:2px;}
+    .tree-node .selected{background:#d0eaff;}
   </style>
+  <script type="module" src="propeditor-demo.js"></script>
 </head>
 <body>
   <div id="app"></div>
-  <script type="module" src="propeditor-demo.js"></script>
+  
 </body>
 </html>
