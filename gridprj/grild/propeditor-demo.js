@@ -57,18 +57,28 @@ document.addEventListener('DOMContentLoaded', () => {
   const elementTree = new Ttree(elementTreeContainer);
 
   // Build tree using parent relationships for better hierarchy
-  function buildTree(parent) {
+  function buildTree(parent, visited = new Set()) {
     const branch = {};
+    const parentKey = parent.toLowerCase();
+    visited.add(parentKey);
     for (const [tag, info] of Object.entries(HTML_TAGS)) {
       let parents = info.parentTag;
-      if (!parents) parents = ['html'];
+      // tags without a parent are considered top-level
+      if (!parents) {
+        if (parentKey === 'html' && tag.toLowerCase() !== parentKey && !visited.has(tag.toLowerCase())) {
+          branch[tag] = buildTree(tag, new Set(visited));
+        }
+        continue;
+      }
+
       if (!Array.isArray(parents)) parents = [parents];
-      if (parents.some(p => (p || 'html').toLowerCase() === parent.toLowerCase())) {
-        branch[tag] = buildTree(tag);
+      if (parents.some(p => (p || '').toLowerCase() === parentKey) && tag.toLowerCase() !== parentKey && !visited.has(tag.toLowerCase())) {
+        branch[tag] = buildTree(tag, new Set(visited));
       }
     }
     return branch;
   }
+
   const treeData = { html: buildTree('html') };
   elementTree.build(treeData, 'HTML');
 
@@ -119,7 +129,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let parentLayer = rootLayer;
     const selected = selectionManager.selection.slice(-1)[0];
-    if (selected && allowedParent(tag, selected.tagName.toLowerCase())) {
+    const selTag = selected === rootLayer ? 'body' : selected?.tagName?.toLowerCase();
+    if (selected && allowedParent(tag, selTag)) {
       parentLayer = selected;
     } else if (selected) {
       const parent = selected.parent;
@@ -129,6 +140,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // not allowed anywhere sensible
         return;
       }
+    } else if (!allowedParent(tag, 'body')) {
+      // nothing selected and element isn't allowed directly under body
+      return;
     }
 
     const layer = new Tlayer(tag, { parent: parentLayer });
