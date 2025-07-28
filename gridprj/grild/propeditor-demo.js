@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const info = HTML_TAGS[childTag];
     if (!info || !info.parentTag) return true;
     const parents = Array.isArray(info.parentTag) ? info.parentTag : [info.parentTag];
-    return parents.map(p => (p || '').toLowerCase()).includes(info.parentTag.toLowerCase());
+    return parents.map(p => (p || '').toLowerCase()).includes(parentTag.toLowerCase());
   }
 
   elementTree.container.addEventListener('dblclick', e => {
