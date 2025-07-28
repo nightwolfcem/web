@@ -61,14 +61,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const branch = {};
     for (const [tag, info] of Object.entries(HTML_TAGS)) {
       let parents = info.parentTag;
-      if (!parents) parents = ['html'];
+      // tags without a parent are considered top-level
+      if (!parents) {
+        if (parent === 'html') {
+          // only include once at root
+          if (tag !== parent) branch[tag] = buildTree(tag);
+        }
+        continue;
+      }
+
       if (!Array.isArray(parents)) parents = [parents];
-      if (parents.some(p => (p || 'html').toLowerCase() === parent.toLowerCase())) {
+      if (parents.some(p => (p || '').toLowerCase() === parent.toLowerCase()) && tag !== parent) {
         branch[tag] = buildTree(tag);
       }
     }
     return branch;
   }
+
   const treeData = { html: buildTree('html') };
   elementTree.build(treeData, 'HTML');
 
