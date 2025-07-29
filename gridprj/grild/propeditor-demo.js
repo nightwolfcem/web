@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const app = document.getElementById('app');
   app.style.flex = '1';
   app.style.display = 'flex';
-
+  const TEXT_EDITABLE = new Set(['div','span','p','b','i','u','em','strong','label','button','a','li','td','th']);
   const left = document.createElement('div');
   left.style.cssText = 'width:220px;border-right:1px solid #ccc;display:flex;flex-direction:column;';
   const tabs = document.createElement('div');
@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
       parentLayer = selected;
     } else if (selected) {
       const parent = selected.parent;
-      if (parent && allowedParent(tag, parent.tagName.toLowerCase())) {
+      if (parent && allowedParent(tag, parent.htmlObject.tagName.toLowerCase())) {
         parentLayer = parent;
       } else if (!allowedParent(tag, 'body')) {
         // not allowed anywhere sensible
