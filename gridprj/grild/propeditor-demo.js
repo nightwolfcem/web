@@ -56,38 +56,41 @@ document.addEventListener('DOMContentLoaded', () => {
   const elementTreeContainer = document.createElement('div');
   const elementTree = new Ttree(elementTreeContainer);
 
-  // Build tree using parent relationships for better hierarchy
-  function buildTree(parent, visited = new Set()) {
-    const branch = {};
-    const parentKey = parent.toLowerCase();
-    visited.add(parentKey);
+  // Build tree grouped by category for a cleaner element list
+  function buildGroupedTree() {
+    const groups = {};
     for (const [tag, info] of Object.entries(HTML_TAGS)) {
-      let parents = info.parentTag;
-      // tags without a parent are considered top-level
-      if (!parents) {
-        if (parentKey === 'html' && tag.toLowerCase() !== parentKey && !visited.has(tag.toLowerCase())) {
-          branch[tag] = buildTree(tag, new Set(visited));
-        }
-        continue;
-      }
-
-      if (!Array.isArray(parents)) parents = [parents];
-      if (parents.some(p => (p || '').toLowerCase() === parentKey) && tag.toLowerCase() !== parentKey && !visited.has(tag.toLowerCase())) {
-        branch[tag] = buildTree(tag, new Set(visited));
+      const categories = info.groupName || ['Other'];
+      for (let cat of categories) {
+        cat = cat || 'Other';
+        if (!groups[cat]) groups[cat] = {};
+        groups[cat][tag] = {};
       }
     }
-    return branch;
+    const sorted = {};
+    for (const g of Object.keys(groups).sort()) {
+      const tags = groups[g];
+      const sortedTags = {};
+      for (const t of Object.keys(tags).sort()) {
+        sortedTags[t] = tags[t];
+      }
+      sorted[g] = sortedTags;
+    }
+    return sorted;
   }
 
-  const treeData = { html: buildTree('html') };
+  const treeData = buildGroupedTree();
   elementTree.build(treeData, 'HTML');
 
   // Decorate labels with icons (if any)
   elementTree.container.querySelectorAll('.tree-node').forEach(el => {
     const tag = el.treeNodeInstance.data.key.toLowerCase();
     const info = HTML_TAGS[tag];
+    const lbl = el.querySelector('.label');
     if (info && info.icon) {
-      el.querySelector('.label').innerHTML = info.icon + ' ' + tag;
+      lbl.innerHTML = info.icon + ' ' + tag;
+    } else {
+      lbl.textContent = el.treeNodeInstance.data.key;
     }
   });
 
@@ -138,6 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const nodeEl = e.target.closest('.tree-node');
     if (!nodeEl || !nodeEl.treeNodeInstance) return;
     const tag = nodeEl.treeNodeInstance.data.key.toLowerCase();
+    if (!HTML_TAGS[tag]) return; // ignore group headers
 
     let parentLayer = rootLayer;
     const selected = selectionManager.selection.slice(-1)[0];
