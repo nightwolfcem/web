@@ -122,9 +122,24 @@ document.addEventListener('DOMContentLoaded', () => {
   // Add item when double clicked in element tree
   function allowedParent(childTag, parentTag) {
     const info = HTML_TAGS[childTag];
-    if (!info || !info.parentTag) return true;
+    if (!info) return true;
+
+    parentTag = (parentTag || '').toLowerCase();
+
+    // div and span are treated as generic containers
+    if (parentTag === 'div' || parentTag === 'span') return true;
+
+    if (!info.parentTag) return true;
+
     const parents = Array.isArray(info.parentTag) ? info.parentTag : [info.parentTag];
-    return parents.map(p => (p || '').toLowerCase()).includes(parentTag.toLowerCase());
+    const normalized = parents.map(p => (p || '').toLowerCase());
+
+    if (normalized.includes(parentTag)) return true;
+
+    // TextFormat elements should be allowed inside most tags
+    if (info.groupName && info.groupName.includes('TextFormat')) return true;
+
+    return false;
   }
 
   function updateTreeDisabled(){
