@@ -27,6 +27,7 @@ editorRegistry.register(
 );
 
 document.addEventListener('DOMContentLoaded', () => {
+  const TEXT_EDITABLE = new Set(['div','span','p','b','i','u','em','strong','label','button','a','li','td','th']);
   const app = document.getElementById('app');
   app.style.flex = '1';
   app.style.display = 'flex';
@@ -132,6 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const selTag = selected === rootLayer ? 'body' : selected?.htmlObject?.tagName?.toLowerCase();
     elementTree.container.querySelectorAll('.tree-node').forEach(el => {
       const tag = el.treeNodeInstance.data.key.toLowerCase();
+      if (!HTML_TAGS[tag]) return; // skip group headers
       const allowed = allowedParent(tag, selTag || 'body');
       el.classList.toggle('disabled', !allowed);
     });
@@ -173,10 +175,33 @@ document.addEventListener('DOMContentLoaded', () => {
       layer.htmlObject.style.top = '10px';
     }
     layer.htmlObject.textContent = tag;
+    if (TEXT_EDITABLE.has(tag)) {
+      layer.htmlObject.classList.add('placeholder');
+    }
     layer.htmlObject.addEventListener('pointerdown', ev => {
       ev.stopPropagation();
       layer.select();
       propEditor.setTarget(layer, layer.layerName);
+    });
+    layer.htmlObject.addEventListener('dblclick', ev => {
+      ev.stopPropagation();
+      if (!TEXT_EDITABLE.has(tag)) return;
+      const el = layer.htmlObject;
+      el.contentEditable = true;
+      if (el.classList.contains('placeholder')) {
+        el.textContent = '';
+        el.classList.remove('placeholder');
+      }
+      el.focus();
+      const finish = () => {
+        el.removeEventListener('blur', finish);
+        el.contentEditable = false;
+        if (!el.textContent.trim()) {
+          el.textContent = tag;
+          el.classList.add('placeholder');
+        }
+      };
+      el.addEventListener('blur', finish);
     });
     updateTreeDisabled();
   });
