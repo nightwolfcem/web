@@ -6,7 +6,7 @@ import { editorRegistry ,TbaseEditor} from '../files/js/src/ui/prop-editor/edito
 import { TtreeView } from '../files/js/src/ui/Ttreeview.js';
 import { DOM } from '../files/js/src/dom/dom.js';
 import { Tlayer } from '../files/js/src/dom/Tlayer.js';
-import { selectionManager } from '../files/js/src/core/globals.js';
+import { selectionManager, globs } from '../files/js/src/core/globals.js';
 import { HTML_TAGS } from '../files/js/src/asset/HTML_TAGS.js';
 
 class TsliderEditor extends TbaseEditor {
@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
   app.style.flex = '1';
   app.style.display = 'flex';
   const TEXT_EDITABLE = new Set(['div','span','p','b','i','u','em','strong','label','button','a','li','td','th']);
+  let activeTextEdit = null;
   const left = document.createElement('div');
   left.style.cssText = 'width:220px;border-right:1px solid #ccc;display:flex;flex-direction:column;';
   const tabs = document.createElement('div');
@@ -193,29 +194,49 @@ document.addEventListener('DOMContentLoaded', () => {
     layer.htmlObject.classList.add('placeholder');
   }
      layer.htmlObject.addEventListener('pointerdown', ev => {
+       if (activeTextEdit) return;
        ev.stopPropagation();
        layer.select();
        propEditor.setTarget(layer, layer.layerName);
      });
   layer.htmlObject.addEventListener('dblclick', ev => {
     ev.stopPropagation();
+    if (activeTextEdit) return;
     if (!TEXT_EDITABLE.has(tag)) return;
-    const el = layer.htmlObject;
-    el.contentEditable = true;
-    if (el.classList.contains('placeholder')) {
-      el.textContent = '';
-      el.classList.remove('placeholder');
+    const rootEl = layer.htmlObject;
+    let target = rootEl;
+    if (rootEl.children.length > 0) {
+      target = rootEl.querySelector('[data-textedit]');
+      if (!target) {
+        target = document.createElement('span');
+        target.dataset.textedit = '1';
+        const text = Array.from(rootEl.childNodes)
+          .filter(n => n.nodeType === 3)
+          .map(n => n.textContent)
+          .join('');
+        target.textContent = text || '';
+        rootEl.prepend(target);
+      }
     }
-    el.focus();
+    activeTextEdit = { element: target, prevMode: globs.designMode };
+    DOM.setDesignMode(false);
+    target.contentEditable = true;
+    if (rootEl.classList.contains('placeholder')) {
+      target.textContent = '';
+      rootEl.classList.remove('placeholder');
+    }
+    target.focus();
     const finish = () => {
-      el.removeEventListener('blur', finish);
-      el.contentEditable = false;
-      if (!el.textContent.trim()) {
-        el.textContent = tag;
-        el.classList.add('placeholder');
+      target.removeEventListener('blur', finish);
+      target.contentEditable = false;
+      DOM.setDesignMode(activeTextEdit.prevMode);
+      activeTextEdit = null;
+      if (!target.textContent.trim()) {
+        target.textContent = tag;
+        rootEl.classList.add('placeholder');
       }
     };
-    el.addEventListener('blur', finish);
+    target.addEventListener('blur', finish);
   });
      updateTreeDisabled();
    });
