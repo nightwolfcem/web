@@ -91,11 +91,10 @@ export class TpropEditor extends Twindow {
     }
 
     setTarget(targetObject, name = 'window') {
-
         this.currentTarget = targetObject;
         this.tree.build(targetObject, name);
-        this.editorContainer.innerHTML = 'Bir özellik seçin...';
-        this.updatePath(this.tree.rootNode);
+        // Kök nesneyi otomatik olarak seç ve özelliklerini göster
+        this.tree.selectNode(this.tree.rootNode);
     }
 
     /**
@@ -169,7 +168,7 @@ export class TpropEditor extends Twindow {
         }
         const menu = document.createElement('div');
         menu.className = 'path-menu';
-        menu.style.cssText = 'position:absolute;background:#fff;border:1px solid #ccc;z-index:1000;';
+        menu.style.cssText = 'position:absolute;background:#fff;border:1px solid #ccc;z-index:1000;max-height:200px;overflow:auto;';
         node.children.forEach(child => {
             const item = document.createElement('div');
             item.textContent = child.data.key;
@@ -184,9 +183,17 @@ export class TpropEditor extends Twindow {
             menu.appendChild(item);
         });
         const rect = anchor.getBoundingClientRect();
-        menu.style.left = rect.left + 'px';
-        menu.style.top = (rect.bottom + window.scrollY) + 'px';
+        menu.style.left = rect.left + window.scrollX + 'px';
+        menu.style.top = rect.bottom + window.scrollY + 'px';
         document.body.appendChild(menu);
+
+        const menuRect = menu.getBoundingClientRect();
+        if (menuRect.right > window.innerWidth) {
+            menu.style.left = window.innerWidth - menuRect.width + window.scrollX + 'px';
+        }
+        if (menuRect.bottom > window.innerHeight) {
+            menu.style.top = rect.top + window.scrollY - menuRect.height + 'px';
+        }
         this.currentMenu = menu;
         const close = (ev) => {
             if (!menu.contains(ev.target)) {
@@ -205,7 +212,7 @@ export class TpropEditor extends Twindow {
 
         const handle = document.createElement('div');
         handle.className = 'prop-splitter';
-        handle.style.cssText = `position:absolute;top:0;bottom:0;width:4px;cursor:col-resize;background:#ddd;right:${this.nameColWidth}px;`;
+        handle.style.cssText = `position:absolute;top:0;bottom:0;width:4px;cursor:col-resize;background:#ddd;left:${this.nameColWidth}px;`;
 
         const rowsContainer = document.createElement('div');
         rowsContainer.style.display = 'flex';
@@ -227,6 +234,21 @@ export class TpropEditor extends Twindow {
             valueCell.style.flex = '1';
 
             const val = obj[key];
+
+            // Özellik tipine göre renklendirme
+            if (typeof val === 'object' && val !== null) {
+                nameCell.style.color = '#0000CC';
+                nameCell.style.fontWeight = 'bold';
+            } else if (typeof val === 'function') {
+                nameCell.style.color = '#25b15b';
+            } else if (typeof val === 'string') {
+                nameCell.style.color = '#a31515';
+            } else if (typeof val === 'number') {
+                nameCell.style.color = '#098658';
+            } else if (typeof val === 'boolean') {
+                nameCell.style.color = '#0000FF';
+            }
+
             const EditorComponent = editorRegistry.getEditorFor(val, key, obj);
             if (EditorComponent) {
                 const editorInstance = new EditorComponent(obj, key);
@@ -256,12 +278,9 @@ export class TpropEditor extends Twindow {
                     icon.textContent = '>';
                     icon.style.marginRight = '4px';
                     nameCell.prepend(icon);
-                    nameCell.style.fontWeight = 'bold';
-                    nameCell.style.color = 'darkblue';
                     span = document.createElement('span');
                     span.textContent = '{...}';
                 } else if (typeof val === 'function') {
-                    nameCell.style.color = 'darkgreen';
                     span = document.createElement('span');
                     span.textContent = 'function';
                 } else {
@@ -285,9 +304,9 @@ export class TpropEditor extends Twindow {
             e.preventDefault();
             const onMove = (ev) => {
                 const rect = list.getBoundingClientRect();
-                this.nameColWidth = Math.max(50, rect.right - ev.clientX);
+                this.nameColWidth = Math.max(50, ev.clientX - rect.left);
                 list.querySelectorAll('.prop-name').forEach(n => n.style.width = this.nameColWidth + 'px');
-                handle.style.right = this.nameColWidth + 'px';
+                handle.style.left = this.nameColWidth + 'px';
             };
             const onUp = () => {
                 window.removeEventListener('mousemove', onMove);
