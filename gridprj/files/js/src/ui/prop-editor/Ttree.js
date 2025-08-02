@@ -48,7 +48,9 @@ export class Ttree extends EventTarget {
         });
     }
 
+
     build(obj, name = 'window') {
+
         this.container.innerHTML = '';
         const rootData = { key: name, value: obj, parent: null };
         const rootNode = this._createNode(rootData, 0, null);
@@ -68,6 +70,7 @@ export class Ttree extends EventTarget {
     }
 
     toggleNode(node) {
+
         if (node.isExpanded) {
             // Düğümü kapat
             node.children.forEach(child => child.htmlObject.remove());
@@ -76,6 +79,7 @@ export class Ttree extends EventTarget {
             node.isExpanded = false;
         } else {
             // Düğümü aç
+
             const value = node.data.value;
             if (typeof value === 'object' && value !== null) {
                 for (const key in value) {
@@ -97,6 +101,7 @@ export class Ttree extends EventTarget {
         }
         return false;
     }
+
 
     selectNode(node) {
         if (this.selectedNode) {

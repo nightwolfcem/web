@@ -62,6 +62,7 @@ export class TpropEditor extends Twindow {
     }
 
     setTarget(targetObject, name = 'window') {
+
         this.currentTarget = targetObject;
         this.tree.build(targetObject, name);
         this.editorContainer.innerHTML = 'Bir özellik seçin...';
@@ -76,6 +77,7 @@ export class TpropEditor extends Twindow {
         this.editorContainer.innerHTML = '';
         const { parent, key, value } = node.data;
 
+
         if (value && typeof value === 'object') {
             this.renderObjectProperties(value);
         } else {
@@ -88,6 +90,7 @@ export class TpropEditor extends Twindow {
                 info.textContent = `Değer: ${String(value)} (Düzenlenemez)`;
                 this.editorContainer.appendChild(info);
             }
+
         }
         this.updatePath(node);
     }
@@ -112,11 +115,13 @@ export class TpropEditor extends Twindow {
             const sp = document.createElement('span');
             sp.textContent = p.data.key;
             sp.style.cursor = 'pointer';
+
             sp.onclick = (e) => {
                 e.stopPropagation();
                 this.tree.selectNode(p);
                 this.showNodeChildrenMenu(p, sp);
             };
+
             this.pathBar.appendChild(sp);
             if (idx < nodes.length - 1) {
                 const sep = document.createElement('span');
@@ -249,5 +254,6 @@ export class TpropEditor extends Twindow {
 
         this.editorContainer.appendChild(list);
     }
+
 }
 window.TpropEditor = TpropEditor;
