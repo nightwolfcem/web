@@ -392,121 +392,125 @@ export const DOM = {
         document.removeEventListener('mousemove', DOM.handleDesignDrag);
         document.removeEventListener('mouseup', DOM.handleDesignDragEnd);
     },
-    makeResizable  : function (el, options) {
-        const map = getEventMap(el);                       // WeakMap<Element, Map>
+        makeResizable  : function (el, options) {
+        const map = getEventMap(el);
+        if (map) {
+            for (const [type, list] of map) {
+                if (!['mousemove','mousedown','pointermove','pointerdown'].includes(type)) continue;
+                for (const rec of [...list]) {
+                    if (rec.listener && rec.listener._isResizeHandler) {
+                        el.removeEventListener(type, rec.listener, rec.options);
+                    }
+                }
+            }
+        }
 
-        if (map) {
-            for (const [type, list] of map) {
-                if (type !== 'mousemove' && type !== 'mousedown') continue;
-                for (const rec of [...list]) {                 // kopya üzerinden döngü
-                    if (rec.listener && rec.listener._isResizeHandler) {
-                        el.removeEventListener(type, rec.listener, rec.options);
-                    }
-                }
-            }
-        }
+        if (!options) {
+            el.style.cursor = '';
+            return;
+        }
 
-        if (!options) {
-            el.style.cursor = '';
-            return;
-        }
+        const {
+            borders,
+            useHelper,
+            minWidth, maxWidth,
+            minHeight, maxHeight
+        } = options;
 
-        const {
-            borders,      // Eborder bitmask: hangi kenarlardan resize edilecek
-            useHelper,    // (isteğe bağlı, eklenecekse helper çizim mantığı)
-            minWidth, maxWidth,
-            minHeight, maxHeight
-        } = options;
+        function hasBorder(flag) {
+            return ((borders & flag) === flag) ||
+                (borders === Eborder.all && flag !== 0);
+        }
 
-        function hasBorder(flag) {
-            return ((borders & flag) === flag) ||
-                (borders === Eborder.all && flag !== 0);
-        }
+        function hitZone(x, y, w, h) {
+            const th = 7; // eşik (px)
+            if (hasBorder(Eborder.leftTop) && x < th && y < th) return 'nw';
+            if (hasBorder(Eborder.rightTop) && x > w - th && y < th) return 'ne';
+            if (hasBorder(Eborder.leftBottom) && x < th && y > h - th) return 'sw';
+            if (hasBorder(Eborder.rightBottom) && x > w - th && y > h - th) return 'se';
+            if (hasBorder(Eborder.top) && y < th) return 'n';
+            if (hasBorder(Eborder.bottom) && y > h - th) return 's';
+            if (hasBorder(Eborder.left) && x < th) return 'w';
+            if (hasBorder(Eborder.right) && x > w - th) return 'e';
+            return '';
+        }
 
-        function hitZone(x, y, w, h) {
-            const th = 7; // eşik (px)
-            if (hasBorder(Eborder.leftTop) && x < th && y < th) return 'nw';
-            if (hasBorder(Eborder.rightTop) && x > w - th && y < th) return 'ne';
-            if (hasBorder(Eborder.leftBottom) && x < th && y > h - th) return 'sw';
-            if (hasBorder(Eborder.rightBottom) && x > w - th && y > h - th) return 'se';
-            if (hasBorder(Eborder.top) && y < th) return 'n';
-            if (hasBorder(Eborder.bottom) && y > h - th) return 's';
-            if (hasBorder(Eborder.left) && x < th) return 'w';
-            if (hasBorder(Eborder.right) && x > w - th) return 'e';
-            return '';
-        }
+        const pointerMoveHandler = function (e) {
+            const r = el.getBoundingClientRect();
+            const zone = hitZone(
+                e.clientX - r.left,
+                e.clientY - r.top,
+                r.width,
+                r.height
+            );
+            el.style.cursor = zone ? (zone + '-resize') : '';
+        };
+        pointerMoveHandler._isResizeHandler = true;
 
-        const mouseMoveHandler = function (e) {
-            const r = el.getBoundingClientRect();
-            const zone = hitZone(
-                e.clientX - r.left,
-                e.clientY - r.top,
-                r.width,
-                r.height
-            );
-            el.style.cursor = zone ? (zone + '-resize') : '';
-        };
-        mouseMoveHandler._isResizeHandler = true;
+        const pointerDownHandler = function (e) {
+            const r = el.getBoundingClientRect();
+            const zone = hitZone(
+                e.clientX - r.left,
+                e.clientY - r.top,
+                r.width,
+                r.height
+            );
+            if (!zone) return;
 
-        const mouseDownHandler = function (e) {
-            const r = el.getBoundingClientRect();
-            const zone = hitZone(
-                e.clientX - r.left,
-                e.clientY - r.top,
-                r.width,
-                r.height
-            );
-            if (!zone) return;  // kenarda değilse resize başlatılmaz
+            e.preventDefault();
+            e.stopPropagation();
+            if (INTERACTION_STATE.get(el)) return;
+            INTERACTION_STATE.set(el, 'resizing');
 
-            e.preventDefault();
-            e.stopPropagation();
-            if (INTERACTION_STATE.get(el)) return;
-            INTERACTION_STATE.set(el, 'resizing');
+            const start = {
+                x: e.clientX, y: e.clientY,
+                left: el.offsetLeft,
+                top: el.offsetTop,
+                width: r.width,
+                height: r.height
+            };
 
-            const start = {
-                x: e.clientX, y: e.clientY,
-                left: el.offsetLeft,
-                top: el.offsetTop,
-                width: r.width,
-                height: r.height
-            };
+            el.setPointerCapture?.(e.pointerId);
 
-            function onDrag(ev) {
-                const dx = ev.clientX - start.x;
-                const dy = ev.clientY - start.y;
-                let newW = start.width, newH = start.height;
-                let newL = start.left, newT = start.top;
+            const onDrag = (ev) => {
+                const dx = ev.clientX - start.x;
+                const dy = ev.clientY - start.y;
+                let newW = start.width, newH = start.height;
+                let newL = start.left, newT = start.top;
 
-                if (zone.includes('e')) newW = start.width + dx;
-                if (zone.includes('s')) newH = start.height + dy;
-                if (zone.includes('w')) { newW = start.width - dx; newL = start.left + dx; }
-                if (zone.includes('n')) { newH = start.height - dy; newT = start.top + dy; }
+                if (zone.includes('e')) newW = start.width + dx;
+                if (zone.includes('s')) newH = start.height + dy;
+                if (zone.includes('w')) { newW = start.width - dx; newL = start.left + dx; }
+                if (zone.includes('n')) { newH = start.height - dy; newT = start.top + dy; }
 
-                if (newW >= minWidth && newW <= maxWidth) {
-                    el.style.width = newW + 'px';
-                    if (zone.includes('w')) el.style.left = newL + 'px';
-                }
-                if (newH >= minHeight && newH <= maxHeight) {
-                    el.style.height = newH + 'px';
-                    if (zone.includes('n')) el.style.top = newT + 'px';
-                }
-            }
+                if (newW >= minWidth && newW <= maxWidth) {
+                    el.style.width = newW + 'px';
+                    if (zone.includes('w')) el.style.left = newL + 'px';
+                }
+                if (newH >= minHeight && newH <= maxHeight) {
+                    el.style.height = newH + 'px';
+                    if (zone.includes('n')) el.style.top = newT + 'px';
+                }
+            };
 
-            function onUp() {
-                document.removeEventListener('mousemove', onDrag);
-                document.removeEventListener('mouseup', onUp);
-                INTERACTION_STATE.delete(el);
-            }
+            const onUp = (ev) => {
+                el.removeEventListener('pointermove', onDrag);
+                el.removeEventListener('pointerup', onUp);
+                el.removeEventListener('pointercancel', onUp);
+                el.releasePointerCapture?.(ev.pointerId);
+                INTERACTION_STATE.delete(el);
+            };
 
-            document.addEventListener('mousemove', onDrag);
-            document.addEventListener('mouseup', onUp, { once: true });
-        };
-        mouseDownHandler._isResizeHandler = true;
+            el.addEventListener('pointermove', onDrag);
+            el.addEventListener('pointerup', onUp, { once: true });
+            el.addEventListener('pointercancel', onUp, { once: true });
+        };
+        pointerDownHandler._isResizeHandler = true;
 
-        el.addEventListener('mousemove', mouseMoveHandler);
-        el.addEventListener('mousedown', mouseDownHandler);
-    },
-    makeResizableWithHandles : function (el, flags) {
+        el.addEventListener('pointermove', pointerMoveHandler);
+        el.addEventListener('pointerdown', pointerDownHandler);
+    },
+makeResizableWithHandles : function (el, flags) {
         (el._resHandles || []).forEach(h => h.remove());
         el._resHandles = [];
 
