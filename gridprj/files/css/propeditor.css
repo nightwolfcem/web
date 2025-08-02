@@ -23,6 +23,32 @@
     box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
 }
 
+/* Özel scroll barlar */
+.TpropEditor .prop-keys {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+}
+.TpropEditor .prop-values {
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+}
+.TpropEditor .prop-keys::-webkit-scrollbar,
+.TpropEditor .prop-values::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.TpropEditor .prop-keys::-webkit-scrollbar-thumb,
+.TpropEditor .prop-values::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+.TpropEditor .prop-keys::-webkit-scrollbar-track,
+.TpropEditor .prop-values::-webkit-scrollbar-track {
+    background: #f0f0f0;
+}
+
 /* Yeni prop-editor bileşeni için menü yüksekliğini sınırla */
 .path-menu {
     max-height: 200px;
