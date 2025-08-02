@@ -163,7 +163,7 @@ export class Twindow extends extendsClass(TdialogMixin, TframeMixin, Tpositioned
         this.#isModal = modal;
         const ov = document.createElement('div');
         ov.className = 'twindow-backdrop';
-        Object.assign(ov.style, { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)', zIndex: 9900 });
+        Object.assign(ov.style, { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)'});
         ov.addEventListener('mousedown', e => {
             if (!this.#isModal) this.close(false);
             e.stopPropagation();
@@ -245,7 +245,7 @@ export class Twindow extends extendsClass(TdialogMixin, TframeMixin, Tpositioned
     }
 
     showDialog(target = null, align, dx, dy) {
-        this.#ensurePlacement(['popup', 'windows']);
+        this.#ensurePlacement(['dialog', 'modal']);
         return this.#open(false, DOM.getHtmlElement(target), align, dx, dy);
     }
     
