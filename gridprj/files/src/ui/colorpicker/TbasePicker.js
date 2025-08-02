@@ -89,6 +89,20 @@ export class TbasePicker extends Twindow {
         this.updatePreview();
     }
 
+   attach(input) {
+        this.targetInput = input;
+        input.addEventListener('change', e => this.set(e.target.value));
+        
+        const originalOnChange = this.onChange;
+        this.onChange = value => {
+            if (this.targetInput) {
+                this.targetInput.value = value;
+            }
+            if(originalOnChange) originalOnChange(value);
+        };
+        this.set(input.value);
+    }
+    
     buildSpecificUI() { throw new Error('buildSpecificUI must be implemented by subclass'); }
     updatePreview() { throw new Error('updatePreview must be implemented by subclass'); }
     
@@ -99,4 +113,5 @@ export class TbasePicker extends Twindow {
         this.onClose(result);
     }
 }
+
 window.TbasePicker = TbasePicker;
