@@ -2,9 +2,10 @@
  * TtreeNode: Ağaç yapısındaki her bir düğümü temsil eder.
  */
 class TtreeNode {
-    constructor(data, level = 0) {
+    constructor(data, level = 0, parentNode = null) {
         this.data = data; // { key, value, parent }
         this.level = level;
+        this.parentNode = parentNode;
         this.children = [];
         this.isExpanded = false;
 
@@ -14,7 +15,7 @@ class TtreeNode {
 
         this.toggle = document.createElement('span');
         this.toggle.className = 'toggle';
-        
+
         this.label = document.createElement('span');
         this.label.className = 'label';
         this.label.textContent = data.key;
@@ -47,21 +48,22 @@ export class Ttree extends EventTarget {
         });
     }
 
-    build(obj, name = 'Root') {
+    build(obj, name = 'window') {
         this.container.innerHTML = '';
         const rootData = { key: name, value: obj, parent: null };
-        const rootNode = this._createNode(rootData, 0);
+        const rootNode = this._createNode(rootData, 0, null);
+        this.rootNode = rootNode;
         this.container.appendChild(rootNode.htmlObject);
         this.toggleNode(rootNode); // Başlangıçta kök düğümü aç
     }
 
-    _createNode(data, level) {
-        const node = new TtreeNode(data, level);
+    _createNode(data, level, parentNode) {
+        const node = new TtreeNode(data, level, parentNode);
         node.htmlObject.treeNodeInstance = node; // DOM elementinden sınıfa geri referans
 
-        const isExpandable = typeof data.value === 'object' && data.value !== null && Object.keys(data.value).length > 0;
+        const isExpandable = this._hasProperties(data.value);
         node.toggle.innerHTML = isExpandable ? '►' : '';
-        
+
         return node;
     }
 
@@ -77,17 +79,23 @@ export class Ttree extends EventTarget {
             const value = node.data.value;
             if (typeof value === 'object' && value !== null) {
                 for (const key in value) {
-                    if (Object.prototype.hasOwnProperty.call(value, key)) {
-                        const childData = { key, value: value[key], parent: value };
-                        const childNode = this._createNode(childData, node.level + 1);
-                        node.children.push(childNode);
-                        node.htmlObject.after(childNode.htmlObject);
-                    }
+                    const childData = { key, value: value[key], parent: value };
+                    const childNode = this._createNode(childData, node.level + 1, node);
+                    node.children.push(childNode);
+                    node.htmlObject.after(childNode.htmlObject);
                 }
             }
             node.toggle.innerHTML = '▼';
             node.isExpanded = true;
         }
+    }
+
+    _hasProperties(obj) {
+        if (typeof obj !== 'object' || obj === null) return false;
+        for (const _ in obj) {
+            return true;
+        }
+        return false;
     }
 
     selectNode(node) {
