@@ -369,5 +369,5 @@ export class Telement extends extendsClass(Tclass, EventTarget) {
  .droppable-hover { background-color: rgba(0, 120, 212, 0.05); }
  .dockable:empty { border: 2px dotted #0078d4 !important; }
  .dock-highlight { outline: 2px dashed #0078d4 !important; background-color: rgba(0, 120, 212, 0.1) !important; }`;
- onDOMLoad(() =>   DOM.addStyle(styles));
+ DOM.loadFucs.push(() =>   DOM.addStyle(styles));
     window.Telement = Telement;
