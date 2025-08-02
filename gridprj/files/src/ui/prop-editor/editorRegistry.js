@@ -2,7 +2,7 @@ import { TsingleColorPicker } from '../colorpicker/TsingleColorPicker.js';
 import { Tord } from '../../core/enums.js';
 // StyleEditor'ın akıllı kontrol fabrikasını import ediyoruz.
 import { ControlFactory } from '../style-editor/ControlFactory.js';
-import { namedColors } from './namedColors.js';
+import { cssProps } from '../../data/cssProperties.js';
 
 // --- TEMEL EDİTÖR SINIFI ---
 class TbaseEditor {
@@ -70,9 +70,11 @@ class TcolorEditor extends TbaseEditor {
         const listId = `color-list-${Math.random().toString(36).slice(2)}`;
         const datalist = document.createElement('datalist');
         datalist.id = listId;
-        Object.entries(namedColors).forEach(([name, hex]) => {
+
+        const colorNames = cssProps.colorNames || Object.keys(cssProps._colorKeywords || {});
+        colorNames.forEach(name => {
             const option = document.createElement('option');
-            option.value = hex;
+            option.value = name;
             option.label = name;
             datalist.appendChild(option);
         });
