@@ -40,7 +40,7 @@ export class StyleEditor {
         } else {
             selectEl.addEventListener('change', loadSelected);
         }
-
+    }
 
     /**
      * Belirli bir CSS özelliği için düzenleme arayüzünü oluşturur ve gösterir.
@@ -188,3 +188,4 @@ export class StyleEditor {
         this.renderProperties(Object.keys(cssProps.properties));
     }
 }
+
