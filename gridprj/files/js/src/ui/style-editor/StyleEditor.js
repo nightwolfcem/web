@@ -1,10 +1,6 @@
 import { ControlFactory } from './ControlFactory.js';
 import { cssProps } from '../../data/cssProperties.js';
 
-/**
- * StyleEditor: Bir hedef elementin CSS özelliklerini dinamik olarak
- * düzenlemek için bir arayüz oluşturan ana sınıf.
- */
 export class StyleEditor {
     /**
      * @param {HTMLElement} targetElement - Stilleri düzenlenecek hedef element.
@@ -19,11 +15,7 @@ export class StyleEditor {
         this.currentProp = '';
     }
 
-    /**
-     * Verilen select ve tetikleyici elementi kullanarak özellik seçim arayüzü kurar.
-     * @param {HTMLSelectElement} selectEl - CSS özellik adlarının doldurulacağı select.
-     * @param {HTMLElement} triggerEl - Seçimi uygulamak için kullanılacak buton veya element.
-     */
+    
     bindPropertySelector(selectEl, triggerEl) {
         if (!selectEl) return;
 
@@ -48,13 +40,14 @@ export class StyleEditor {
         } else {
             selectEl.addEventListener('change', loadSelected);
         }
-    }
+
 
     /**
      * Belirli bir CSS özelliği için düzenleme arayüzünü oluşturur ve gösterir.
      * @param {string} styleProp - Düzenlenecek CSS özelliği (örn: 'backgroundColor').
      */
     renderControl(styleProp) {
+
         this.currentProp = styleProp;
         this.editorContainer.innerHTML = ''; // Önceki kontrolü temizle
 
