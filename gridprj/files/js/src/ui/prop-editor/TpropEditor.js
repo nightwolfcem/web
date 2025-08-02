@@ -36,7 +36,36 @@ export class TpropEditor extends Twindow {
 
         this.pathBar = document.createElement('div');
         this.pathBar.className = 'prop-editor-path';
-        this.pathBar.style.cssText = 'padding:4px 8px;border-bottom:1px solid #ccc;white-space:nowrap;overflow:auto;';
+        this.pathBar.style.cssText = 'padding:4px 8px;border-bottom:1px solid #ccc;white-space:nowrap;overflow:hidden;';
+
+        let scrollDir = 0;
+        let scrollTimer = null;
+        const stopScroll = () => {
+            if (scrollTimer) {
+                clearInterval(scrollTimer);
+                scrollTimer = null;
+            }
+        };
+        this.pathBar.addEventListener('mousemove', (e) => {
+            const rect = this.pathBar.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const threshold = 20;
+            if (x > rect.width - threshold && this.pathBar.scrollLeft < this.pathBar.scrollWidth - rect.width) {
+                scrollDir = 1;
+            } else if (x < threshold && this.pathBar.scrollLeft > 0) {
+                scrollDir = -1;
+            } else {
+                scrollDir = 0;
+            }
+            if (scrollDir && !scrollTimer) {
+                scrollTimer = setInterval(() => {
+                    this.pathBar.scrollLeft += scrollDir * 10;
+                }, 30);
+            } else if (!scrollDir) {
+                stopScroll();
+            }
+        });
+        this.pathBar.addEventListener('mouseleave', stopScroll);
 
         this.searchInput = document.createElement('input');
         this.searchInput.type = 'text';
@@ -188,14 +217,14 @@ export class TpropEditor extends Twindow {
             row.style.display = 'flex';
             row.style.alignItems = 'center';
 
-            const valueCell = document.createElement('div');
-            valueCell.className = 'prop-value';
-            valueCell.style.flex = '1';
-
             const nameCell = document.createElement('div');
             nameCell.className = 'prop-name';
             nameCell.style.width = this.nameColWidth + 'px';
             nameCell.textContent = key;
+
+            const valueCell = document.createElement('div');
+            valueCell.className = 'prop-value';
+            valueCell.style.flex = '1';
 
             const val = obj[key];
             const EditorComponent = editorRegistry.getEditorFor(val, key, obj);
@@ -203,6 +232,7 @@ export class TpropEditor extends Twindow {
                 const editorInstance = new EditorComponent(obj, key);
                 valueCell.appendChild(editorInstance.render());
             } else {
+                let span;
                 if (typeof val === 'string') {
                     const inp = document.createElement('input');
                     inp.type = 'text';
@@ -221,14 +251,30 @@ export class TpropEditor extends Twindow {
                     inp.checked = val;
                     inp.onchange = (e) => obj[key] = e.target.checked;
                     valueCell.appendChild(inp);
+                } else if (typeof val === 'object' && val !== null) {
+                    const icon = document.createElement('span');
+                    icon.textContent = '>';
+                    icon.style.marginRight = '4px';
+                    nameCell.prepend(icon);
+                    nameCell.style.fontWeight = 'bold';
+                    nameCell.style.color = 'darkblue';
+                    span = document.createElement('span');
+                    span.textContent = '{...}';
+                } else if (typeof val === 'function') {
+                    nameCell.style.color = 'darkgreen';
+                    span = document.createElement('span');
+                    span.textContent = 'function';
                 } else {
-                    const span = document.createElement('span');
+                    span = document.createElement('span');
                     span.textContent = String(val);
+                }
+                if (span) {
+                    span.style.color = '#888';
                     valueCell.appendChild(span);
                 }
             }
 
-            row.append(valueCell, nameCell);
+            row.append(nameCell, valueCell);
             rowsContainer.appendChild(row);
         }
 
