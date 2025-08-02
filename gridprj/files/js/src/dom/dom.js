@@ -920,4 +920,22 @@ el.body();
 }
   };
 if (typeof window !== 'undefined') window.DOM = DOM;
-onDOMLoad(initializeDOMModule);
+// Çalıştırılacak fonksiyonları tutan dizi.
+const loadFuncs = [];
+
+
+
+// Ana yükleyici fonksiyon. Kayıtlı tüm fonksiyonları sırayla çalıştırır.
+function runAll() {
+    for (const func of DOM.loadFuncs) {
+        try {
+            func();
+        } catch (e) {
+            console.error("[Loader] Başlangıç fonksiyonu çalıştırılırken hata oluştu:", e);
+        }
+    }
+}
+
+    document.addEventListener('DOMContentLoaded', runAll);
+
+DOM.loadFucs.push(initializeDOMModule);
