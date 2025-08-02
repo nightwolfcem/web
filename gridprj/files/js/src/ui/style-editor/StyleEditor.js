@@ -20,6 +20,37 @@ export class StyleEditor {
     }
 
     /**
+     * Verilen select ve tetikleyici elementi kullanarak özellik seçim arayüzü kurar.
+     * @param {HTMLSelectElement} selectEl - CSS özellik adlarının doldurulacağı select.
+     * @param {HTMLElement} triggerEl - Seçimi uygulamak için kullanılacak buton veya element.
+     */
+    bindPropertySelector(selectEl, triggerEl) {
+        if (!selectEl) return;
+
+        // Select içerisini tüm bilinen CSS özellikleriyle doldur.
+        selectEl.innerHTML = '';
+        Object.keys(cssProps.properties).forEach(prop => {
+            const opt = document.createElement('option');
+            opt.value = prop;
+            opt.textContent = prop;
+            selectEl.appendChild(opt);
+        });
+
+        const loadSelected = () => {
+            const selected = selectEl.value;
+            if (selected) {
+                this.renderControl(selected);
+            }
+        };
+
+        if (triggerEl) {
+            triggerEl.addEventListener('click', loadSelected);
+        } else {
+            selectEl.addEventListener('change', loadSelected);
+        }
+    }
+
+    /**
      * Belirli bir CSS özelliği için düzenleme arayüzünü oluşturur ve gösterir.
      * @param {string} styleProp - Düzenlenecek CSS özelliği (örn: 'backgroundColor').
      */

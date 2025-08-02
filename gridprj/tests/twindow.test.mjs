@@ -6,8 +6,10 @@ global.window = dom.window;
 global.document = dom.window.document;
 
 // Load modules
-const { DOM } = await import('../files/src/dom/dom.js');
-const { Twindow } = await import('../files/src/ui/Twindow.js');
+// 'src' klasörü artık 'files/js/src' konumuna taşındı.
+// Testlerdeki modül yollarını güncel konuma göre düzenliyoruz.
+const { DOM } = await import('../files/js/src/dom/dom.js');
+const { Twindow } = await import('../files/js/src/ui/Twindow.js');
 
 // trigger DOM load handlers
 document.dispatchEvent(new dom.window.Event('DOMContentLoaded'));
