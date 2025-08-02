@@ -656,5 +656,5 @@ this.status.sizable = true;
   }
 }
 
-DOM.addStyleSheet(new URL('../../../../css/propeditor.css', import.meta.url).href);
+DOM.addStyleSheet(globs.path + 'files/css/propeditor.css');
 
