@@ -2,6 +2,7 @@ import { TsingleColorPicker } from '../colorpicker/TsingleColorPicker.js';
 import { Tord } from '../../core/enums.js';
 // StyleEditor'ın akıllı kontrol fabrikasını import ediyoruz.
 import { ControlFactory } from '../style-editor/ControlFactory.js';
+import { namedColors } from './namedColors.js';
 
 // --- TEMEL EDİTÖR SINIFI ---
 class TbaseEditor {
@@ -47,6 +48,52 @@ class TbooleanEditor extends TbaseEditor {
         input.checked = this.initialValue;
         input.addEventListener('change', () => this._updateValue(input.checked));
         return input;
+    }
+}
+
+class TcolorEditor extends TbaseEditor {
+    render() {
+        const wrapper = document.createElement('div');
+        wrapper.style.display = 'flex';
+        wrapper.style.alignItems = 'center';
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = this.initialValue || '';
+        input.style.flex = '1';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = '🎨';
+        btn.style.marginLeft = '4px';
+
+        const listId = `color-list-${Math.random().toString(36).slice(2)}`;
+        const datalist = document.createElement('datalist');
+        datalist.id = listId;
+        Object.entries(namedColors).forEach(([name, hex]) => {
+            const option = document.createElement('option');
+            option.value = hex;
+            option.label = name;
+            datalist.appendChild(option);
+        });
+        input.setAttribute('list', listId);
+
+        const update = (val) => this._updateValue(val);
+
+        input.addEventListener('change', () => update(input.value));
+        btn.addEventListener('click', () => {
+            TsingleColorPicker.pick({
+                targetInput: input,
+                defaultColor: input.value,
+                onChange: c => {
+                    input.value = c;
+                    update(c);
+                }
+            });
+        });
+
+        wrapper.append(input, btn, datalist);
+        return wrapper;
     }
 }
 
@@ -109,6 +156,12 @@ class TeditorRegistry {
             TstylePropertyEditor
         );
 
+        // Renk değerleri için özel editör
+        this.register(
+            (value, key) => typeof value === 'string' && (/color/i.test(key) || /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value)),
+            TcolorEditor
+        );
+
         // Standart tip kontrolleri
         this.register('string', TtextEditor);
         this.register('number', TnumberEditor);
@@ -148,7 +201,7 @@ class TeditorRegistry {
 }
 
 export const editorRegistry = new TeditorRegistry();
-export { TbaseEditor, TtextEditor, TnumberEditor, TbooleanEditor, TselectEditor, TstylePropertyEditor };
+export { TbaseEditor, TtextEditor, TnumberEditor, TbooleanEditor, TselectEditor, TstylePropertyEditor, TcolorEditor };
 window.TeditorRegistry = TeditorRegistry;
 window.TbaseEditor = TbaseEditor;
 window.TtextEditor = TtextEditor;
@@ -156,3 +209,4 @@ window.TnumberEditor = TnumberEditor;
 window.TbooleanEditor = TbooleanEditor;
 window.TselectEditor = TselectEditor;
 window.TstylePropertyEditor = TstylePropertyEditor;
+window.TcolorEditor = TcolorEditor;
