@@ -2,6 +2,8 @@
 // Her kontrol, özelliğin türüne göre (renk, sayı, bileşik değer vb.) özelleşmiştir.
 import { TbaseControl } from './TbaseControl.js';
 import { TsingleColorPicker } from '../../colorpicker/TsingleColorPicker.js';
+// Renk isimleri listesi için cssProps'u ekliyoruz.
+import { cssProps } from '../../../data/cssProperties.js';
 
 export class TcolorControl extends TbaseControl {
     render() {
@@ -12,6 +14,17 @@ export class TcolorControl extends TbaseControl {
         textInput.type = 'text';
         textInput.value = this.initialValue;
         textInput.style.flex = '1';
+
+        // Hazır CSS renk isimlerini sunmak için datalist kullanıyoruz.
+        const listId = `${this.styleProp}-colors-${Math.random().toString(36).slice(2)}`;
+        textInput.setAttribute('list', listId);
+        const dataList = document.createElement('datalist');
+        dataList.id = listId;
+        (cssProps.colorNames || []).forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            dataList.appendChild(opt);
+        });
         
         const colorBox = document.createElement('div');
         colorBox.style.cssText = 'width: 28px; height: 28px; border: 1px solid #888; cursor: pointer;';
@@ -35,7 +48,7 @@ export class TcolorControl extends TbaseControl {
             });
         });
 
-        container.append(textInput, colorBox);
+        container.append(textInput, colorBox, dataList);
         return container;
     }
 }
