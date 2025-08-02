@@ -12,6 +12,9 @@ export const Tcolors = cssProps.colorNames.reduce((acc, name) => {
   return acc;
 }, {});
 
+import '../../core/prototypes.js';
+
+
 export class TlistEditor {
   constructor(object, property, list) {
     this.htmlObject = document.createElement('select');
@@ -93,7 +96,7 @@ export class TeditListEditor {
     item.index = index;
     item.value = value;
     item.innerHTML = key;
-    const toHex = (color) => {
+ const toHex = (color) => {
       const tmp = document.createElement('div');
       tmp.style.color = color;
       document.body.appendChild(tmp);
@@ -107,6 +110,11 @@ export class TeditListEditor {
       return luminance > 0.5 ? '#000' : '#FFF';
     };
     if (isColorList) {
+
+      return luminance > 0.5 ? '#000' : '#FFF';
+    };
+    if (isColorList) {
+     
       item.style.backgroundColor = value;
       item.style.color = getOptimalTextColor(value);
     }
@@ -389,8 +397,9 @@ export class TpropEditor extends Twindow {
     cv.style.cssText = 'width: 100%; height: 18px;box-sizing: border-box; font-size: small; font-family: monospace; font-weight: 700;';
 
     cp = document.createElement('div');
-    cp.className = 'prop-keys';
+ cp.className = 'prop-keys';
     cp.style.cssText = 'display:inline-block;width:100px;height:100%;';
+
     cp.innerHTML = '<table cellpadding=0 cellspacing=0 style="table-layout:fixed;min-width:100%;border-collapse:collapse;" id="tprops"></table>';
 
     sp = document.createElement('div');
@@ -422,8 +431,9 @@ export class TpropEditor extends Twindow {
     });
 
     cv = document.createElement('div');
-    cv.className = 'prop-values';
+  cv.className = 'prop-values';
     cv.style.cssText = 'height:100%;width:calc(100% - 105px);display:inline-block;margin-left:5px;vertical-align:top;';
+
     cv.innerHTML = '<table cellpadding=0 cellspacing=0 style="table-layout:fixed;width:100%;border-collapse:collapse;" id="tvalues"></table>';
     cv.onscroll = function (e) {
       cp.scrollTop = cv.scrollTop;
@@ -580,9 +590,11 @@ export class TpropEditor extends Twindow {
                 }
                 np.innerHTML = `<div class="dots"><div>${ts}</div><p>...</p>`;
                 np.getElementsByTagName('p')[0].onclick = function (i, np) {
+
                   if (!editbox.editor) {
                     editbox.body();
                   }
+
                   editbox.editor.setValue(obj[i] == null ? 'null' : obj[i].toString());
                   editbox.np = np;
                   editbox.obj = obj;
