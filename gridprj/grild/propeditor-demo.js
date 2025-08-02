@@ -1,16 +1,16 @@
 import '../files/js/src/main.js';
 import { TpropEditor } from '../files/js/src/ui/prop-editor/TpropEditor.js';
 import { Ttree } from '../files/js/src/ui/prop-editor/Ttree.js';
-import { editorRegistry ,TbaseEditor} from '../files/js/src/ui/prop-editor/editorRegistry.js';
+import { editorRegistry, TbaseEditor } from '../files/js/src/ui/prop-editor/editorRegistry.js';
 
 import { TtreeView } from '../files/js/src/ui/Ttreeview.js';
 import { DOM } from '../files/js/src/dom/dom.js';
 import { Tlayer } from '../files/js/src/dom/Tlayer.js';
-import { selectionManager } from '../files/js/src/core/globals.js';
+import { selectionManager, globs } from '../files/js/src/core/globals.js';
 import { HTML_TAGS } from '../files/js/src/asset/HTML_TAGS.js';
 
 class TsliderEditor extends TbaseEditor {
-  render(){
+  render() {
     const input = document.createElement('input');
     input.type = 'range';
     input.min = 0;
@@ -30,7 +30,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const app = document.getElementById('app');
   app.style.flex = '1';
   app.style.display = 'flex';
-  const TEXT_EDITABLE = new Set(['div','span','p','b','i','u','em','strong','label','button','a','li','td','th']);
+  const TEXT_EDITABLE = new Set(['div', 'span', 'p', 'b', 'i', 'u', 'em', 'strong', 'label', 'button', 'a', 'li', 'td', 'th']);
+  let activeTextEdit = null;
+
   const left = document.createElement('div');
   left.style.cssText = 'width:220px;border-right:1px solid #ccc;display:flex;flex-direction:column;';
   const tabs = document.createElement('div');
@@ -52,11 +54,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   app.append(left, designArea, right);
 
-  // Tab panel
   const elementTreeContainer = document.createElement('div');
   const elementTree = new Ttree(elementTreeContainer);
 
-  // Build tree grouped by category for a cleaner element list
   function buildGroupedTree() {
     const groups = {};
     for (const [tag, info] of Object.entries(HTML_TAGS)) {
@@ -82,7 +82,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const treeData = buildGroupedTree();
   elementTree.build(treeData, 'HTML');
 
-  // Decorate labels with icons (if any)
   elementTree.container.querySelectorAll('.tree-node').forEach(el => {
     const tag = el.treeNodeInstance.data.key.toLowerCase();
     const info = HTML_TAGS[tag];
@@ -96,58 +95,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const layerTreeContainer = document.createElement('div');
   let currentTab = null;
-  function showTab(tab){
+  function showTab(tab) {
     leftContent.innerHTML = '';
     btnElements.classList.toggle('active', tab === 'elements');
     btnLayers.classList.toggle('active', tab === 'layers');
     currentTab = tab;
-    if(tab === 'elements') leftContent.appendChild(elementTreeContainer);
+    if (tab === 'elements') leftContent.appendChild(elementTreeContainer);
     else leftContent.appendChild(layerTreeContainer);
   }
   btnElements.onclick = () => showTab('elements');
   btnLayers.onclick = () => showTab('layers');
   showTab('elements');
 
-  // Root layer for design items
   const rootLayer = new Tlayer(designArea, { layerName: 'root' });
   const layerTree = new TtreeView(layerTreeContainer, rootLayer);
 
   updateTreeDisabled();
 
-  // Prop editor
   const propEditor = new TpropEditor();
   propEditor.body(right);
   propEditor.show();
 
-  // Add item when double clicked in element tree
   function allowedParent(childTag, parentTag) {
     const info = HTML_TAGS[childTag];
     if (!info) return true;
-
     parentTag = (parentTag || '').toLowerCase();
-
-    // div and span are treated as generic containers
     if (parentTag === 'div' || parentTag === 'span') return true;
-
     if (!info.parentTag) return true;
-
     const parents = Array.isArray(info.parentTag) ? info.parentTag : [info.parentTag];
     const normalized = parents.map(p => (p || '').toLowerCase());
-
     if (normalized.includes(parentTag)) return true;
-
-    // TextFormat elements should be allowed inside most tags
     if (info.groupName && info.groupName.includes('TextFormat')) return true;
-
     return false;
   }
 
-  function updateTreeDisabled(){
+  function updateTreeDisabled() {
     const selected = selectionManager.selection.slice(-1)[0];
     const selTag = selected === rootLayer ? 'body' : selected?.htmlObject?.tagName?.toLowerCase();
     elementTree.container.querySelectorAll('.tree-node').forEach(el => {
       const tag = el.treeNodeInstance.data.key.toLowerCase();
-       if (!HTML_TAGS[tag]) return; // skip group headers
+      if (!HTML_TAGS[tag]) return;
       const allowed = allowedParent(tag, selTag || 'body');
       el.classList.toggle('disabled', !allowed);
     });
@@ -157,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const nodeEl = e.target.closest('.tree-node');
     if (!nodeEl || !nodeEl.treeNodeInstance) return;
     const tag = nodeEl.treeNodeInstance.data.key.toLowerCase();
-    if (!HTML_TAGS[tag]) return; // ignore group headers
+    if (!HTML_TAGS[tag]) return;
 
     let parentLayer = rootLayer;
     const selected = selectionManager.selection.slice(-1)[0];
@@ -169,11 +156,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (parent && allowedParent(tag, parent.htmlObject.tagName.toLowerCase())) {
         parentLayer = parent;
       } else if (!allowedParent(tag, 'body')) {
-        // not allowed anywhere sensible
         return;
       }
     } else if (!allowedParent(tag, 'body')) {
-      // nothing selected and element isn't allowed directly under body
       return;
     }
 
@@ -190,36 +175,61 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     layer.htmlObject.textContent = tag;
     if (TEXT_EDITABLE.has(tag)) {
-    layer.htmlObject.classList.add('placeholder');
-  }
-     layer.htmlObject.addEventListener('pointerdown', ev => {
-       ev.stopPropagation();
-       layer.select();
-       propEditor.setTarget(layer, layer.layerName);
-     });
-  layer.htmlObject.addEventListener('dblclick', ev => {
-    ev.stopPropagation();
-    if (!TEXT_EDITABLE.has(tag)) return;
-    const el = layer.htmlObject;
-    el.contentEditable = true;
-    if (el.classList.contains('placeholder')) {
-      el.textContent = '';
-      el.classList.remove('placeholder');
+      layer.htmlObject.classList.add('placeholder');
     }
-    el.focus();
-    const finish = () => {
-      el.removeEventListener('blur', finish);
-      el.contentEditable = false;
-      if (!el.textContent.trim()) {
-        el.textContent = tag;
-        el.classList.add('placeholder');
+
+    layer.htmlObject.addEventListener('pointerdown', ev => {
+      if (activeTextEdit) return;
+      ev.stopPropagation();
+      layer.select();
+      propEditor.setTarget(layer, layer.layerName);
+    });
+
+    layer.htmlObject.addEventListener('dblclick', ev => {
+      ev.stopPropagation();
+      if (activeTextEdit) return;
+      if (!TEXT_EDITABLE.has(tag)) return;
+
+      const rootEl = layer.htmlObject;
+      let target = rootEl;
+      if (rootEl.children.length > 0) {
+        target = rootEl.querySelector('[data-textedit]');
+        if (!target) {
+          target = document.createElement('span');
+          target.dataset.textedit = '1';
+          const text = Array.from(rootEl.childNodes)
+            .filter(n => n.nodeType === 3)
+            .map(n => n.textContent)
+            .join('');
+          target.textContent = text || '';
+          rootEl.prepend(target);
+        }
       }
-    };
-    el.addEventListener('blur', finish);
+
+      activeTextEdit = { element: target, prevMode: globs.designMode };
+      DOM.setDesignMode(false);
+      target.contentEditable = true;
+      if (rootEl.classList.contains('placeholder')) {
+        target.textContent = '';
+        rootEl.classList.remove('placeholder');
+      }
+      target.focus();
+      const finish = () => {
+        target.removeEventListener('blur', finish);
+        target.contentEditable = false;
+        DOM.setDesignMode(activeTextEdit.prevMode);
+        activeTextEdit = null;
+        if (!target.textContent.trim()) {
+          target.textContent = tag;
+          rootEl.classList.add('placeholder');
+        }
+      };
+      target.addEventListener('blur', finish);
+    });
+
+    updateTreeDisabled();
   });
-     updateTreeDisabled();
-   });
-  // Update prop editor on selection change
+
   selectionManager.addEventListener('change', ({ detail }) => {
     if (detail.action === 'select') {
       propEditor.setTarget(detail.item, detail.item.layerName || 'Element');
