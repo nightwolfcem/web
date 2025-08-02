@@ -1,0 +1,115 @@
+
+import { Twindow } from '../Twindow.js';
+import { EcaptionButton } from '../../core/enums.js';
+import { DOM } from '../../dom/dom.js';
+
+const PICKER_W = 350;
+const PICKER_H = 220;
+
+export function pickerWindowOpts(opts = {}) {
+    const embedded = !!opts.parent || !!opts.container;
+    return {
+        title: opts.title ?? 'Color Picker',
+        parent: opts.parent ?? opts.container ?? null,
+        width: PICKER_W,
+        height: PICKER_H,
+        minWidth: PICKER_W,
+        minHeight: PICKER_H,
+        showCaption: embedded ? false : (opts.showCaption ?? true),
+        movable: embedded ? false : (opts.movable ?? true),
+        sizable: false, // resizable -> sizable
+        ...opts
+    };
+}
+
+export function colorWindowOpts(opts = {}) {
+    return {
+        targetElement: null,
+        targetStyle: 'backgroundColor',
+        targetInput: null,
+        defaultColor: '#ff0000',
+        onChange: null,
+        onClose: null,
+        container: null,
+        title: 'Single Color Picker',
+        ...opts
+    };
+}
+
+
+export class TbasePicker extends Twindow {
+    constructor(opts = {}) {
+        super({
+            width: 300, height: 220, sizable: false,
+            title: opts.title ?? 'Color Picker',
+            buttons: [EcaptionButton.close],
+            ...opts
+        });
+
+        this.targetStyle = opts.targetStyle ?? 'background';
+        this.targetInput = opts.targetInput ?? null;
+        this.onChange = typeof opts.onChange === 'function' ? opts.onChange : () => {};
+        this.onClose = typeof opts.onClose === 'function' ? opts.onClose : () => {};
+    }
+
+    static #_instances = new WeakMap();
+
+    static getInstance(opts = {}) {
+        let inst = TbasePicker.#_instances.get(this);
+        if (!inst) {
+            inst = new this(opts);
+            const parent = opts.parent ?? opts.container ?? DOM.baseLayer.subLayers.windows;
+            inst.body(parent);
+            TbasePicker.#_instances.set(this, inst);
+        } else {
+            Object.assign(inst, opts);
+            if (opts.parent && inst.parent !== opts.parent) {
+                inst.body(opts.parent);
+            } else if (opts.container && inst.parent !== opts.container) {
+                inst.body(opts.container);
+            }
+        }
+        return inst;
+    }
+   attach(input) {
+        this.targetInput = input;
+        input.addEventListener('change', e => this.set(e.target.value));
+        
+        const originalOnChange = this.onChange;
+        this.onChange = value => {
+            if (this.targetInput) {
+                this.targetInput.value = value;
+            }
+            if(originalOnChange) originalOnChange(value);
+        };
+        this.set(input.value);
+    }
+    
+    body(parent) {
+        if (!this.parent) {
+            super.body(parent);
+        } else {
+            this.parent.appendChild(this.htmlObject);
+            this.loaded = true;
+        }
+         this.contentPanel.style.overflow = 'hidden';
+        this.contentPanel.style.textAlign = 'center';
+        this.previewBox = Object.assign(document.createElement('div'), {
+            style: 'position:relative;overflow:hidden;display:inline-block;width:56px;height:56px;border:1px solid #000;margin-top:10px'
+        });
+
+        this.buildSpecificUI();
+        this.updatePreview();
+    }
+
+    buildSpecificUI() { throw new Error('buildSpecificUI must be implemented by subclass'); }
+    updatePreview() { throw new Error('updatePreview must be implemented by subclass'); }
+    
+    close(result) {
+        // Twindow's close method handles destroy or hide.
+        // We just ensure onClose callback is fired.
+        super.close(result); 
+        this.onClose(result);
+    }
+}
+window.TbasePicker = TbasePicker;
