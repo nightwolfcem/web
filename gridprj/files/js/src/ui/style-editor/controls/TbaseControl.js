@@ -5,7 +5,19 @@ export  class TbaseControl {
         this.meta = meta;
         this.targetElement = targetElement;
         this.onChange = onChange;
-        this.initialValue = (targetElement.style ? targetElement.style[styleProp] : targetElement[styleProp]) || meta?.initial || '';
+
+        let init = '';
+        if (targetElement && targetElement.style) {
+            const styleObj = targetElement.style;
+            if (typeof styleObj.getPropertyValue === 'function') {
+                init = styleObj.getPropertyValue(styleProp);
+            } else {
+                init = styleObj[styleProp];
+            }
+        } else if (targetElement) {
+            init = targetElement[styleProp];
+        }
+        this.initialValue = init || meta?.initial || '';
     }
     render() {
         throw new Error("Render metodu alt sınıfta tanımlanmalıdır.");

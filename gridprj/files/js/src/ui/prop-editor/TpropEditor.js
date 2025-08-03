@@ -218,7 +218,12 @@ export class TpropEditor extends Twindow {
         rowsContainer.style.display = 'flex';
         rowsContainer.style.flexDirection = 'column';
 
-        for (const key in obj) {
+        // CSSStyleDeclaration nesneleri farklı şekilde ele alınır.
+        const keys = obj instanceof CSSStyleDeclaration
+            ? Array.from({ length: obj.length }, (_, i) => obj[i])
+            : Object.keys(obj);
+
+        for (const key of keys) {
             const row = document.createElement('div');
             row.className = 'prop-row';
             row.style.display = 'flex';
@@ -233,7 +238,9 @@ export class TpropEditor extends Twindow {
             valueCell.className = 'prop-value';
             valueCell.style.flex = '1';
 
-            const val = obj[key];
+            const val = obj instanceof CSSStyleDeclaration
+                ? obj.getPropertyValue(key)
+                : obj[key];
 
             // Özellik tipine göre renklendirme
             if (typeof val === 'object' && val !== null) {
