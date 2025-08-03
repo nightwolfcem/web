@@ -1,5 +1,10 @@
 import { TbaseControl } from './TbaseControl.js';
 import { cssProps } from '../../../data/cssProperties.js';
+import { TabsoluteElement } from '../../../dom/TabsoluteElement.js';
+import { Ealign } from '../../../core/enums.js';
+import { DOM } from '../../../dom/dom.js';
+
+let sharedSuggestionBox;
 
 export class TcompoundValueControl extends TbaseControl {
     render() {
@@ -12,14 +17,25 @@ export class TcompoundValueControl extends TbaseControl {
         input.placeholder = this.meta.syntax || 'Değerleri boşlukla ayırarak girin...';
         container.appendChild(input);
 
-        const suggestionBox = document.createElement('div');
-        suggestionBox.className = 'suggestion-box';
-        Object.assign(suggestionBox.style, {
-            position: 'absolute', top: '100%', left: 0, width: '100%',
-            border: '1px solid #ccc', background: '#fff', maxHeight: '150px',
-            overflowY: 'auto', zIndex: '1000', display: 'none', boxSizing: 'border-box'
-        });
-        container.appendChild(suggestionBox);
+        const getSuggestionBox = () => {
+            if (!sharedSuggestionBox) {
+                sharedSuggestionBox = new TabsoluteElement({
+                    align: Ealign.bottom | Ealign.left | Ealign.right | Ealign.offset,
+                    parent: DOM.baseLayer.subLayers.dropdown,
+                    className: 'suggestion-box',
+                    style: {
+                        border: '1px solid #ccc',
+                        background: '#fff',
+                        maxHeight: '150px',
+                        overflowY: 'auto',
+                        boxSizing: 'border-box'
+                    }
+                });
+                sharedSuggestionBox.hide();
+            }
+            sharedSuggestionBox.targetElement = input;
+            return sharedSuggestionBox;
+        };
 
         const expectedTokens = [];
         const staticOptions = [];
@@ -65,10 +81,11 @@ export class TcompoundValueControl extends TbaseControl {
         };
 
         const updateSuggestions = () => {
+            const box = getSuggestionBox();
             const suggestions = getSuggestions();
-            suggestionBox.innerHTML = '';
+            box.htmlObject.innerHTML = '';
             if (suggestions.length === 0) {
-                suggestionBox.style.display = 'none';
+                box.hide();
                 return;
             }
             suggestions.forEach(sugg => {
@@ -89,18 +106,19 @@ export class TcompoundValueControl extends TbaseControl {
                         newValue += ' ';
                     }
                     input.value = newValue;
-                    suggestionBox.style.display = 'none';
+                    box.hide();
                     input.focus();
                     this.onChange(input.value.trim());
                 });
-                suggestionBox.appendChild(item);
+                box.appendChild(item);
             });
-            suggestionBox.style.display = 'block';
+            box.htmlObject.style.width = `${input.offsetWidth}px`;
+            box.popup();
         };
 
         input.addEventListener('input', updateSuggestions);
         input.addEventListener('change', () => this.onChange(input.value.trim()));
-        input.addEventListener('blur', () => setTimeout(() => suggestionBox.style.display = 'none', 200));
+        input.addEventListener('blur', () => setTimeout(() => sharedSuggestionBox?.hide(), 200));
 
         return container;
     }
