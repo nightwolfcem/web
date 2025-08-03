@@ -410,13 +410,13 @@ this.y = y;
 return this.#push();
 }
 #applyChanges(changes) {
-const pp = TelementPoint.pagePos(this.#el);
+const parentPos = this.#el.offsetParent ? TelementPoint.pagePos(this.#el.offsetParent) : { x: 0, y: 0 };
 if (changes.left != null) {
-this.#el.style.left = `${changes.left - pp.x}px`;
+this.#el.style.left = `${changes.left - parentPos.x}px`;
 super.x = changes.left;
 }
 if (changes.top != null) {
-this.#el.style.top = `${changes.top - pp.y}px`;
+this.#el.style.top = `${changes.top - parentPos.y}px`;
 super.y = changes.top;
 }
 if (changes.width != null) {
