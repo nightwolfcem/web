@@ -4,7 +4,7 @@ import { Ealign, Tord } from '../../core/enums.js';
 import { onDOMLoad } from '../../core/loader.js';
 import { Tcolor, calculateLuminance } from '../../utils/colorUtils.js';
 import { cssProps } from '../../data/cssProperties.js';
-import { SplitBar } from '../SplitBar.js';
+import { TSplitBar } from '../TSplitBar.js';
 import '../../core/prototypes.js';
 
 // Renk tanımları cssProps'tan oluşturuluyor
@@ -401,27 +401,13 @@ this.status.sizable = true;
 
     cp.innerHTML = '<table cellpadding=0 cellspacing=0 style="table-layout:fixed;min-width:100%;border-collapse:collapse;" id="tprops"></table>';
 
-    const splitBar = new SplitBar(
-      'vertical',
-      () => {
-        hideLargeTable();
-        this.htmlObject.dispatchEvent(new Event('resizestart'));
-      },
-      (ev, { dx }) => {
-        var w, t = dx;
-        if (t != 0) {
-          w = parseInt(splitBar.htmlObject.previousSibling.style.width);
-          if (w + t >= 30 && (splitBar.htmlObject.nextSibling.offsetWidth - t) >= 30) {
-            splitBar.htmlObject.previousSibling.style.width = (w + t) + 'px';
-            splitBar.htmlObject.nextSibling.style.width = 'calc(100% - ' + (w + t + 7) + 'px)';
-          }
-        }
-      },
-      () => {
-        this.htmlObject.dispatchEvent(new Event('resizeend'));
-        showHiddenTable();
-      }
-    );
+    const splitBar = new TSplitBar('vertical');
+    splitBar.onStartMove = () => {
+      this.htmlObject.dispatchEvent(new CustomEvent('resizestart'));
+    };
+    splitBar.onEndMove = () => {
+      this.htmlObject.dispatchEvent(new CustomEvent('resizeend'));
+    };
     sp = splitBar.htmlObject;
 
     cv = document.createElement('div');
@@ -456,19 +442,8 @@ this.status.sizable = true;
       const tbl = cv.getElementsByTagName('table')[0];
       if (tbl && tbl.style.display === 'none') tbl.style.display = '';
     };
-    let winResizeTimer;
-    window.addEventListener('resize', () => {
-      if (!winResizeTimer) {
-        hideLargeTable();
-        this.htmlObject.dispatchEvent(new Event('resizestart'));
-      }
-      clearTimeout(winResizeTimer);
-      winResizeTimer = setTimeout(() => {
-        this.htmlObject.dispatchEvent(new Event('resizeend'));
-        showHiddenTable();
-        winResizeTimer = null;
-      }, 100);
-    });
+    this.htmlObject.onresizestart = hideLargeTable;
+    this.htmlObject.onresizeend = showHiddenTable;
     this.htmlObject.onwheel = (e) => {
       var ho = this.htmlObject;
       if (e.currentTarget == ho)
