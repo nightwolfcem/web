@@ -404,6 +404,7 @@ this.status.sizable = true;
     const splitBar = new SplitBar(
       'vertical',
       () => {
+        hideLargeTable();
         this.htmlObject.dispatchEvent(new Event('resizestart'));
       },
       (ev, { dx }) => {
@@ -418,6 +419,7 @@ this.status.sizable = true;
       },
       () => {
         this.htmlObject.dispatchEvent(new Event('resizeend'));
+        showHiddenTable();
       }
     );
     sp = splitBar.htmlObject;
@@ -446,21 +448,24 @@ this.status.sizable = true;
     this.cntx.lvl = 0;
     this.maxSubLVL = 3;
     this.findsubprops(this.defobj, null, null);
-    this.htmlObject.onresizestart = () => {
-      if (cv.getElementsByTagName('table')[0].rows.length > 100)
-        cv.getElementsByTagName('table')[0].style.display = 'none';
+    const hideLargeTable = () => {
+      const tbl = cv.getElementsByTagName('table')[0];
+      if (tbl && tbl.rows.length > 100) tbl.style.display = 'none';
     };
-    this.htmlObject.onresizeend = () => {
-      if (cv.getElementsByTagName('table')[0].style.display == 'none')
-        cv.getElementsByTagName('table')[0].style.display = '';
+    const showHiddenTable = () => {
+      const tbl = cv.getElementsByTagName('table')[0];
+      if (tbl && tbl.style.display === 'none') tbl.style.display = '';
     };
     let winResizeTimer;
     window.addEventListener('resize', () => {
-      if (!winResizeTimer)
+      if (!winResizeTimer) {
+        hideLargeTable();
         this.htmlObject.dispatchEvent(new Event('resizestart'));
+      }
       clearTimeout(winResizeTimer);
       winResizeTimer = setTimeout(() => {
         this.htmlObject.dispatchEvent(new Event('resizeend'));
+        showHiddenTable();
         winResizeTimer = null;
       }, 100);
     });
