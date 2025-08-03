@@ -16,6 +16,7 @@ const TframeMixin = class TframeMixin {
         maxHeight = null,
         showCaption = true,
         movable = true,
+        resizable = true,
         parent = null
     } = {}) {
 
@@ -60,6 +61,16 @@ const TframeMixin = class TframeMixin {
         this.contentPanel.className = 'twindow-content';
         this.contentPanel.style.cssText = `flex:1 1 auto;overflow:auto;background:#fff;min-height:${minHeight - 30}px;position:relative;`;
         this.htmlObject.appendChild(this.contentPanel);
+
+        Object.assign(this.resizeOptions, {
+            minWidth,
+            minHeight,
+            ...(maxWidth ? { maxWidth } : {}),
+            ...(maxHeight ? { maxHeight } : {})
+        });
+        if (resizable) {
+            this.status.sizable = true;
+        }
     }
 
     #mkBtn(btnType) {
