@@ -19,8 +19,8 @@ export class TcompoundValueControl extends TbaseControl {
         const getSuggestionBox = () => {
             if (!sharedSuggestionBox) {
                 sharedSuggestionBox = new TabsoluteElement({
-                    align: Ealign.bottom | Ealign.left | Ealign.right,
-                    parent: DOM.baseLayer.subLayers.popup,
+                    align: Ealign.bottom | Ealign.left | Ealign.right | Ealign.offset,
+                    parent: DOM.baseLayer.subLayers.dropdown,
                     className: 'suggestion-box popup absolute',
                     style: {
                         border: '1px solid #ccc',
@@ -88,6 +88,7 @@ export class TcompoundValueControl extends TbaseControl {
 
                 return;
             }
+
             suggestions.forEach(sugg => {
                 const item = document.createElement('div');
                 item.className = 'suggestion-item';
