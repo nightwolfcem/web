@@ -66,7 +66,11 @@ export class StyleEditor {
 
         // Değer değiştiğinde hedef elementin stilini güncelleyecek olan callback fonksiyonu
         const onChangeCallback = (newValue) => {
-            this.targetElement.style[styleProp] = newValue;
+            if (typeof this.targetElement.style.setProperty === 'function') {
+                this.targetElement.style.setProperty(styleProp, newValue);
+            } else {
+                this.targetElement.style[styleProp] = newValue;
+            }
         };
 
         // Fabrikayı kullanarak doğru kontrolü oluştur
@@ -102,7 +106,11 @@ export class StyleEditor {
             const controlWrap = document.createElement('div');
             controlWrap.style.cssText = 'flex:1;';
             const control = ControlFactory.createControl(prop, this.targetElement, val => {
-                this.targetElement.style[prop] = val;
+                if (typeof this.targetElement.style.setProperty === 'function') {
+                    this.targetElement.style.setProperty(prop, val);
+                } else {
+                    this.targetElement.style[prop] = val;
+                }
             });
             controlWrap.appendChild(control);
 

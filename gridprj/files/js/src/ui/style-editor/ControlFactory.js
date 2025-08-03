@@ -23,7 +23,17 @@ export class ControlFactory {
             return new TautoCompleteControl(styleProp, [], targetElement, onChange).render();
         }
 
-        const initialValue = (targetElement.style ? targetElement.style[styleProp] : targetElement[styleProp]) || meta.initial;
+        let initialValue = '';
+        if (targetElement.style) {
+            if (typeof targetElement.style.getPropertyValue === 'function') {
+                initialValue = targetElement.style.getPropertyValue(styleProp);
+            } else {
+                initialValue = targetElement.style[styleProp];
+            }
+        } else if (targetElement[styleProp] !== undefined) {
+            initialValue = targetElement[styleProp];
+        }
+        initialValue = initialValue || meta.initial;
         const allValues = meta.values || [];
 
         // 1. Bileşik Değer Kontrolü (örn: border, animation)
@@ -33,7 +43,7 @@ export class ControlFactory {
 
         // 2. Renk Kontrolü
         if (allValues.includes('[color]')) {
-            return new TcolorControl(styleProp, initialValue, targetElement, onChange).render();
+            return new TcolorControl(styleProp, meta, targetElement, onChange).render();
         }
 
         // 3. Sayısal/Uzunluk Kontrolü
