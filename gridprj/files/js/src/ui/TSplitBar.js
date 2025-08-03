@@ -17,8 +17,9 @@ export class TSplitBar {
       let lastX = e.clientX;
       let lastY = e.clientY;
       this.onStartMove?.(e);
-      if (typeof this.htmlObject.onstartmove === 'function') this.htmlObject.onstartmove(e);
- this.htmlObject.dispatchEvent(new CustomEvent('startmove'));
+      const startEv = new CustomEvent('startmove');
+      if (typeof this.htmlObject.onstartmove === 'function') this.htmlObject.onstartmove(startEv);
+      this.htmlObject.dispatchEvent(startEv);
 
       const move = (ev) => {
         const dx = ev.clientX - lastX;
@@ -31,8 +32,9 @@ export class TSplitBar {
         document.removeEventListener('mousemove', move);
         document.removeEventListener('mouseup', stop);
         this.onEndMove?.(ev);
-        if (typeof this.htmlObject.onendmove === 'function') this.htmlObject.onendmove(ev);
-  this.htmlObject.dispatchEvent(new CustomEvent('endmove'));
+        const endEv = new CustomEvent('endmove');
+        if (typeof this.htmlObject.onendmove === 'function') this.htmlObject.onendmove(endEv);
+        this.htmlObject.dispatchEvent(endEv);
 
       };
       document.addEventListener('mousemove', move);
