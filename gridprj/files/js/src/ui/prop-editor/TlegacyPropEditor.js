@@ -57,7 +57,11 @@ export class TeditListEditor {
   createInputField() {
     const inputField = document.createElement('input');
     inputField.type = 'text';
-    inputField.style.cssText = 'width: 100%; font-size: inherit; border: 1px solid rgb(105, 152, 237); box-sizing: border-box;';
+    // Borders from the input field were inflating row height and
+    // breaking the synchronized scrolling between the keys and
+    // values tables.  Use a borderless input and lock the height so
+    // each row keeps a consistent size.
+    inputField.style.cssText = 'width:100%;height:100%;font-size:inherit;box-sizing:border-box;border:none;margin:0;padding:0;';
     inputField.value = this.object[this.property];
     inputField.onchange = () => {
       this.object[this.property] = inputField.value;
@@ -164,7 +168,9 @@ export function TtextEditor(bo, bp, pf) {
   var o, t = this;
   t.htmlObject = document.createElement('INPUT');
   o = t.htmlObject;
-  o.style.cssText = 'height:100%;width: calc(100% - 2px); font-size: inherit; border: 1px solid rgb(105, 152, 237);box-sizing: border-box;';
+  // Remove borders and enforce a fixed height so text editors do not
+  // expand rows beyond the grid's baseline height.
+  o.style.cssText = 'height:100%;width:100%;font-size:inherit;box-sizing:border-box;border:none;margin:0;padding:0;';
   function setText(value) {
     bo[bp] = value;
     if (o.value != bo[bp])
