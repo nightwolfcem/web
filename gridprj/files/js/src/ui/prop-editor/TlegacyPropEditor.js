@@ -1,7 +1,7 @@
 import { DOM } from '../../dom/dom.js';
 import { Twindow } from '../Twindow.js';
 import { Ealign, Tord } from '../../core/enums.js';
-
+import { onDOMLoad } from '../core/loader.js';
 import { Tcolor, calculateLuminance } from '../../utils/colorUtils.js';
 import { cssProps } from '../../data/cssProperties.js';
 import '../../core/prototypes.js';
