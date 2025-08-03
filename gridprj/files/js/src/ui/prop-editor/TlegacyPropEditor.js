@@ -403,10 +403,14 @@ this.status.sizable = true;
 
     const splitBar = new TSplitBar('vertical');
     splitBar.onStartMove = () => {
-    this.htmlObject.dispatchEvent(new CustomEvent('resizestart'));
+    const ev = new CustomEvent('resizestart');
+    if (typeof this.htmlObject.onresizestart === 'function') this.htmlObject.onresizestart(ev);
+    this.htmlObject.dispatchEvent(ev);
     };
     splitBar.onEndMove = () => {
-      this.htmlObject.dispatchEvent(new CustomEvent('resizeend'));
+      const ev = new CustomEvent('resizeend');
+      if (typeof this.htmlObject.onresizeend === 'function') this.htmlObject.onresizeend(ev);
+      this.htmlObject.dispatchEvent(ev);
 
     };
     sp = splitBar.htmlObject;
