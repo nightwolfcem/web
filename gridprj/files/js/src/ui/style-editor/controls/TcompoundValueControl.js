@@ -9,7 +9,6 @@ let sharedSuggestionBox;
 export class TcompoundValueControl extends TbaseControl {
     render() {
         const container = document.createElement('div');
-        container.style.position = 'relative';
 
         const input = document.createElement('input');
         input.type = 'text';
@@ -20,9 +19,9 @@ export class TcompoundValueControl extends TbaseControl {
         const getSuggestionBox = () => {
             if (!sharedSuggestionBox) {
                 sharedSuggestionBox = new TabsoluteElement({
-                    align: Ealign.bottom | Ealign.left | Ealign.right,
+                    align: Ealign.bottom | Ealign.left | Ealign.right | Ealign.offset,
                     parent: DOM.baseLayer.subLayers.dropdown,
-                    className: 'suggestion-box',
+                    className: 'suggestion-box popup absolute',
                     style: {
                         border: '1px solid #ccc',
                         background: '#fff',
@@ -114,6 +113,8 @@ export class TcompoundValueControl extends TbaseControl {
                 });
                 box.appendChild(item);
             });
+            box.targetElement = input;
+            box.htmlObject.style.width = input.getBoundingClientRect().width + 'px';
             box.popup();
         };
 
