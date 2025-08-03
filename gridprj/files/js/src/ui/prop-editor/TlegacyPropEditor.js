@@ -374,7 +374,7 @@ this.status.sizable = true;
       }
       list.unshift({ obj: window, name: 'window' });
       for (var i = 0; i < list.length; i++) {
-        p.addprop(list[i].obj, list[i].name);
+        this.addprop(list[i].obj, list[i].name);
       }
     };
 

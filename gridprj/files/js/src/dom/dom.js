@@ -9,10 +9,12 @@ const INTERACTION_STATE = new WeakMap();
 
 let dragStartX, dragStartY;
 let initialPositions = new Map();
-  const RESIZE_CURSORS = {
-        n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize',
-        ne: 'nesw-resize', nw: 'nwse-resize', se: 'nwse-resize', sw: 'nesw-resize'
-    };
+ const RESIZE_CURSORS = {
+        n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize',
+        ne: 'nesw-resize', nw: 'nwse-resize', se: 'nwse-resize', sw: 'nesw-resize'
+    };
+
+    const EDGE_THRESHOLD = 10;
 
     function createResizeHandle(direction) {
         const handle = document.createElement('div');
@@ -422,7 +424,7 @@ export const DOM = {
         }
 
         function hitZone(x, y, w, h) {
-            const th = 7; // eşik (px)
+            const th = EDGE_THRESHOLD; // eşik (px)
             if (hasBorder(Eborder.leftTop) && x < th && y < th) return 'nw';
             if (hasBorder(Eborder.rightTop) && x > w - th && y < th) return 'ne';
             if (hasBorder(Eborder.leftBottom) && x < th && y > h - th) return 'sw';
@@ -586,7 +588,7 @@ makeResizableWithHandles : function (el, flags) {
      */
     makeResizableByEdges : function (el, flags) {
         (el._resHandles || []).forEach(h => h.remove()); el._resHandles = [];
-        const threshold = 6;
+        const threshold = EDGE_THRESHOLD;
         const rect = () => el.getBoundingClientRect();
 
         function onMove(e) {
@@ -758,7 +760,7 @@ makeResizableWithHandles : function (el, flags) {
                 globs.selectionManager.add(te);
                 te.htmlObject.classList.add('selected');
             }
-            const threshold = 7;
+            const threshold = EDGE_THRESHOLD;
             const rect = element.getBoundingClientRect();
             const nearEdge = (
                 e.clientX - rect.left < threshold || rect.right - e.clientX < threshold ||
