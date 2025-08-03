@@ -452,7 +452,7 @@ this.status.sizable = true;
     this.cntx.lvl = 0;
     this.maxSubLVL = 3;
     this.findsubprops(this.defobj, null, null);
-    this.onresize = function (x, y, p) {
+    this.htmlObject.onresize = function (x, y, p) {
       if (x && p && cv.getElementsByTagName('table')[0].rows.length > 100) {
         cv.getElementsByTagName('table')[0].style.display = 'none';
       } else if (p == false && cv.getElementsByTagName('table')[0].style.display == 'none') {
