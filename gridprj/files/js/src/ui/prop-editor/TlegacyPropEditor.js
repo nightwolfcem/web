@@ -404,7 +404,7 @@ this.status.sizable = true;
     cp = document.createElement('div');
 
     cp.className = 'prop-keys';
-    cp.style.cssText = 'display:inline-block;width:100px;height:100%;';
+    cp.style.cssText = 'display:inline-block;width:100px;height:100%;overflow:hidden;';
 
     cp.innerHTML = '<table cellpadding=0 cellspacing=0 style="table-layout:fixed;min-width:100%;border-collapse:collapse;" id="tprops"></table>';
 
