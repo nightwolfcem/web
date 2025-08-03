@@ -4,6 +4,9 @@ import { TabsoluteElement } from '../../../dom/TabsoluteElement.js';
 import { Ealign } from '../../../core/enums.js';
 import { DOM } from '../../../dom/dom.js';
 
+let sharedSuggestionBox;
+
+
 export class TcompoundValueControl extends TbaseControl {
     render() {
         const container = document.createElement('div');
@@ -29,6 +32,7 @@ export class TcompoundValueControl extends TbaseControl {
             }
         });
         suggestionBox.hide();
+
 
         const expectedTokens = [];
         const staticOptions = [];
@@ -73,11 +77,13 @@ export class TcompoundValueControl extends TbaseControl {
             return Array.from(suggestions).filter(s => s.toLowerCase().startsWith(current));
         };
 
-        const updateSuggestions = () => {
+ const updateSuggestions = () => {
+            const box = getSuggestionBox();
             const suggestions = getSuggestions();
-            suggestionBox.htmlObject.innerHTML = '';
+            box.htmlObject.innerHTML = '';
             if (suggestions.length === 0) {
-                suggestionBox.hide();
+                box.hide();
+
                 return;
             }
             suggestions.forEach(sugg => {
@@ -98,19 +104,22 @@ export class TcompoundValueControl extends TbaseControl {
                         newValue += ' ';
                     }
                     input.value = newValue;
-                    suggestionBox.hide();
+             box.hide();
+
                     input.focus();
                     this.onChange(input.value.trim());
                 });
-                suggestionBox.appendChild(item);
+                box.appendChild(item);
             });
-            suggestionBox.htmlObject.style.width = `${input.offsetWidth}px`;
-            suggestionBox.popup();
+    box.htmlObject.style.width = `${input.offsetWidth}px`;
+            box.popup();
         };
 
         input.addEventListener('input', updateSuggestions);
         input.addEventListener('change', () => this.onChange(input.value.trim()));
-        input.addEventListener('blur', () => setTimeout(() => suggestionBox.hide(), 200));
+        input.addEventListener('blur', () => setTimeout(() => sharedSuggestionBox?.hide(), 200));
+EventListener('blur', () => setTimeout(() => suggestionBox.hide(), 200));
+
 
         return container;
     }

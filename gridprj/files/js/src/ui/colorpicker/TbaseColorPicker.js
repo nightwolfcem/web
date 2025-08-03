@@ -44,7 +44,9 @@ export class TbaseColorPicker extends TbasePicker {
 
         this.suggestionBox = new TabsoluteElement({
             targetElement: this.hexInput,
-            align: Ealign.bottom | Ealign.left | Ealign.right,
+
+            align: Ealign.bottom | Ealign.left | Ealign.right | Ealign.offset,
+
             parent: DOM.baseLayer.subLayers.dropdown,
             className: 'cp-suggestions',
             style: { fontSize: '10px', background: '#fff', border: '1px solid #ccc', maxHeight: '100px', overflowY: 'auto', width: '120px' }
