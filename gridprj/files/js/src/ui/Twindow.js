@@ -39,7 +39,12 @@ const TframeMixin = class TframeMixin {
         if (showCaption) {
             this.captionBar = document.createElement('div');
             this.captionBar.className = 'twindow-caption';
-            this.captionBar.style.cssText = `display:flex;align-items:center;justify-content:space-between;background:linear-gradient(#ececec,#e3e8f2 90%);height:30px;padding:0 10px 0 12px;user-select:none;cursor:${movable && !parent ? 'move' : 'default'};font-weight:bold;border-bottom:1px solid #c5c5c5`;
+            this.captionBar.style.cssText = `display:flex;align-items:center;justify-content:space-between;background:linear-gradient(#ececec,#e3e8f2 90%);height:30px;padding:0 10px 0 12px;user-select:none;font-weight:bold;border-bottom:1px solid #c5c5c5`;
+            if (movable && !parent && !resizable) {
+                this.captionBar.style.cursor = 'move';
+            } else {
+                this.captionBar.style.cursor = 'inherit';
+            }
 
             const captionTitle = document.createElement('div');
             captionTitle.textContent = title;

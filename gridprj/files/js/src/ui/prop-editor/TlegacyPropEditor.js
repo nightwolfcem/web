@@ -5,6 +5,7 @@ import { onDOMLoad } from '../../core/loader.js';
 import { Tcolor, calculateLuminance } from '../../utils/colorUtils.js';
 import { cssProps } from '../../data/cssProperties.js';
 import { TSplitBar } from '../TSplitBar.js';
+import { ControlFactory } from '../style-editor/ControlFactory.js';
 import '../../core/prototypes.js';
 
 // Renk tanımları cssProps'tan oluşturuluyor
@@ -602,18 +603,26 @@ this.status.sizable = true;
                 ns = booleditor.htmlObject;
               } else {
                 if (typeof obj[i] == 'string') {
-                  var s = new String();
-                  s = obj[i];
-                  var patt1 = /^#[abcdef0123456789]*/g;
-                  var m = s.match(patt1);
-                  if ((m != null && (m[0].length - 1) % 3 == 0) || i.search(/color/i) != -1) {
-                    var coloreditor = new TeditListEditor(obj, i, Tcolors);
-                    ns = coloreditor.htmlObject;
+                  if (obj.constructor.name === 'CSSStyleDeclaration' && cssProps.properties[i]) {
+                    const control = ControlFactory.createControl(i, obj.ownerElement || obj._element || obj, (val) => {
+                      obj[i] = val;
+                    });
+                    ns = control;
                     ns.style.width = '100%';
                   } else {
-                    var texteditor = new TtextEditor(obj, i);
-                    ns = texteditor.htmlObject;
-                    ns.style.width = '100%';
+                    var s = new String();
+                    s = obj[i];
+                    var patt1 = /^#[abcdef0123456789]*/g;
+                    var m = s.match(patt1);
+                    if ((m != null && (m[0].length - 1) % 3 == 0) || i.search(/color/i) != -1) {
+                      var coloreditor = new TeditListEditor(obj, i, Tcolors);
+                      ns = coloreditor.htmlObject;
+                      ns.style.width = '100%';
+                    } else {
+                      var texteditor = new TtextEditor(obj, i);
+                      ns = texteditor.htmlObject;
+                      ns.style.width = '100%';
+                    }
                   }
                 } else {
                   var texteditor = new TtextEditor(obj, i, true && typeof obj[i] == 'function');

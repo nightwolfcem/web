@@ -1,7 +1,7 @@
 // Bu dosya, bir CSS özelliğini düzenlemek için akıllı UI kontrolleri oluşturan sınıfları içerir.
 // Her kontrol, özelliğin türüne göre (renk, sayı, bileşik değer vb.) özelleşmiştir.
 import { TbaseControl } from './TbaseControl.js';
-import { TsingleColorPicker } from '../../colorpicker/TsingleColorPicker.js';
+import { TtabbedColorPicker } from '../../colorpicker/TtabbedColorPicker.js';
 // Renk isimleri listesi için cssProps'u ekliyoruz.
 import { cssProps } from '../../../data/cssProperties.js';
 
@@ -37,15 +37,17 @@ export class TcolorControl extends TbaseControl {
         });
 
         colorBox.addEventListener('click', () => {
-            // Merkezi PickerManager'ı kullanarak TsingleColorPicker'ı açıyoruz.
-            TsingleColorPicker.pick(TsingleColorPicker, {
-                targetInput: textInput, // Picker'ı doğrudan input'a bağlıyoruz
+            const picker = TtabbedColorPicker.getInstance({
+                targetInput: textInput,
                 defaultColor: textInput.value,
                 onChange: (color) => {
                     colorBox.style.backgroundColor = color;
+                    textInput.value = color;
                     this.onChange(color);
                 }
             });
+            picker.popup(colorBox);
+            picker.show();
         });
 
         container.append(textInput, colorBox, dataList);
