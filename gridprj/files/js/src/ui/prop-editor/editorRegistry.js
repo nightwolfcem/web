@@ -128,13 +128,17 @@ class TstylePropertyEditor extends TbaseEditor {
     render() {
         // parent: style nesnesi
         // parent.owner: stilin ait olduğu Telement
-        const targetElement = this.parent.owner?.htmlObject || null;
+        const targetElement = this.parent.owner?.htmlObject || this.parent.ownerElement || null;
         if (!targetElement) {
             return new TtextEditor(this.parent, this.key).render();
         }
 
         const onChangeCallback = (newValue) => {
-            this._updateValue(newValue);
+            if (typeof this.parent.setProperty === 'function') {
+                this.parent.setProperty(this.key, newValue);
+            } else {
+                this._updateValue(newValue);
+            }
         };
 
         // StyleEditor'ın akıllı fabrikasını çağırıyoruz.
