@@ -4,6 +4,7 @@ import { Ealign, Tord } from '../../core/enums.js';
 import { onDOMLoad } from '../../core/loader.js';
 import { Tcolor, calculateLuminance } from '../../utils/colorUtils.js';
 import { cssProps } from '../../data/cssProperties.js';
+import { SplitBar } from '../SplitBar.js';
 import '../../core/prototypes.js';
 
 // Renk tanımları cssProps'tan oluşturuluyor
@@ -242,7 +243,7 @@ export class TpropEditor extends Twindow {
     super({ title: 'propeditor', width, height });
 this.status.sizable = true;
 
-    var cv, sp, cp, i, z, mx, mc;
+    var cv, sp, cp, i, z, mc;
     editbox = editbox ? editbox : new Teditbox('Code editor', 400, 400);
     this.cntx = document.createElement('div');
     this.cntx.innerHTML = '<div style=""></div>';
@@ -400,33 +401,26 @@ this.status.sizable = true;
 
     cp.innerHTML = '<table cellpadding=0 cellspacing=0 style="table-layout:fixed;min-width:100%;border-collapse:collapse;" id="tprops"></table>';
 
-    sp = document.createElement('div');
-    sp.style.cssText = 'cursor:col-resize;width:5px;position:absolute;min-width:5px;background-color:#999;height: 100%;display:inline-block;overflow:hidden;vertical-align:top;';
-    sp.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      mx = e.clientX;
-      if (cv.getElementsByTagName('table')[0].rows.length > 100)
-        cv.getElementsByTagName('table')[0].style.display = 'none';
-      const move = (ev) => {
-        var w, t = ev.clientX - mx;
-        mx = ev.clientX;
+    const splitBar = new SplitBar(
+      'vertical',
+      () => {
+        this.htmlObject.dispatchEvent(new Event('resizestart'));
+      },
+      (ev, { dx }) => {
+        var w, t = dx;
         if (t != 0) {
-          w = parseInt(sp.previousSibling.style.width);
-          if (w + t >= 30 && (sp.nextSibling.offsetWidth - t) >= 30) {
-            sp.previousSibling.style.width = (w + t) + 'px';
-            sp.nextSibling.style.width = 'calc(100% - ' + (w + t + 7) + 'px)';
+          w = parseInt(splitBar.htmlObject.previousSibling.style.width);
+          if (w + t >= 30 && (splitBar.htmlObject.nextSibling.offsetWidth - t) >= 30) {
+            splitBar.htmlObject.previousSibling.style.width = (w + t) + 'px';
+            splitBar.htmlObject.nextSibling.style.width = 'calc(100% - ' + (w + t + 7) + 'px)';
           }
         }
-      };
-      const up = () => {
-        document.removeEventListener('mousemove', move);
-        document.removeEventListener('mouseup', up);
-        if (cv.getElementsByTagName('table')[0].style.display == 'none')
-          cv.getElementsByTagName('table')[0].style.display = '';
-      };
-      document.addEventListener('mousemove', move);
-      document.addEventListener('mouseup', up);
-    });
+      },
+      () => {
+        this.htmlObject.dispatchEvent(new Event('resizeend'));
+      }
+    );
+    sp = splitBar.htmlObject;
 
     cv = document.createElement('div');
 
@@ -452,13 +446,24 @@ this.status.sizable = true;
     this.cntx.lvl = 0;
     this.maxSubLVL = 3;
     this.findsubprops(this.defobj, null, null);
-    this.htmlObject.onresize = function (x, y, p) {
-      if (x && p && cv.getElementsByTagName('table')[0].rows.length > 100) {
+    this.htmlObject.onresizestart = () => {
+      if (cv.getElementsByTagName('table')[0].rows.length > 100)
         cv.getElementsByTagName('table')[0].style.display = 'none';
-      } else if (p == false && cv.getElementsByTagName('table')[0].style.display == 'none') {
-        cv.getElementsByTagName('table')[0].style.display = '';
-      }
     };
+    this.htmlObject.onresizeend = () => {
+      if (cv.getElementsByTagName('table')[0].style.display == 'none')
+        cv.getElementsByTagName('table')[0].style.display = '';
+    };
+    let winResizeTimer;
+    window.addEventListener('resize', () => {
+      if (!winResizeTimer)
+        this.htmlObject.dispatchEvent(new Event('resizestart'));
+      clearTimeout(winResizeTimer);
+      winResizeTimer = setTimeout(() => {
+        this.htmlObject.dispatchEvent(new Event('resizeend'));
+        winResizeTimer = null;
+      }, 100);
+    });
     this.htmlObject.onwheel = (e) => {
       var ho = this.htmlObject;
       if (e.currentTarget == ho)
