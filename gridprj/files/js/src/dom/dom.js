@@ -492,6 +492,8 @@ export const DOM = {
                     el.style.height = newH + 'px';
                     if (zone.includes('n')) el.style.top = newT + 'px';
                 }
+                if (!("onresize" in el)) el.onresize = null;
+                el.dispatchEvent(new Event('resize'));
             };
 
             const onUp = (ev) => {
@@ -564,16 +566,18 @@ makeResizableWithHandles : function (el, flags) {
                 const { left, top, width, height } = rect();
                 const dirKey = dir;
 
-                function onMove(ev) {
-                    const dx = ev.clientX - startX, dy = ev.clientY - startY;
-                    let newW = width, newH = height, newL = left, newT = top;
-                    if (dirKey.includes('e')) newW = width + dx;
-                    if (dirKey.includes('s')) newH = height + dy;
-                    if (dirKey.includes('w')) { newW = width - dx; newL = left + dx; }
-                    if (dirKey.includes('n')) { newH = height - dy; newT = top + dy; }
-                    if (newW > 20) { el.style.width = newW + 'px'; el.style.left = newL + 'px'; }
-                    if (newH > 20) { el.style.height = newH + 'px'; el.style.top = newT + 'px'; }
-                }
+                function onMove(ev) {
+                    const dx = ev.clientX - startX, dy = ev.clientY - startY;
+                    let newW = width, newH = height, newL = left, newT = top;
+                    if (dirKey.includes('e')) newW = width + dx;
+                    if (dirKey.includes('s')) newH = height + dy;
+                    if (dirKey.includes('w')) { newW = width - dx; newL = left + dx; }
+                    if (dirKey.includes('n')) { newH = height - dy; newT = top + dy; }
+                    if (newW > 20) { el.style.width = newW + 'px'; el.style.left = newL + 'px'; }
+                    if (newH > 20) { el.style.height = newH + 'px'; el.style.top = newT + 'px'; }
+                    if (!("onresize" in el)) el.onresize = null;
+                    el.dispatchEvent(new Event('resize'));
+                }
 
                 document.addEventListener('mousemove', onMove);
                 document.addEventListener('mouseup', () => document.removeEventListener('mousemove', onMove), { once: true });
@@ -616,16 +620,18 @@ makeResizableWithHandles : function (el, flags) {
             function onDrag(ev) {
                 const dx = ev.clientX - start.x, dy = ev.clientY - start.y;
                 let newW = start.width, newH = start.height, newL = start.left, newT = start.top;
-                if (dir.includes('e')) newW = start.width + dx;
-                if (dir.includes('s')) newH = start.height + dy;
-                if (dir.includes('w')) { newW = start.width - dx; newL = start.left + dx; }
-                if (dir.includes('n')) { newH = start.height - dy; newT = start.top + dy; }
-                if (newW > 20) el.style.width = newW + 'px';
-                if (newH > 20) el.style.height = newH + 'px';
-                if (dir.includes('w') || dir.includes('n')) {
-                    el.style.left = newL + 'px'; el.style.top = newT + 'px';
-                }
-            }
+                if (dir.includes('e')) newW = start.width + dx;
+                if (dir.includes('s')) newH = start.height + dy;
+                if (dir.includes('w')) { newW = start.width - dx; newL = start.left + dx; }
+                if (dir.includes('n')) { newH = start.height - dy; newT = start.top + dy; }
+                if (newW > 20) el.style.width = newW + 'px';
+                if (newH > 20) el.style.height = newH + 'px';
+                if (dir.includes('w') || dir.includes('n')) {
+                    el.style.left = newL + 'px'; el.style.top = newT + 'px';
+                }
+                if (!("onresize" in el)) el.onresize = null;
+                el.dispatchEvent(new Event('resize'));
+            }
 
             document.addEventListener('mousemove', onDrag);
             document.addEventListener('mouseup', () => document.removeEventListener('mousemove', onDrag), { once: true });
