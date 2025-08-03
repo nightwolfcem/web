@@ -5,12 +5,14 @@ export class TnumericControl extends TbaseControl {
      render() {
         const container = document.createElement("div");
         container.style.display = 'flex';
+        container.style.height = '100%';
         const numInput = document.createElement("input");
         numInput.type = "number";
-        numInput.style.flex = '2';
-        
+        numInput.style.cssText = 'flex:1;height:100%;box-sizing:border-box;border:none;margin:0;padding:0;border-right:1px solid #ccc;';
+
         const unitSelect = document.createElement("select");
-        unitSelect.style.flex = '1';
+        unitSelect.style.cssText = 'width:40px;height:100%;box-sizing:border-box;border:none;margin:0;padding:0;';
+        unitSelect.style.flex = '0 0 40px';
         const units = this.getAvailableUnits();
         units.forEach(unit => {
             const opt = document.createElement("option");

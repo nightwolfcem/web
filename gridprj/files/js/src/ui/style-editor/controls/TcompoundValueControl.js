@@ -21,11 +21,11 @@ export class TcompoundValueControl extends TbaseControl {
         });
         container.appendChild(suggestionBox);
 
-        const orderedProps = [];
+        const expectedTokens = [];
         const staticOptions = [];
         (this.meta.values || []).forEach(tok => {
             if (tok.startsWith('[prop:')) {
-                orderedProps.push(tok.slice(6, -1));
+                expectedTokens.push(tok.slice(6, -1));
             } else if (tok === 'initial' || tok === 'inherit') {
                 staticOptions.push(tok);
             }
@@ -34,38 +34,34 @@ export class TcompoundValueControl extends TbaseControl {
         const dynamicTokens = ['[length]','[percent]','[time]','[number]','[string]'];
 
         const getSuggestions = () => {
-            const text = input.value;
-            const tokens = text.trim() === '' ? [] : text.trim().split(/\s+/);
-            const editingIndex = text.endsWith(' ') ? tokens.length : tokens.length - 1;
-            const currentPart = text.endsWith(' ') ? '' : (tokens[editingIndex] || '');
+            const val = input.value;
+            const tokens = val.split(/\s+/);
+            if (val.endsWith(' ')) tokens.push('');
+            const current = tokens[tokens.length - 1].toLowerCase();
             const suggestions = new Set();
 
-            if (editingIndex === 0) {
-                staticOptions.forEach(opt => suggestions.add(opt));
-            }
-
-            if (editingIndex >= 0 && editingIndex < orderedProps.length) {
-                const subProp = orderedProps[editingIndex];
+            expectedTokens.forEach(subProp => {
                 const subMeta = cssProps.properties[subProp];
-                if (subMeta) {
-                    (subMeta.values || []).forEach(val => {
-                        if (dynamicTokens.includes(val)) return;
-                        if (val === '[color]') {
-                            (cssProps.colorNames || []).forEach(c => suggestions.add(c));
-                        } else if (val === '[family-name]') {
-                            (cssProps.familyNames || []).forEach(f => suggestions.add(f));
-                        } else if (val === '[generic-family]') {
-                            (cssProps.genericFamilies || []).forEach(g => suggestions.add(g));
-                        } else if (val.startsWith('[fn:')) {
-                            suggestions.add(val);
-                        } else if (!val.startsWith('[')) {
-                            suggestions.add(val);
-                        }
-                    });
-                }
-            }
+                if (!subMeta) return;
+                (subMeta.values || []).forEach(v => {
+                    if (dynamicTokens.includes(v)) return;
+                    if (v === '[color]') {
+                        (cssProps.colorNames || []).forEach(c => suggestions.add(c));
+                    } else if (v === '[family-name]') {
+                        (cssProps.familyNames || []).forEach(f => suggestions.add(f));
+                    } else if (v === '[generic-family]') {
+                        (cssProps.genericFamilies || []).forEach(g => suggestions.add(g));
+                    } else if (v.startsWith('[fn:')) {
+                        suggestions.add(v.slice(4, -1) + '()');
+                    } else if (!v.startsWith('[')) {
+                        suggestions.add(v);
+                    }
+                });
+            });
 
-            return Array.from(suggestions).filter(s => s.toLowerCase().startsWith(currentPart.toLowerCase()));
+            staticOptions.forEach(opt => suggestions.add(opt));
+
+            return Array.from(suggestions).filter(s => s.toLowerCase().startsWith(current));
         };
 
         const updateSuggestions = () => {
@@ -87,13 +83,9 @@ export class TcompoundValueControl extends TbaseControl {
                     const text = input.value;
                     const tokens = text.trim() === '' ? [] : text.trim().split(/\s+/);
                     const editingIndex = text.endsWith(' ') ? tokens.length : tokens.length - 1;
-                    const replacement = sugg.startsWith('[fn:') && sugg.endsWith(']')
-                        ? sugg.slice(4, -1) + '()'
-                        : sugg;
-                    tokens[editingIndex] = replacement;
+                    tokens[editingIndex] = sugg;
                     let newValue = tokens.join(' ');
-                    const isStatic = staticOptions.includes(sugg);
-                    if (!isStatic && editingIndex < orderedProps.length - 1) {
+                    if (!staticOptions.includes(sugg)) {
                         newValue += ' ';
                     }
                     input.value = newValue;
