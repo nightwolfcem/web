@@ -407,6 +407,7 @@ this.status.sizable = true;
     cp.style.cssText = 'display:inline-block;width:100px;height:100%;overflow:hidden;';
 
     cp.innerHTML = '<table cellpadding=0 cellspacing=0 style="table-layout:fixed;min-width:100%;border-collapse:collapse;" id="tprops"></table>';
+    this.keysDiv = cp;
 
     const splitBar = new TSplitBar('vertical');
     splitBar.onStartMove = () => {
@@ -432,6 +433,7 @@ this.status.sizable = true;
     cv.onscroll = function (e) {
       cp.scrollTop = cv.scrollTop;
     };
+    this.valuesDiv = cv;
 
     this.cntx.appendChild(cp);
     this.cntx.appendChild(sp);
@@ -489,6 +491,10 @@ this.status.sizable = true;
         tp.rows[i].style.display = 'none';
         tv.rows[i].style.display = 'none';
       }
+    }
+    if (this.keysDiv && this.valuesDiv) {
+      this.keysDiv.scrollTop = 0;
+      this.valuesDiv.scrollTop = 0;
     }
   }
 
