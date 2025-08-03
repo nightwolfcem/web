@@ -464,7 +464,7 @@ export const DOM = {
             INTERACTION_STATE.set(el, 'resizing');
 
             if (!("onresizestart" in el)) el.onresizestart = null;
-            el.dispatchEvent(new Event('resizestart'));
+            el.dispatchEvent(new CustomEvent('resizestart'));
 
             const start = {
                 x: e.clientX, y: e.clientY,
@@ -505,7 +505,7 @@ export const DOM = {
                 el.removeEventListener('pointercancel', onUp);
                 el.releasePointerCapture?.(ev.pointerId);
                 if (!("onresizeend" in el)) el.onresizeend = null;
-                el.dispatchEvent(new Event('resizeend'));
+                el.dispatchEvent(new CustomEvent('resizeend'));
                 INTERACTION_STATE.delete(el);
             };
 
@@ -572,7 +572,7 @@ makeResizableWithHandles : function (el, flags) {
                 const dirKey = dir;
 
                 if (!("onresizestart" in el)) el.onresizestart = null;
-                el.dispatchEvent(new Event('resizestart'));
+                el.dispatchEvent(new CustomEvent('resizestart'));
 
                 function onMove(ev) {
                     const dx = ev.clientX - startX, dy = ev.clientY - startY;
@@ -590,7 +590,7 @@ makeResizableWithHandles : function (el, flags) {
                 function onUp() {
                     document.removeEventListener('mousemove', onMove);
                     if (!("onresizeend" in el)) el.onresizeend = null;
-                    el.dispatchEvent(new Event('resizeend'));
+                    el.dispatchEvent(new CustomEvent('resizeend'));
                 }
                 document.addEventListener('mousemove', onMove);
                 document.addEventListener('mouseup', onUp, { once: true });
@@ -629,7 +629,7 @@ makeResizableWithHandles : function (el, flags) {
             if (!dir) return;
             e.preventDefault();
             if (!("onresizestart" in el)) el.onresizestart = null;
-            el.dispatchEvent(new Event('resizestart'));
+            el.dispatchEvent(new CustomEvent('resizestart'));
             const start = { x: e.clientX, y: e.clientY, ...r };
 
             function onDrag(ev) {
@@ -651,7 +651,7 @@ makeResizableWithHandles : function (el, flags) {
             function onUp() {
                 document.removeEventListener('mousemove', onDrag);
                 if (!("onresizeend" in el)) el.onresizeend = null;
-                el.dispatchEvent(new Event('resizeend'));
+                el.dispatchEvent(new CustomEvent('resizeend'));
             }
             document.addEventListener('mousemove', onDrag);
             document.addEventListener('mouseup', onUp, { once: true });
