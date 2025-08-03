@@ -559,12 +559,14 @@ this.status.sizable = true;
           nr = tp.insertRow(k);
           nr1 = nr;
           nr = nr.insertCell();
-          np = tv.insertRow(k);
-          np = np.insertCell();
+
+          const npRow = tv.insertRow(k);
+          npRow.style.height = nr1.style.height = '18px';
+          np = npRow.insertCell();
           np.valign = 'center';
           np.style.cssText = nr.style.cssText;
           np = np.appendChild(document.createElement('div'));
-          np.style = 'height:100%;box-sizing: border-box';
+          np.style.cssText = 'height:100%;box-sizing:border-box;font-size:inherit;';
           k = k + 1;
           nr1.lvl = (lvl ? lvl + '-' : '') + k;
           if (obj[i] != null)
