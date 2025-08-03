@@ -11,7 +11,7 @@ import { cssProps } from '../../data/cssProperties.js';
 export class ControlFactory {
     /**
      * @param {string} styleProp - Düzenlenecek CSS özelliği (örn: 'backgroundColor').
-     * @param {HTMLElement} targetElement - Stilin uygulanacağı hedef element.
+     * @param {HTMLElement|CSSStyleDeclaration} targetElement - Stilin uygulanacağı hedef element veya doğrudan stil deklarasyonu.
      * @param {Function} onChange - Değer değiştiğinde çağrılacak callback.
      * @returns {HTMLElement} Oluşturulan kontrolün ana HTML elementi.
      */
@@ -23,7 +23,7 @@ export class ControlFactory {
             return new TautoCompleteControl(styleProp, [], targetElement, onChange).render();
         }
 
-        const initialValue = targetElement.style[styleProp] || meta.initial;
+        const initialValue = (targetElement.style ? targetElement.style[styleProp] : targetElement[styleProp]) || meta.initial;
         const allValues = meta.values || [];
 
         // 1. Bileşik Değer Kontrolü (örn: border, animation)

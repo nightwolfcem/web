@@ -5,7 +5,7 @@ export  class TbaseControl {
         this.meta = meta;
         this.targetElement = targetElement;
         this.onChange = onChange;
-        this.initialValue = targetElement.style[styleProp] || meta?.initial || '';
+        this.initialValue = (targetElement.style ? targetElement.style[styleProp] : targetElement[styleProp]) || meta?.initial || '';
     }
     render() {
         throw new Error("Render metodu alt sınıfta tanımlanmalıdır.");
