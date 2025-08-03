@@ -655,5 +655,5 @@ this.status.sizable = true;
 
   }
 }
-DOM.loadFuncs.push(_=>DOM.addStyleSheet(DOM.getUpPath(null, 2) + "files/css/propeditor.css'));
+onDOMLoad(_=>DOM.addStyleSheet(DOM.getUpPath(null, 2) + "files/css/propeditor.css'));
 
