@@ -8,6 +8,12 @@ import { TSplitBar } from '../TSplitBar.js';
 import { ControlFactory } from '../style-editor/ControlFactory.js';
 import '../../core/prototypes.js';
 
+// CSSStyleDeclaration üzerinde dönen property isimleri genellikle
+// camelCase biçimindedir. cssProps verisi ise tireli (kebab-case)
+// anahtarlar içerir. Bu yardımcı fonksiyon, stil isimlerini doğru
+// formata çevirerek cssProps ile eşleşmeyi sağlar.
+const toKebabCase = (prop) => prop.replace(/([A-Z])/g, '-$1').toLowerCase();
+
 // Renk tanımları cssProps'tan oluşturuluyor
 export const Tcolors = cssProps.colorNames.reduce((acc, name) => {
   acc[name] = name;
@@ -603,12 +609,29 @@ this.status.sizable = true;
                 ns = booleditor.htmlObject;
               } else {
                 if (typeof obj[i] == 'string') {
-                  if (obj.constructor.name === 'CSSStyleDeclaration' && cssProps.properties[i]) {
-                    const control = ControlFactory.createControl(i, obj.ownerElement || obj._element || obj, (val) => {
-                      obj[i] = val;
-                    });
-                    ns = control;
-                    ns.style.width = '100%';
+                  if (obj.constructor.name === 'CSSStyleDeclaration') {
+                    const cssName = toKebabCase(i);
+                    if (cssProps.properties[cssName]) {
+                      const control = ControlFactory.createControl(cssName, obj.ownerElement || obj._element || obj, (val) => {
+                        obj[i] = val;
+                      });
+                      ns = control;
+                      ns.style.width = '100%';
+                    } else {
+                      var s = new String();
+                      s = obj[i];
+                      var patt1 = /^#[abcdef0123456789]*/g;
+                      var m = s.match(patt1);
+                      if ((m != null && (m[0].length - 1) % 3 == 0) || i.search(/color/i) != -1) {
+                        var coloreditor = new TeditListEditor(obj, i, Tcolors);
+                        ns = coloreditor.htmlObject;
+                        ns.style.width = '100%';
+                      } else {
+                        var texteditor = new TtextEditor(obj, i);
+                        ns = texteditor.htmlObject;
+                        ns.style.width = '100%';
+                      }
+                    }
                   } else {
                     var s = new String();
                     s = obj[i];
