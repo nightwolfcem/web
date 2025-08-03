@@ -463,6 +463,9 @@ export const DOM = {
             if (INTERACTION_STATE.get(el)) return;
             INTERACTION_STATE.set(el, 'resizing');
 
+            if (!("onresizestart" in el)) el.onresizestart = null;
+            el.dispatchEvent(new Event('resizestart'));
+
             const start = {
                 x: e.clientX, y: e.clientY,
                 left: el.offsetLeft,
@@ -501,6 +504,8 @@ export const DOM = {
                 el.removeEventListener('pointerup', onUp);
                 el.removeEventListener('pointercancel', onUp);
                 el.releasePointerCapture?.(ev.pointerId);
+                if (!("onresizeend" in el)) el.onresizeend = null;
+                el.dispatchEvent(new Event('resizeend'));
                 INTERACTION_STATE.delete(el);
             };
 
@@ -560,11 +565,14 @@ makeResizableWithHandles : function (el, flags) {
             el._resHandles.push(h);
             document.body.appendChild(h);
 
-            h.addEventListener('mousedown', e => {
-                e.preventDefault(); e.stopPropagation();
-                const startX = e.clientX, startY = e.clientY;
-                const { left, top, width, height } = rect();
-                const dirKey = dir;
+            h.addEventListener('mousedown', e => {
+                e.preventDefault(); e.stopPropagation();
+                const startX = e.clientX, startY = e.clientY;
+                const { left, top, width, height } = rect();
+                const dirKey = dir;
+
+                if (!("onresizestart" in el)) el.onresizestart = null;
+                el.dispatchEvent(new Event('resizestart'));
 
                 function onMove(ev) {
                     const dx = ev.clientX - startX, dy = ev.clientY - startY;
@@ -579,11 +587,16 @@ makeResizableWithHandles : function (el, flags) {
                     el.dispatchEvent(new Event('resize'));
                 }
 
-                document.addEventListener('mousemove', onMove);
-                document.addEventListener('mouseup', () => document.removeEventListener('mousemove', onMove), { once: true });
-            });
-        });
-    },
+                function onUp() {
+                    document.removeEventListener('mousemove', onMove);
+                    if (!("onresizeend" in el)) el.onresizeend = null;
+                    el.dispatchEvent(new Event('resizeend'));
+                }
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp, { once: true });
+            });
+        });
+    },
 
     /**
      * Attach edge-based resize (no handles), window-like behavior.
@@ -606,16 +619,18 @@ makeResizableWithHandles : function (el, flags) {
             el.style.cursor = RESIZE_CURSORS[dir] || '';
         }
 
-        function onDown(e) {
-            const r = rect(); const x = e.clientX - r.left, y = e.clientY - r.top;
-            let dir = '';
-            if (y < threshold && (flags & Eborder.top)) dir += 'n';
-            else if (y > r.height - threshold && (flags & Eborder.bottom)) dir += 's';
-            if (x < threshold && (flags & Eborder.left)) dir += 'w';
-            else if (x > r.width - threshold && (flags & Eborder.right)) dir += 'e';
-            if (!dir) return;
-            e.preventDefault();
-            const start = { x: e.clientX, y: e.clientY, ...r };
+        function onDown(e) {
+            const r = rect(); const x = e.clientX - r.left, y = e.clientY - r.top;
+            let dir = '';
+            if (y < threshold && (flags & Eborder.top)) dir += 'n';
+            else if (y > r.height - threshold && (flags & Eborder.bottom)) dir += 's';
+            if (x < threshold && (flags & Eborder.left)) dir += 'w';
+            else if (x > r.width - threshold && (flags & Eborder.right)) dir += 'e';
+            if (!dir) return;
+            e.preventDefault();
+            if (!("onresizestart" in el)) el.onresizestart = null;
+            el.dispatchEvent(new Event('resizestart'));
+            const start = { x: e.clientX, y: e.clientY, ...r };
 
             function onDrag(ev) {
                 const dx = ev.clientX - start.x, dy = ev.clientY - start.y;
@@ -633,9 +648,14 @@ makeResizableWithHandles : function (el, flags) {
                 el.dispatchEvent(new Event('resize'));
             }
 
-            document.addEventListener('mousemove', onDrag);
-            document.addEventListener('mouseup', () => document.removeEventListener('mousemove', onDrag), { once: true });
-        }
+            function onUp() {
+                document.removeEventListener('mousemove', onDrag);
+                if (!("onresizeend" in el)) el.onresizeend = null;
+                el.dispatchEvent(new Event('resizeend'));
+            }
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', onUp, { once: true });
+        }
 
         el.addEventListener('mousemove', onMove);
         el.addEventListener('mousedown', onDown);

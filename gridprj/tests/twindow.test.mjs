@@ -15,6 +15,7 @@ const { Twindow } = await import('../files/js/src/ui/Twindow.js');
 document.dispatchEvent(new dom.window.Event('DOMContentLoaded'));
 
 const win = new Twindow();
+assert.strictEqual(win.status.sizable, true, 'window is resizable by default');
 win.showModal();
 assert.strictEqual(win.parent, DOM.baseLayer.subLayers.modal, 'placed in modal layer');
 win.hide();
