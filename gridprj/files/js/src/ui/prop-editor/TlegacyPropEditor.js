@@ -407,6 +407,7 @@ this.status.sizable = true;
     cp.style.cssText = 'display:inline-block;width:100px;height:100%;overflow:hidden;';
 
     cp.innerHTML = '<table cellpadding=0 cellspacing=0 style="table-layout:fixed;min-width:100%;border-collapse:collapse;" id="tprops"></table>';
+    this.keysDiv = cp;
 
     const splitBar = new TSplitBar('vertical');
     splitBar.onStartMove = () => {
@@ -432,6 +433,7 @@ this.status.sizable = true;
     cv.onscroll = function (e) {
       cp.scrollTop = cv.scrollTop;
     };
+    this.valuesDiv = cv;
 
     this.cntx.appendChild(cp);
     this.cntx.appendChild(sp);
@@ -489,6 +491,10 @@ this.status.sizable = true;
         tp.rows[i].style.display = 'none';
         tv.rows[i].style.display = 'none';
       }
+    }
+    if (this.keysDiv && this.valuesDiv) {
+      this.keysDiv.scrollTop = 0;
+      this.valuesDiv.scrollTop = 0;
     }
   }
 
@@ -553,12 +559,14 @@ this.status.sizable = true;
           nr = tp.insertRow(k);
           nr1 = nr;
           nr = nr.insertCell();
-          np = tv.insertRow(k);
-          np = np.insertCell();
+
+          const npRow = tv.insertRow(k);
+          npRow.style.height = nr1.style.height = '18px';
+          np = npRow.insertCell();
           np.valign = 'center';
           np.style.cssText = nr.style.cssText;
           np = np.appendChild(document.createElement('div'));
-          np.style = 'height:100%;box-sizing: border-box';
+          np.style.cssText = 'height:100%;box-sizing:border-box;font-size:inherit;';
           k = k + 1;
           nr1.lvl = (lvl ? lvl + '-' : '') + k;
           if (obj[i] != null)
