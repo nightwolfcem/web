@@ -81,11 +81,14 @@ export class ThistoryManager {
                 for (const entry of entries) {
                     const t = entry.target.owner;
                     if (!t) continue;
-                    const newSize = Trect.fromElement(entry.target);
-                    const oldSize = entry.target._$lastSize;
+                    const target = entry.target;
+                    const newSize = Trect.fromElement(target);
+                    const oldSize = target._$lastSize;
                     if (oldSize.width !== newSize.width || oldSize.height !== newSize.height || oldSize.left !== newSize.left || oldSize.top !== newSize.top) {
                         this.execute(new TsizeCommand(t, oldSize, newSize));
-                        entry.target._$lastSize = newSize.clone();
+                        target._$lastSize = newSize.clone();
+                        if (!("onresize" in target)) target.onresize = null;
+                        target.dispatchEvent(new Event('resize'));
                     }
                 }
             }, 50);
@@ -145,3 +148,5 @@ export class ThistoryManager {
     }
 }
 window.ThistoryManager = ThistoryManager;
+
+
