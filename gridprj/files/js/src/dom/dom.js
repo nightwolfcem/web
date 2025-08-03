@@ -747,9 +747,18 @@ makeResizableWithHandles : function (el, flags) {
             }
         }
 
-              const onPointerDown = e => {
+        const onPointerDown = e => {
             if (!handle.contains(e.target) || e.target.closest('button')) return;
             if (INTERACTION_STATE.get(element)) return;
+
+            const threshold = EDGE_THRESHOLD;
+            const rect = element.getBoundingClientRect();
+            const nearEdge = (
+                e.clientX - rect.left < threshold || rect.right - e.clientX < threshold ||
+                e.clientY - rect.top < threshold || rect.bottom - e.clientY < threshold
+            );
+            if (nearEdge) return; // resize öncelikli
+
             INTERACTION_STATE.set(element, 'moving');
             onMoveStartCb?.();
 
@@ -760,15 +769,8 @@ makeResizableWithHandles : function (el, flags) {
                 globs.selectionManager.add(te);
                 te.htmlObject.classList.add('selected');
             }
-            const threshold = EDGE_THRESHOLD;
-            const rect = element.getBoundingClientRect();
-            const nearEdge = (
-                e.clientX - rect.left < threshold || rect.right - e.clientX < threshold ||
-                e.clientY - rect.top < threshold || rect.bottom - e.clientY < threshold
-            );
-            if (nearEdge) return; // resize öncelikli
 
-            handle.setPointerCapture(e.pointerId);
+            handle.setPointerCapture(e.pointerId);
 
             const container = movableRect instanceof Element
                 ? movableRect
