@@ -4,6 +4,7 @@ import { TabsoluteElement } from '../../dom/TabsoluteElement.js';
 import { Ealign } from '../../core/enums.js';
 import { getContrastColor, translayer, colorNameToHex } from './utils.js';
 import { cssProps } from '../../data/cssProperties.js';
+import { DOM } from '../../dom/dom.js';
 
 export class TbaseColorPicker extends TbasePicker {
 
@@ -44,10 +45,11 @@ export class TbaseColorPicker extends TbasePicker {
         this.suggestionBox = new TabsoluteElement({
             targetElement: this.hexInput,
             align: Ealign.bottom | Ealign.left | Ealign.right,
+            parent: DOM.baseLayer.subLayers.dropdown,
             className: 'cp-suggestions',
-            style: { fontSize: '10px', background: '#fff', border: '1px solid #ccc', maxHeight: '100px', overflowY: 'auto', width: '120px', zIndex: '1000' }
+            style: { fontSize: '10px', background: '#fff', border: '1px solid #ccc', maxHeight: '100px', overflowY: 'auto', width: '120px' }
         });
-        this.appendChild(this.suggestionBox);
+        this.suggestionBox.hide();
 
         this._wireSVEvents();
         this._wireHexRgbaEvents();
