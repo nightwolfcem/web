@@ -85,7 +85,7 @@ export class TeditListEditor {
 
   createDropdownMenu() {
     const menu = document.createElement('div');
-    menu.style.cssText = 'z-index:100000; max-height:200px; background-color:#FFF; overflow-y:scroll; overflow-x:hidden; display:none; position:absolute; border: 1px solid rgb(105, 152, 237);';
+    menu.style.cssText = 'z-index:100000; max-height:200px; background-color:#FFF; overflow-y:scroll; overflow-x:hidden; display:none; position:absolute; border: 2px solid rgb(105, 152, 237,0.4);';
     if (this.list === Tcolors && !Tcolors._z) {
       Tcolors._z = menu;
     }
