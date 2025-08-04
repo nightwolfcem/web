@@ -7,6 +7,8 @@ import { cssProps } from '../../data/cssProperties.js';
 import { TSplitBar } from '../TSplitBar.js';
 import { ControlFactory } from '../style-editor/ControlFactory.js';
 import '../../core/prototypes.js';
+import { classToObjects } from '../../core/classUtils.js';
+import { Tlayer } from '../../dom/Tlayer.js';
 
 // CSSStyleDeclaration üzerinde dönen property isimleri genellikle
 // camelCase biçimindedir. cssProps verisi ise tireli (kebab-case)
@@ -378,6 +380,47 @@ this.status.sizable = true;
     this.viewObject = function (obj) {
       var mx = this.htmlObject.getElementsByClassName('propdiv')[0];
       mx.innerHTML = '';
+      const ls = document.createElement('span');
+      ls.pname = 'Layers';
+      ls.innerHTML = 'Layers>';
+      ls.onclick = (e) => {
+        if (e.button == 0) {
+          const pl = document.getElementById('_propselector');
+          pl.innerHTML = '';
+          const layers = classToObjects(Tlayer) || [];
+          if (layers.length) {
+            let sp = document.createElement('option');
+            sp.disabled = true;
+            sp.selected = true;
+            sp.value = '';
+            sp.text = 'select';
+            sp.style.display = 'none';
+            pl.add(sp);
+            layers.forEach(l => {
+              const op = document.createElement('option');
+              op.text = l.layerName || l.id;
+              op.v = l;
+              pl.add(op, pl.options[null]);
+            });
+            pl.onchange = () => {
+              let v = pl.options.item(pl.selectedIndex);
+              pl.selectedIndex = -1;
+              pl.style.display = 'none';
+              this.viewObject(v.v);
+            };
+            pl.onkeyup = (e) => { if (e.key == 'Escape') pl.blur(); };
+            pl.onblur = () => { pl.style.display = 'none'; };
+            pl.style.display = '';
+            pl.style.zIndex = this.htmlObject.style.zIndex + 1;
+            const r = ls.parentNode.getBoundingClientRect();
+            pl.style.position = 'absolute';
+            pl.style.left = r.left + 'px';
+            pl.style.top = (r.bottom + window.scrollY) + 'px';
+            pl.focus();
+          }
+        }
+      };
+      mx.appendChild(ls);
       this.clear();
       Object.keys(this.tabs).forEach(t => {
         if (t === 'style' && obj.style) this.findsubprops(obj.style, null, t);
@@ -453,6 +496,7 @@ this.status.sizable = true;
       }
     });
 
+
     const hideLargeTable = () => {
       const tbl = this.tabs[this.activeTab].valuesDiv.getElementsByTagName('table')[0];
       if (tbl && tbl.rows.length > 100) tbl.style.display = 'none';
@@ -471,7 +515,7 @@ this.status.sizable = true;
       area.valuesDiv.scrollTop = area.valuesDiv.scrollTop + e.deltaY;
       e.preventDefault();
     };
-    this.addprop(window, 'window');
+    this.viewObject(window);
   }
 
   createTabArea() {
