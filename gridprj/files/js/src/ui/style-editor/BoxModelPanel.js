@@ -113,3 +113,6 @@ export class BoxModelPanel {
         this.updateDiagram();
     }
 }
+
+window.BoxModelPanel = BoxModelPanel;
+

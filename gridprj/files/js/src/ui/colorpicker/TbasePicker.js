@@ -43,6 +43,7 @@ export class TbasePicker extends Twindow {
             width: 300, height: 220, sizable: false,
             title: opts.title ?? 'Color Picker',
             buttons: [EcaptionButton.close],
+            closeMode: 'hide',
             ...opts
         });
 
@@ -63,6 +64,8 @@ export class TbasePicker extends Twindow {
             TbasePicker.#_instances.set(this, inst);
         } else {
             Object.assign(inst, opts);
+            if (!('targetElement' in opts)) inst.targetElement = null;
+            if (!('targetInput' in opts)) inst.targetInput = null;
             if (opts.parent && inst.parent !== opts.parent) {
                 inst.body(opts.parent);
             } else if (opts.container && inst.parent !== opts.container) {
