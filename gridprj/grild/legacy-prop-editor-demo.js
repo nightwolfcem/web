@@ -3,7 +3,7 @@ import { TpropEditor as TlegacyPropEditor } from '../files/js/src/ui/prop-editor
 import {allClass} from '../files/js/src/core/classUtils.js';
 document.addEventListener('DOMContentLoaded', () => {
   const app = document.getElementById('app');
- const editor = new TlegacyPropEditor(600, 400,{closeMode:"hide");
+ const editor = new TlegacyPropEditor(600, 400,{closeMode:"hide"});
 
   editor.body(app);
   editor.viewObject(document.body);
