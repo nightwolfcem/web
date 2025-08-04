@@ -1,8 +1,8 @@
-import { ControlFactory } from './ControlFactory.js';
+import { TControlFactory } from './TControlFactory.js';
 import { cssProps } from '../../data/cssProperties.js';
-import { BoxModelPanel } from './BoxModelPanel.js';
+import { TBoxModelPanel } from './TBoxModelPanel.js';
 
-export class StyleEditor {
+export class TStyleEditor {
     /**
      * @param {HTMLElement} targetElement - Stilleri düzenlenecek hedef element.
      * @param {HTMLElement} editorContainer - Düzenleme arayüzünün yerleştirileceği konteyner.
@@ -75,7 +75,7 @@ export class StyleEditor {
         };
 
         // Fabrikayı kullanarak doğru kontrolü oluştur
-        const control = ControlFactory.createControl(styleProp, this.targetElement, onChangeCallback);
+        const control = TControlFactory.createControl(styleProp, this.targetElement, onChangeCallback);
         wrapper.appendChild(control);
 
         this.editorContainer.appendChild(wrapper);
@@ -106,7 +106,7 @@ export class StyleEditor {
 
             const controlWrap = document.createElement('div');
             controlWrap.style.cssText = 'flex:1;';
-            const control = ControlFactory.createControl(prop, this.targetElement, val => {
+            const control = TControlFactory.createControl(prop, this.targetElement, val => {
                 if (typeof this.targetElement.style.setProperty === 'function') {
                     this.targetElement.style.setProperty(prop, val);
                 } else {
@@ -202,7 +202,9 @@ export class StyleEditor {
      */
     renderBoxModel() {
         this.editorContainer.innerHTML = '';
-        this.boxModelPanel = new BoxModelPanel(this.targetElement, this.editorContainer);
+        this.boxModelPanel = new TBoxModelPanel(this.targetElement, this.editorContainer);
     }
 }
+
+window.TStyleEditor = TStyleEditor;
 

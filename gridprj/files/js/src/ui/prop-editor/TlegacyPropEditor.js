@@ -5,7 +5,7 @@ import { onDOMLoad } from '../../core/loader.js';
 import { Tcolor, calculateLuminance } from '../../utils/colorUtils.js';
 import { cssProps } from '../../data/cssProperties.js';
 import { TSplitBar } from '../TSplitBar.js';
-import { ControlFactory } from '../style-editor/ControlFactory.js';
+import { TControlFactory } from '../style-editor/TControlFactory.js';
 import '../../core/prototypes.js';
 import { classToObjects } from '../../core/classUtils.js';
 import { Tlayer } from '../../dom/Tlayer.js';
@@ -736,7 +736,7 @@ this.status.sizable = true;
                   if (obj.constructor.name === 'CSSStyleDeclaration') {
                     const cssName = toKebabCase(i);
                     if (cssProps.properties[cssName]) {
-                      const control = ControlFactory.createControl(cssName, obj.ownerElement || obj._element || obj, (val) => {
+                      const control = TControlFactory.createControl(cssName, obj.ownerElement || obj._element || obj, (val) => {
                         obj[i] = val;
                       });
                       ns = control;

@@ -3513,7 +3513,7 @@
   "Tomato", "Turquoise", "Violet", "Wheat", "White",
  "WhiteSmoke", "Yellow", "YellowGreen"
 ];
-class StyleEditor {
+class TStyleEditor {
       constructor(element, container) {
         this.element = element;
         this.container = container;
@@ -3982,7 +3982,8 @@ class StyleEditor {
         return container;
       }
     }
-  
+window.TStyleEditor = TStyleEditor;
+
     document.addEventListener("DOMContentLoaded", () => {
       const target = document.getElementById("target");
       const editorContainer = document.getElementById("editor");
@@ -3996,7 +3997,7 @@ class StyleEditor {
         propSelect.appendChild(option);
       });
   
-      const styleEditor = new StyleEditor(target, editorContainer);
+      const styleEditor = new TStyleEditor(target, editorContainer);
       loadButton.addEventListener("click", () => {
         const selectedProp = propSelect.value;
         styleEditor.change(selectedProp);

@@ -4,8 +4,12 @@ import { JSDOM } from 'jsdom';
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url: 'http://localhost' });
 global.window = dom.window;
 global.document = dom.window.document;
+global.DOMRect = dom.window.DOMRect;
+global.location = dom.window.location;
+const { TpositionedElement } = await import('../files/js/src/dom/TpositionedElement.js');
+global.TpositionedElement = TpositionedElement;
 
-import { BoxModelPanel } from '../files/js/src/ui/style-editor/BoxModelPanel.js';
+const { TBoxModelPanel } = await import('../files/js/src/ui/style-editor/TBoxModelPanel.js');
 
 document.dispatchEvent(new dom.window.Event('DOMContentLoaded'));
 
@@ -14,7 +18,7 @@ document.body.appendChild(target);
 const container = document.createElement('div');
 document.body.appendChild(container);
 
-const panel = new BoxModelPanel(target, container);
+const panel = new TBoxModelPanel(target, container);
 panel.showControls('margin');
 
 // Simulate user changing top margin through numeric control

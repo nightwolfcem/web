@@ -3462,7 +3462,7 @@ function createElementWithAttributes(tag, attrs = {}, text) {
   
     /* Örnek JSON veri */
    
-    class StyleEditor {
+    class TStyleEditor {
       constructor(element, container) {
         this.element = element;
         this.container = container;
@@ -3662,7 +3662,8 @@ function createElementWithAttributes(tag, attrs = {}, text) {
         this.element.style[compositeProp] = compositeValue;
       }
     }
-  
+    window.TStyleEditor = TStyleEditor;
+
     // Kullanım:
     document.addEventListener("DOMContentLoaded", () => {
       const target = document.getElementById("target");
@@ -3679,7 +3680,7 @@ function createElementWithAttributes(tag, attrs = {}, text) {
       document.body.insertBefore(propSelect, editor);
       document.body.insertBefore(loadButton, editor);
   
-      const styleEditor = new StyleEditor(target, editor);
+      const styleEditor = new TStyleEditor(target, editor);
   
       loadButton.addEventListener("click", () => {
         const selectedProp = propSelect.value;
