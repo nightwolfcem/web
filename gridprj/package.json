@@ -1,0 +1,8 @@
+{
+  "name": "gridprj",
+  "version": "1.0.0",
+  "type": "module",
+  "devDependencies": {
+    "jsdom": "^24.0.0"
+  }
+}
