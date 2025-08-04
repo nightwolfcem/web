@@ -12,8 +12,9 @@ export class TsingleColorPicker extends TbaseColorPicker {
      */
     static getInstance(opts = {}) {
         const inst = super.getInstance(opts);
-        inst.targetElement = opts.targetElement ?? inst.targetElement ?? null;
         inst.targetInput = opts.targetInput ?? inst.targetInput ?? null;
+        inst.styleTarget = opts.targetElement ?? inst.styleTarget ?? null;
+        inst.targetElement = inst.styleTarget;
         inst.onChange = typeof opts.onChange === 'function' ? opts.onChange : inst.onChange;
         inst.onClose = typeof opts.onClose === 'function' ? opts.onClose : inst.onClose;
         if (opts.defaultColor) {
@@ -45,7 +46,7 @@ export class TsingleColorPicker extends TbaseColorPicker {
 
         const detected =
             (this.targetInput && this.targetInput.value) ||
-            (this.targetElement && getComputedStyle(this.targetElement)[this.targetStyle]) ||
+            (this.styleTarget && getComputedStyle(this.styleTarget)[this.targetStyle]) ||
             opts.defaultColor;
 
         this.set(detected);

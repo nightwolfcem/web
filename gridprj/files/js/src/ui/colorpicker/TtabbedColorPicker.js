@@ -63,7 +63,7 @@ export class TtabbedColorPicker extends TbasePicker {
             onChange: (value) => {
                 // Herhangi bir alt picker'dan gelen değeri ana onChange'e iletiyoruz
                 this.onChange(value);
-                if (this.targetElement) this.targetElement.style[this.targetStyle] = value;
+                if (this.styleTarget) this.styleTarget.style[this.targetStyle] = value;
                 if (this.targetInput) this.targetInput.value = value;
             }
         };
@@ -72,12 +72,8 @@ export class TtabbedColorPicker extends TbasePicker {
         this.pickers.gradient = new TgradientPicker({ ...commonOptions, title: '' });
         this.pickers.multiRadial = new TmultiRadialGradientPicker({ ...commonOptions, title: '' });
 
-        // Oluşturulan picker'ları body'ye ekleyerek DOM'a dahil ediyoruz
         Object.values(this.pickers).forEach(picker => {
-            picker.body();
-            picker.htmlObject.style.position = 'relative'; // Gömülü mod için
-            picker.htmlObject.style.border = 'none';
-            picker.htmlObject.style.boxShadow = 'none';
+            picker.embed(this.pickerContainer);
             picker.htmlObject.style.width = '100%';
             picker.htmlObject.style.height = '100%';
         });

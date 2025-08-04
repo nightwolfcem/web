@@ -222,8 +222,8 @@ export class TbaseColorPicker extends TbasePicker {
         const rgbaStr = Tcolor.hsvaToRgba(this.hsva);
         translayer.setForeColor(rgbaStr, this.previewBox);
 
-        if (this.targetElement && this.targetStyle) {
-            this.targetElement.style[this.targetStyle] = rgbaStr;
+        if (this.styleTarget && this.targetStyle) {
+            this.styleTarget.style[this.targetStyle] = rgbaStr;
         }
         
         const rgb = Tcolor.hsvaToRgb(this.hsva);

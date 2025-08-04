@@ -14,8 +14,8 @@ export class TgradientPicker extends TbaseGradientPicker {
     static pick(opts = {}) {
         const p = this.getInstance(opts);
         if (opts.targetInput) p.attach(opts.targetInput);
-        if (opts.targetElement) p.targetElement = opts.targetElement;
-        
+        if (opts.targetElement) p.styleTarget = opts.targetElement;
+
         p.popup(opts.targetElement || opts.targetInput || null);
         p.show();
         return p;
@@ -23,7 +23,7 @@ export class TgradientPicker extends TbaseGradientPicker {
 
     constructor(opts = {}) {
         super({ title: "Gradyan Seçici", ...opts });
-        const detectedCss = (this.targetInput?.value) || (this.targetElement && getComputedStyle(this.targetElement)[this.targetStyle]) || opts.defaultCss;
+        const detectedCss = (this.targetInput?.value) || (this.styleTarget && getComputedStyle(this.styleTarget)[this.targetStyle]) || opts.defaultCss;
         this.set(detectedCss);
     }
     

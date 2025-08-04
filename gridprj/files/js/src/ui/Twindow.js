@@ -264,6 +264,37 @@ export class Twindow extends extendsClass(TdialogMixin, TframeMixin, Tpositioned
         this.#ensurePlacement(['dialog', 'modal']);
         return this.#open(false, DOM.getHtmlElement(target), align, dx, dy);
     }
+
+    embed(parent = null) {
+        this._embedBackup = {
+            border: this.htmlObject.style.border,
+            boxShadow: this.htmlObject.style.boxShadow,
+            position: this.htmlObject.style.position,
+            captionDisplay: this.captionBar ? this.captionBar.style.display : ''
+        };
+        if (this.captionBar) this.captionBar.style.display = 'none';
+        Object.assign(this.htmlObject.style, {
+            border: 'none',
+            boxShadow: 'none',
+            position: 'relative'
+        });
+        if (parent) {
+            this.body(parent);
+        } else if (!this.parent) {
+            this.body();
+        }
+    }
+
+    unembed() {
+        if (!this._embedBackup) return;
+        if (this.captionBar) this.captionBar.style.display = this._embedBackup.captionDisplay;
+        Object.assign(this.htmlObject.style, {
+            border: this._embedBackup.border,
+            boxShadow: this._embedBackup.boxShadow,
+            position: this._embedBackup.position
+        });
+        this._embedBackup = null;
+    }
     
     hide(result) {
         super.hide();
