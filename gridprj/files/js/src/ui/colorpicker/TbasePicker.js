@@ -25,7 +25,7 @@ export function pickerWindowOpts(opts = {}) {
 export function colorWindowOpts(opts = {}) {
     return {
         targetElement: null,
-        targetStyle: 'backgroundColor',
+        targetStyle: null,
         targetInput: null,
         defaultColor: '#ff0000',
         onChange: null,
@@ -40,14 +40,18 @@ export function colorWindowOpts(opts = {}) {
 export class TbasePicker extends Twindow {
     constructor(opts = {}) {
         super({
-            width: 300, height: 220, sizable: false,
+            width: 300,
+            height: 220,
+            sizable: false,
             title: opts.title ?? 'Color Picker',
             buttons: [EcaptionButton.close],
             closeMode: 'hide',
             ...opts
         });
 
-        this.targetStyle = opts.targetStyle ?? 'background';
+        this.styleTarget = opts.targetElement ?? null;
+        this.targetElement = this.styleTarget;
+        this.targetStyle = opts.targetStyle ?? null;
         this.targetInput = opts.targetInput ?? null;
         this.onChange = typeof opts.onChange === 'function' ? opts.onChange : () => {};
         this.onClose = typeof opts.onClose === 'function' ? opts.onClose : () => {};
@@ -71,8 +75,16 @@ export class TbasePicker extends Twindow {
             } else if (opts.container && inst.parent !== opts.container) {
                 inst.body(opts.container);
             }
+            inst.styleTarget = inst.targetElement;
+            inst.targetElement = inst.styleTarget;
         }
         return inst;
+    }
+
+    popup(target = null, align = null, dx = 0, dy = 0) {
+        const st = this.styleTarget;
+        super.popup(target, align, dx, dy);
+        this.targetElement = st;
     }
    attach(input) {
         this.targetInput = input;

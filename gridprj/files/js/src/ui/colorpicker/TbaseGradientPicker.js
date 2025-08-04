@@ -176,8 +176,8 @@ renderStopButtons() {
   updatePreview(){
     const css = this.toCss(this.selectedFunction);
     translayer.setForeColor(css, this.previewBox);
-    if(this.targetElement && this.targetStyle)
-      this.targetElement.style[this.targetStyle]=css;
+    if(this.styleTarget && this.targetStyle)
+      this.styleTarget.style[this.targetStyle]=css;
     if(this.targetInput) this.targetInput.value=css;
      this.#refreshSelectors();
     this.onChange(css);
