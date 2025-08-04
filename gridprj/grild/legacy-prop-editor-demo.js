@@ -11,4 +11,4 @@ document.addEventListener('DOMContentLoaded', () => {
   editor.show();
 
 });
- export {app,editor,allClass};
+ export {app,editor,AllClass};
