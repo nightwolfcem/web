@@ -1,5 +1,6 @@
 import { ControlFactory } from './ControlFactory.js';
 import { cssProps } from '../../data/cssProperties.js';
+import { BoxModelPanel } from './BoxModelPanel.js';
 
 export class StyleEditor {
     /**
@@ -194,6 +195,14 @@ export class StyleEditor {
      */
     renderAll() {
         this.renderProperties(Object.keys(cssProps.properties));
+    }
+
+    /**
+     * Kutu modelini görsel olarak düzenlemek için özel bir panel oluşturur.
+     */
+    renderBoxModel() {
+        this.editorContainer.innerHTML = '';
+        this.boxModelPanel = new BoxModelPanel(this.targetElement, this.editorContainer);
     }
 }
 

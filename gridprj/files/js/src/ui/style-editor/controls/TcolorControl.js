@@ -43,7 +43,9 @@ export class TcolorControl extends TbaseControl {
         colorBox.addEventListener('click', () => {
             const picker = TtabbedColorPicker.getInstance({
                 targetInput: textInput,
+                targetElement: null,
                 defaultColor: textInput.value,
+                closeMode: 'hide',
                 onChange: (color) => {
                     colorBox.style.backgroundColor = color;
                     textInput.value = color;
