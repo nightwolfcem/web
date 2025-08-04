@@ -258,9 +258,10 @@ this.status.sizable = true;
 
     var cv, sp, cp, i, z, mc;
     editbox = editbox ? editbox : new Teditbox('Code editor', 400, 400);
-    this.cntx = document.createElement('div');
-    this.cntx.innerHTML = '<div style=""></div>';
-    this.cntx.style.cssText = 'width:100%;overflow:hidden;height:calc(100% - 35px);display:inline-block;background-color:#fefefe;white-space:nowrap';
+    this.tabs = {};
+    this.filters = {};
+    this.activeTab = 'props';
+    this.cntx = null;
     cp = document.createElement('div');
     cp.className = 'cp';
     cp.style.cssText = 'width: 100%;border: 1px inset; box-sizing: border-box;display:inline-block;height: 35px;';
@@ -359,11 +360,17 @@ this.status.sizable = true;
           pl.style.left = r.left + 'px';
           pl.style.top = (r.bottom + window.scrollY) + 'px';
           this.clear();
-          this.findsubprops(prop);
+          Object.keys(this.tabs).forEach(t => {
+            if (t === 'style' && prop.style) this.findsubprops(prop.style, null, t);
+            else if (t !== 'style') this.findsubprops(prop, null, t);
+          });
         }
       };
       this.clear();
-      this.findsubprops(prop);
+      Object.keys(this.tabs).forEach(t => {
+        if (t === 'style' && prop.style) this.findsubprops(prop.style, null, t);
+        else if (t !== 'style') this.findsubprops(prop, null, t);
+      });
       mx.appendChild(s);
       mx.scrollLeft = 10000;
     };
@@ -372,7 +379,10 @@ this.status.sizable = true;
       var mx = this.htmlObject.getElementsByClassName('propdiv')[0];
       mx.innerHTML = '';
       this.clear();
-      this.findsubprops(obj, null);
+      Object.keys(this.tabs).forEach(t => {
+        if (t === 'style' && obj.style) this.findsubprops(obj.style, null, t);
+        else if (t !== 'style') this.findsubprops(obj, null, t);
+      });
       var k, l, list = [];
       k = obj;
       while (k) {
@@ -403,91 +413,137 @@ this.status.sizable = true;
 
     this.contentPanel.appendChild(cp);
 
-    cv = document.createElement('select');
-    cv.className = 'cv';
-    cv.style.cssText = 'width: 100%; height: 18px;box-sizing: border-box; font-size: small; font-family: monospace; font-weight: 700;';
+    // --- Tab container setup ---
+    const tabNames = ['style', 'props', 'nulls', 'functions', 'events'];
+    this.tabBar = document.createElement('ul');
+    this.tabBar.className = 'prop-tab-bar';
+    this.tabBar.style.cssText = 'list-style:none;margin:0;padding:0;display:flex;border-bottom:1px solid #ccc;';
+    this.contentPanel.appendChild(this.tabBar);
 
-    cp = document.createElement('div');
+    const tabContainer = document.createElement('div');
+    tabContainer.style.cssText = 'width:100%;overflow:hidden;height:calc(100% - 35px);';
+    this.contentPanel.appendChild(tabContainer);
 
-    cp.className = 'prop-keys';
-    cp.style.cssText = 'display:inline-block;width:100px;height:100%;overflow:hidden;';
+    tabNames.forEach(name => {
+      const li = document.createElement('li');
+      li.textContent = name;
+      li.style.cssText = 'padding:4px 8px;cursor:pointer;border-right:1px solid #ccc;';
+      li.onclick = () => this.switchTab(name);
+      this.tabBar.appendChild(li);
 
-    cp.innerHTML = '<table cellpadding=0 cellspacing=0 style="table-layout:fixed;min-width:100%;border-collapse:collapse;" id="tprops"></table>';
-    this.keysDiv = cp;
+      const area = this.createTabArea();
+      area.container.style.display = 'none';
+      tabContainer.appendChild(area.container);
+      this.tabs[name] = area;
+      this.filters[name] = '';
+    });
 
-    const splitBar = new TSplitBar('vertical');
-    splitBar.onStartMove = () => {
-    const ev = new CustomEvent('resizestart');
-    if (typeof this.htmlObject.onresizestart === 'function') this.htmlObject.onresizestart(ev);
-    this.htmlObject.dispatchEvent(ev);
-    };
-    splitBar.onEndMove = () => {
-      const ev = new CustomEvent('resizeend');
-      if (typeof this.htmlObject.onresizeend === 'function') this.htmlObject.onresizeend(ev);
-      this.htmlObject.dispatchEvent(ev);
-
-    };
-    sp = splitBar.htmlObject;
-
-    cv = document.createElement('div');
-
-  cv.className = 'prop-values';
-    cv.style.cssText = 'height:100%;width:calc(100% - 105px);display:inline-block;margin-left:3px;vertical-align:top;';
-
-
-    cv.innerHTML = '<table cellpadding=0 cellspacing=0 style="table-layout:fixed;width:100%;border-collapse:collapse;" id="tvalues"></table>';
-    cv.onscroll = function (e) {
-      cp.scrollTop = cv.scrollTop;
-    };
-    this.valuesDiv = cv;
-
-    this.cntx.appendChild(cp);
-    this.cntx.appendChild(sp);
-    this.cntx.appendChild(cv);
-    this.cntx1 = this.cntx.cloneNode(true);
-    this.cntx1.style.display = 'none';
-    this.contentPanel.appendChild(this.cntx);
-    this.contentPanel.appendChild(this.cntx1);
     this.contentPanel.style.fontSize = '12px';
     this.contentPanel.style.overflow = 'hidden';
     this.defobj = window;
-    this.cntx.lvl = 0;
     this.maxSubLVL = 3;
-    this.findsubprops(this.defobj, null, null);
+
+    this.switchTab('props');
+    // initial render for all tabs
+    tabNames.forEach(t => {
+      if (t === 'style' && this.defobj.style) {
+        this.findsubprops(this.defobj.style, null, t);
+      } else if (t !== 'style') {
+        this.findsubprops(this.defobj, null, t);
+      }
+    });
+
     const hideLargeTable = () => {
-      const tbl = cv.getElementsByTagName('table')[0];
+      const tbl = this.tabs[this.activeTab].valuesDiv.getElementsByTagName('table')[0];
       if (tbl && tbl.rows.length > 100) tbl.style.display = 'none';
     };
     const showHiddenTable = () => {
-      const tbl = cv.getElementsByTagName('table')[0];
+      const tbl = this.tabs[this.activeTab].valuesDiv.getElementsByTagName('table')[0];
       if (tbl && tbl.style.display === 'none') tbl.style.display = '';
     };
     this.htmlObject.onresizestart = hideLargeTable;
     this.htmlObject.onresizeend = showHiddenTable;
     this.htmlObject.onwheel = (e) => {
-      var ho = this.htmlObject;
+      const ho = this.htmlObject;
+      const area = this.tabs[this.activeTab];
       if (e.currentTarget == ho)
-        cp.scrollTop = cp.scrollTop + e.deltaY;
-      cv.scrollTop = cv.scrollTop + e.deltaY;
+        area.keysDiv.scrollTop = area.keysDiv.scrollTop + e.deltaY;
+      area.valuesDiv.scrollTop = area.valuesDiv.scrollTop + e.deltaY;
       e.preventDefault();
     };
     this.addprop(window, 'window');
   }
 
-  clear() {
-    var tv = this.cntx.getElementsByTagName('table')[1];
-    if (tv && tv.getElementsByTagName('tbody')[0]) {
-      tv.removeChild(tv.getElementsByTagName('tbody')[0]);
-      tv = this.cntx.getElementsByTagName('table')[0];
-      tv.removeChild(tv.getElementsByTagName('tbody')[0]);
+  createTabArea() {
+    const cntx = document.createElement('div');
+    cntx.style.cssText = 'width:100%;overflow:hidden;height:100%;display:inline-block;background-color:#fefefe;white-space:nowrap';
+
+    const cp = document.createElement('div');
+    cp.className = 'prop-keys';
+    cp.style.cssText = 'display:inline-block;width:100px;height:100%;overflow:hidden;';
+    cp.innerHTML = '<table cellpadding=0 cellspacing=0 style="table-layout:fixed;min-width:100%;border-collapse:collapse;"></table>';
+
+    const splitBar = new TSplitBar('vertical');
+    splitBar.onStartMove = () => {
+      const ev = new CustomEvent('resizestart');
+      if (typeof this.htmlObject.onresizestart === 'function') this.htmlObject.onresizestart(ev);
+      this.htmlObject.dispatchEvent(ev);
+    };
+    splitBar.onEndMove = () => {
+      const ev = new CustomEvent('resizeend');
+      if (typeof this.htmlObject.onresizeend === 'function') this.htmlObject.onresizeend(ev);
+      this.htmlObject.dispatchEvent(ev);
+    };
+    const sp = splitBar.htmlObject;
+
+    const cv = document.createElement('div');
+    cv.className = 'prop-values';
+    cv.style.cssText = 'height:100%;width:calc(100% - 105px);display:inline-block;margin-left:3px;vertical-align:top;';
+    cv.innerHTML = '<table cellpadding=0 cellspacing=0 style="table-layout:fixed;width:100%;border-collapse:collapse;"></table>';
+    cv.onscroll = function () {
+      cp.scrollTop = cv.scrollTop;
+    };
+
+    cntx.appendChild(cp);
+    cntx.appendChild(sp);
+    cntx.appendChild(cv);
+
+    return { container: cntx, keysDiv: cp, valuesDiv: cv };
+  }
+
+  switchTab(name) {
+    if (!this.tabs[name]) return;
+    Object.entries(this.tabs).forEach(([t, area]) => {
+      area.container.style.display = t === name ? '' : 'none';
+    });
+    this.activeTab = name;
+    this.cntx = this.tabs[name].container;
+    this.keysDiv = this.tabs[name].keysDiv;
+    this.valuesDiv = this.tabs[name].valuesDiv;
+    const findBar = this.htmlObject.getElementsByClassName('_findbar')[0];
+    if (findBar) {
+      findBar.value = this.filters[name] || '';
     }
+    this.filter(this.filters[name] || '');
+  }
+
+  clear() {
+    Object.values(this.tabs).forEach(area => {
+      const tbls = area.container.getElementsByTagName('table');
+      if (tbls[1] && tbls[1].getElementsByTagName('tbody')[0]) {
+        tbls[1].removeChild(tbls[1].getElementsByTagName('tbody')[0]);
+        tbls[0].removeChild(tbls[0].getElementsByTagName('tbody')[0]);
+      }
+    });
   }
 
   filter(t) {
-    var g, tv, tp = this.cntx.getElementsByTagName('table')[0];
-    tv = this.cntx.getElementsByTagName('table')[1];
-    g = new RegExp(t, 'i', 'g');
-    for (var i = 0; i < tp.rows.length; i++) {
+    this.filters[this.activeTab] = t;
+    const area = this.tabs[this.activeTab];
+    const tp = area.container.getElementsByTagName('table')[0];
+    const tv = area.container.getElementsByTagName('table')[1];
+    const g = new RegExp(t, 'i', 'g');
+    for (let i = 0; i < tp.rows.length; i++) {
       tp.rows[i].style._display = tp.rows[i].style.display;
       tv.rows[i].style._display = tp.rows[i].style.display;
       if (t === '' || g.test(tp.rows[i].cells[0].childNodes[0].nodeValue)) {
@@ -498,15 +554,14 @@ this.status.sizable = true;
         tv.rows[i].style.display = 'none';
       }
     }
-    if (this.keysDiv && this.valuesDiv) {
-      this.keysDiv.scrollTop = 0;
-      this.valuesDiv.scrollTop = 0;
-    }
+    area.keysDiv.scrollTop = 0;
+    area.valuesDiv.scrollTop = 0;
   }
 
   expand(rv) {
-    var l, m, lc, tv, c, tp = this.cntx.getElementsByTagName('table')[0];
-    tv = this.cntx.getElementsByTagName('table')[1];
+    const area = this.tabs[rv.tab || this.activeTab];
+    var l, m, lc, c, tp = area.container.getElementsByTagName('table')[0];
+    const tv = area.container.getElementsByTagName('table')[1];
     function exclp(r, e, f) {
       var k, v, i, g = new RegExp('^' + r.lvl);
       for (i = r.rowIndex + 1; i < tp.rows.length; i++) {
@@ -529,7 +584,7 @@ this.status.sizable = true;
       }
     }
     if (!rv || (rv && !rv.loaded)) {
-      this.findsubprops(rv.obj, rv);
+      this.findsubprops(rv.obj, rv, rv.tab || this.activeTab);
       rv.cells[0].childNodes[0].nodeValue = rv.cells[0].childNodes[0].nodeValue.replace(/\+/, '-');
       rv.loaded = true;
       rv.expanded = true;
@@ -549,18 +604,28 @@ this.status.sizable = true;
 
   findevents(obj, rv) { }
 
-  findsubprops(obj, rv) {
-    var ot, tv, lvl, nr, nr1, np, ns, k, ts, tp = this.cntx.getElementsByTagName('table')[0];
-    tv = this.cntx.getElementsByTagName('table')[1];
+  findsubprops(obj, rv, type) {
+    const area = this.tabs[type || this.activeTab];
+    var ot, tv, lvl, nr, nr1, np, ns, k, ts;
+    const tp = area.container.getElementsByTagName('table')[0];
+    tv = area.container.getElementsByTagName('table')[1];
     if (rv != null) {
       k = rv.rowIndex + 1;
       lvl = rv.lvl;
     } else {
       k = 0;
     }
+    const getCat = (key, val) => {
+      if (val === null) return 'nulls';
+      if (typeof val === 'function') return /^on/i.test(key) ? 'events' : 'functions';
+      if (val instanceof CSSStyleDeclaration) return 'style';
+      return 'props';
+    };
     for (var i in obj) {
       ns = null;
       if (!(obj.constructor.name == 'CSSStyleDeclaration' && !isNaN(Number(i)))) {
+        const cat = type === 'style' ? 'style' : getCat(i, obj[i]);
+        if (type && type !== 'style' && cat !== type) continue;
         try {
           nr = tp.insertRow(k);
           nr1 = nr;
@@ -575,6 +640,7 @@ this.status.sizable = true;
           np.style.cssText = 'height:100%;box-sizing:border-box;font-size:inherit;';
           k = k + 1;
           nr1.lvl = (lvl ? lvl + '-' : '') + k;
+          nr1.tab = type;
           if (obj[i] != null)
             nr.className = typeof obj[i];
           if (typeof obj[i] == 'object' && obj[i] != null && !(obj[i] instanceof Tord)) {
