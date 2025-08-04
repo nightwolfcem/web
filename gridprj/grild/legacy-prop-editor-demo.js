@@ -1,6 +1,6 @@
 import '../files/js/src/main.js';
 import { TpropEditor as TlegacyPropEditor } from '../files/js/src/ui/prop-editor/TlegacyPropEditor.js';
-import {allClass} from '../files/js/src/core/classUtils.js';
+import {AllClass} from '../files/js/src/core/classUtils.js';
 let app,editor;
 document.addEventListener('DOMContentLoaded', () => {
   app = document.getElementById('app');
