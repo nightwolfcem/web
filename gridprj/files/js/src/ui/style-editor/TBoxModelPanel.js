@@ -1,9 +1,9 @@
-import { ControlFactory } from './ControlFactory.js';
+import { TControlFactory } from './TControlFactory.js';
 import { setStyleProperty, getStyleProperty } from './styleUtils.js';
 
 const sides = ['top', 'right', 'bottom', 'left'];
 
-export class BoxModelPanel {
+export class TBoxModelPanel {
     constructor(targetElement, container) {
         this.target = targetElement;
         this.container = container;
@@ -67,7 +67,7 @@ export class BoxModelPanel {
         const props = propMap[region];
         if (!props) return;
         props.forEach((prop, idx) => {
-            const ctrl = ControlFactory.createControl(prop, this.target, val => {
+            const ctrl = TControlFactory.createControl(prop, this.target, val => {
                 setStyleProperty(this.target.style, prop, val);
                 this.updateDiagram();
             });
@@ -114,5 +114,5 @@ export class BoxModelPanel {
     }
 }
 
-window.BoxModelPanel = BoxModelPanel;
+window.TBoxModelPanel = TBoxModelPanel;
 

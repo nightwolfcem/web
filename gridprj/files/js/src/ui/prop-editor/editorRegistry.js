@@ -1,7 +1,7 @@
 import { TsingleColorPicker } from '../colorpicker/TsingleColorPicker.js';
 import { Tord } from '../../core/enums.js';
 // StyleEditor'ın akıllı kontrol fabrikasını import ediyoruz.
-import { ControlFactory } from '../style-editor/ControlFactory.js';
+import { TControlFactory } from '../style-editor/TControlFactory.js';
 import { cssProps } from '../../data/cssProperties.js';
 
 // --- TEMEL EDİTÖR SINIFI ---
@@ -142,7 +142,7 @@ class TstylePropertyEditor extends TbaseEditor {
         };
 
         // StyleEditor'ın akıllı fabrikasını çağırıyoruz.
-        return ControlFactory.createControl(this.key, targetElement, onChangeCallback);
+        return TControlFactory.createControl(this.key, targetElement, onChangeCallback);
     }
 }
 

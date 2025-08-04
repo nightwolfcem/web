@@ -5,10 +5,10 @@ import { TcompoundValueControl } from './controls/TcompoundValueControl.js';
 import { cssProps } from '../../data/cssProperties.js';
 
 /**
- * ControlFactory: Bir CSS özelliğinin meta verisine bakarak
+ * TControlFactory: Bir CSS özelliğinin meta verisine bakarak
  * doğru UI kontrolünü (örn: renk seçici, sayısal giriş) oluşturan bir fabrika.
  */
-export class ControlFactory {
+export class TControlFactory {
     /**
      * @param {string} styleProp - Düzenlenecek CSS özelliği (örn: 'backgroundColor').
      * @param {HTMLElement|CSSStyleDeclaration} targetElement - Stilin uygulanacağı hedef element veya doğrudan stil deklarasyonu.
@@ -55,3 +55,5 @@ export class ControlFactory {
         return new TautoCompleteControl(styleProp, allValues, targetElement, onChange).render();
     }
 }
+
+window.TControlFactory = TControlFactory;
