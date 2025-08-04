@@ -630,6 +630,7 @@ this.status.sizable = true;
                         obj[i] = val;
                       });
                       ns = control;
+                      ns.firstChild.style.width = '100%';
                       ns.style.width = '100%';
                     } else {
                       var s = new String();
