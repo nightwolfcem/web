@@ -14,7 +14,7 @@ let initialPositions = new Map();
         ne: 'nesw-resize', nw: 'nwse-resize', se: 'nwse-resize', sw: 'nesw-resize'
     };
 
-    const EDGE_THRESHOLD = 10;
+    const EDGE_THRESHOLD =5;
 
     function createResizeHandle(direction) {
         const handle = document.createElement('div');
