@@ -1,4 +1,3 @@
-import { TbaseControl } from './TbaseControl.js';
 import { cssProps } from '../../../data/cssProperties.js';
 import { TabsoluteElement } from '../../../dom/TabsoluteElement.js';
 import { Ealign } from '../../../core/enums.js';
@@ -9,6 +8,7 @@ let sharedSuggestionBox;
 export class TcompoundValueControl extends TbaseControl {
     render() {
         const container = document.createElement('div');
+        container.style.position = 'relative';
 
         const input = document.createElement('input');
         input.type = 'text';
@@ -19,9 +19,9 @@ export class TcompoundValueControl extends TbaseControl {
         const getSuggestionBox = () => {
             if (!sharedSuggestionBox) {
                 sharedSuggestionBox = new TabsoluteElement({
-                    align: Ealign.bottom | Ealign.left | Ealign.right | Ealign.offset,
+                    align: Ealign.bottom | Ealign.left | Ealign.right,
                     parent: DOM.baseLayer.subLayers.dropdown,
-                    className: 'suggestion-box popup absolute',
+                    className: 'suggestion-box',
                     style: {
                         border: '1px solid #ccc',
                         background: '#fff',
@@ -35,6 +35,7 @@ export class TcompoundValueControl extends TbaseControl {
             sharedSuggestionBox.targetElement = input;
             return sharedSuggestionBox;
         };
+
 
         const expectedTokens = [];
         const staticOptions = [];
@@ -126,3 +127,4 @@ export class TcompoundValueControl extends TbaseControl {
     }
 }
 window.TcompoundValueControl = TcompoundValueControl;
+
