@@ -432,7 +432,7 @@ this.status.sizable = true;
     cv = document.createElement('div');
 
   cv.className = 'prop-values';
-    cv.style.cssText = 'height:100%;width:calc(100% - 105px);display:inline-block;margin-left:5px;vertical-align:top;';
+    cv.style.cssText = 'height:100%;width:calc(100% - 105px);display:inline-block;margin-left:3px;vertical-align:top;';
 
 
     cv.innerHTML = '<table cellpadding=0 cellspacing=0 style="table-layout:fixed;width:100%;border-collapse:collapse;" id="tvalues"></table>';
