@@ -457,7 +457,13 @@ this.status.sizable = true;
     this.contentPanel.appendChild(cp);
 
     // --- Tab container setup ---
-    const tabNames = ['style', 'props', 'nulls', 'functions', 'events'];
+    // Updated tab layout: style properties are split into three
+    // dedicated sections.  "style" shows all CSS properties,
+    // "stylebox" focuses on box-model related styles like borders
+    // and padding, while "animation" lists animation and transition
+    // related styles.  The previous "nulls" tab has been removed and
+    // null or event handler properties now appear under "events".
+    const tabNames = ['style', 'stylebox', 'props', 'functions', 'events', 'animation'];
     this.tabBar = document.createElement('ul');
     this.tabBar.className = 'prop-tab-bar';
     this.tabBar.style.cssText = 'list-style:none;margin:0;padding:0;display:flex;border-bottom:1px solid #ccc;';
@@ -487,11 +493,14 @@ this.status.sizable = true;
     this.maxSubLVL = 3;
 
     this.switchTab('props');
-    // initial render for all tabs
+    // initial render for all tabs.  Tabs that operate on the element's
+    // style object (`style`, `stylebox` and `animation`) are populated
+    // from `this.defobj.style`, while the others inspect the element
+    // itself.
     tabNames.forEach(t => {
-      if (t === 'style' && this.defobj.style) {
+      if ((t === 'style' || t === 'stylebox' || t === 'animation') && this.defobj.style) {
         this.findsubprops(this.defobj.style, null, t);
-      } else if (t !== 'style') {
+      } else if (t !== 'style' && t !== 'stylebox' && t !== 'animation') {
         this.findsubprops(this.defobj, null, t);
       }
     });
@@ -660,16 +669,32 @@ this.status.sizable = true;
       k = 0;
     }
     const getCat = (key, val) => {
-      if (val === null) return 'nulls';
-      if (typeof val === 'function') return /^on/i.test(key) ? 'events' : 'functions';
+      // Event handler properties typically start with "on".  They may
+      // be functions or `null` when no handler is attached; in either
+      // case they belong in the "events" tab.
+      if (/^on/i.test(key)) return 'events';
+      if (typeof val === 'function') return 'functions';
       if (val instanceof CSSStyleDeclaration) return 'style';
       return 'props';
     };
     for (var i in obj) {
       ns = null;
       if (!(obj.constructor.name == 'CSSStyleDeclaration' && !isNaN(Number(i)))) {
-        const cat = type === 'style' ? 'style' : getCat(i, obj[i]);
-        if (type && type !== 'style' && cat !== type) continue;
+        let cat = type === 'style' ? 'style' : getCat(i, obj[i]);
+        // Custom filters for special style-based tabs.
+        if (type === 'stylebox') {
+          // Show box model related style properties.
+          if (!/^(border|padding|width|height|background|color)/i.test(i)) {
+            continue;
+          }
+        } else if (type === 'animation') {
+          // Show animation and transition related style properties.
+          if (!/(animation|transition)/i.test(i)) {
+            continue;
+          }
+        } else if (type && type !== 'style' && cat !== type) {
+          continue;
+        }
         try {
           nr = tp.insertRow(k);
           nr1 = nr;
