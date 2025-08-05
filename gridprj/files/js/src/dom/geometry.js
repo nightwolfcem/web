@@ -175,19 +175,21 @@ apply();
 });
 }
 static pagePos(el) {
-let x = 0,
-y = 0,
-n = el;
-while (n) {
-x += n.offsetLeft - n.scrollLeft;
-y += n.offsetTop - n.scrollTop;
-n = n.offsetParent;
-}
-return {
-x: x + scrollX,
-y: y + scrollY
-};
-}
+        let x = 0, y = 0;
+        let n = el;
+        let op = el;
+        while (n) {
+            if (n === op) {
+                x += n.offsetLeft;
+                y += n.offsetTop;
+                op = n.offsetParent;
+            }
+            x -= n.scrollLeft;
+            y -= n.scrollTop;
+            n = n.parentElement;
+        }
+        return { x: x + scrollX, y: y + scrollY };
+    }
 static viewToElement(el, xOrPt = 0, y = 0) {
 const p = el.offsetParent || document.body;
 const r = p.getBoundingClientRect();
