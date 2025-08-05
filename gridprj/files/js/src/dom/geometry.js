@@ -410,23 +410,24 @@ this.y = y;
 return this.#push();
 }
 #applyChanges(changes) {
-const parentPos = this.#el.offsetParent ? TelementPoint.pagePos(this.#el.offsetParent) : { x: 0, y: 0 };
-if (changes.left != null) {
-this.#el.style.left = `${changes.left - parentPos.x}px`;
-super.x = changes.left;
-}
-if (changes.top != null) {
-this.#el.style.top = `${changes.top - parentPos.y}px`;
-super.y = changes.top;
-}
-if (changes.width != null) {
-this.#el.style.width = `${changes.width}px`;
-super.width = changes.width;
-}
-if (changes.height != null) {
-this.#el.style.height = `${changes.height}px`;
-super.height = changes.height;
-}
+  const parentRect = this.#el.offsetParent?.getBoundingClientRect();
+    const parentPos = parentRect ? { x: parentRect.left + scrollX, y: parentRect.top + scrollY } : { x: 0, y: 0 };
+    if (changes.left != null) {
+        this.#el.style.left = `${changes.left - parentPos.x}px`;
+        super.x = changes.left;
+    }
+    if (changes.top != null) {
+        this.#el.style.top = `${changes.top - parentPos.y}px`;
+        super.y = changes.top;
+    }
+    if (changes.width != null) {
+        this.#el.style.width = `${changes.width}px`;
+        super.width = changes.width;
+    }
+    if (changes.height != null) {
+        this.#el.style.height = `${changes.height}px`;
+        super.height = changes.height;
+    }
 }
 alignTo(dst, flags = 0, offsetX = 0, offsetY = 0) {
 const sc = ["screen", "document", "window", "viewport"];
