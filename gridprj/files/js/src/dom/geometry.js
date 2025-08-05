@@ -236,20 +236,24 @@ super.width = r.width;
 super.height = r.height;
 }
 #push(changes) {
-if (!changes) changes = ['left', 'top', 'width', 'height'];
-if (typeof changes === 'string')
-changes = changes.split('+-,;|').map(s => s.trim());
-this.suppressRefresh = true;
-const s = this.#el.style;
-if (s.position === '' || s.position === 'static') {
-s.position = 'absolute';
-}
-if (changes.includes('left') || changes.includes('x')) s.left = super.x + 'px';
-if (changes.includes('top') || changes.includes('y')) s.top = super.y + 'px';
-if (changes.includes('width')) s.width = super.width + 'px';
-if (changes.includes('height')) s.height = super.height + 'px';
-delete this.suppressRefresh;
-}
+        if (!changes) changes = ['left', 'top', 'width', 'height'];
+        if (typeof changes === 'string')
+            changes = changes.split('+-,;|').map(s => s.trim());
+        this.suppressRefresh = true;
+        const s = this.#el.style;
+        if (s.position === '' || s.position === 'static') {
+            s.position = 'absolute';
+        }
+        const parent = this.#el.offsetParent;
+        const parentPos = parent ? TelementPoint.pagePos(parent) : { x: 0, y: 0 };
+        if (changes.includes('left') || changes.includes('x'))
+            s.left = (super.x - parentPos.x) + 'px';
+        if (changes.includes('top') || changes.includes('y'))
+            s.top = (super.y - parentPos.y) + 'px';
+        if (changes.includes('width')) s.width = super.width + 'px';
+        if (changes.includes('height')) s.height = super.height + 'px';
+        delete this.suppressRefresh;
+    }
 #wireDomSync() {
 ['left', 'top', 'right', 'bottom', 'width', 'height', 'x', 'y'].forEach(prop => {
 Object.defineProperty(this, prop, {
@@ -304,21 +308,23 @@ el.style.top = (r.top - pp.y) + 'px';
 el.style.width = r.width + 'px';
 el.style.height = r.height + 'px';
 }
-static alignTo(src, dst, flags = 0, offsetX = 0, offsetY = 0) {
-const dRect = ((flags & Ealign.offset) === Ealign.offset) ?
-TelementRect.pageRect(dst) :
-TelementRect.clientRect(dst);
-if (((flags & Ealign.client) === Ealign.client)) {
-const t = {
-left: dRect.left + offsetX,
-top: dRect.top + offsetY,
-width: dRect.width,
-height: dRect.height
-};
-return Object.fromEntries(
-Object.entries(t).filter(([k, v]) => v != null)
-);
-}
+    static alignTo(src, dst, flags = 0, offsetX = 0, offsetY = 0) {
+        const useClient = (flags & Ealign.client) === Ealign.client;
+        const useOffset = (flags & Ealign.offset) === Ealign.offset;
+        const dRect = useClient ? TelementRect.clientRect(dst) :
+            useOffset ? TelementRect.offsetRect(dst) :
+            TelementRect.pageRect(dst);
+        if (useClient) {
+            const t = {
+                left: dRect.left + offsetX,
+                top: dRect.top + offsetY,
+                width: dRect.width,
+                height: dRect.height
+            };
+            return Object.fromEntries(
+                Object.entries(t).filter(([k, v]) => v != null)
+            );
+        }
 const orig = {
 left: src.offsetLeft,
 top: src.offsetTop,
@@ -409,26 +415,26 @@ this.x = x;
 this.y = y;
 return this.#push();
 }
-#applyChanges(changes) {
-  const parentRect = this.#el.offsetParent?.getBoundingClientRect();
-    const parentPos = parentRect ? { x: parentRect.left + scrollX, y: parentRect.top + scrollY } : { x: 0, y: 0 };
-    if (changes.left != null) {
-        this.#el.style.left = `${changes.left - parentPos.x}px`;
-        super.x = changes.left;
+    #applyChanges(changes) {
+        const props = [];
+        if (changes.left != null) {
+            super.x = changes.left;
+            props.push('left');
+        }
+        if (changes.top != null) {
+            super.y = changes.top;
+            props.push('top');
+        }
+        if (changes.width != null) {
+            super.width = changes.width;
+            props.push('width');
+        }
+        if (changes.height != null) {
+            super.height = changes.height;
+            props.push('height');
+        }
+        if (props.length) this.#push(props);
     }
-    if (changes.top != null) {
-        this.#el.style.top = `${changes.top - parentPos.y}px`;
-        super.y = changes.top;
-    }
-    if (changes.width != null) {
-        this.#el.style.width = `${changes.width}px`;
-        super.width = changes.width;
-    }
-    if (changes.height != null) {
-        this.#el.style.height = `${changes.height}px`;
-        super.height = changes.height;
-    }
-}
 alignTo(dst, flags = 0, offsetX = 0, offsetY = 0) {
 const sc = ["screen", "document", "window", "viewport"];
 const tag = typeof dst === "string" ? dst : dst.tagName.toLowerCase();
