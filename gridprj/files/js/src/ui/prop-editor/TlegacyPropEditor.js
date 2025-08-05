@@ -264,6 +264,9 @@ this.status.sizable = true;
     this.filters = {};
     this.activeTab = 'props';
     this.cntx = null;
+    // Box model editor references
+    this.boxInputs = null;
+    this.boxEls = null;
     cp = document.createElement('div');
     cp.className = 'cp';
     cp.style.cssText = 'width: 100%;border: 1px inset; box-sizing: border-box;display:inline-block;height: 35px;';
@@ -378,6 +381,7 @@ this.status.sizable = true;
     };
 
     this.viewObject = function (obj) {
+      this.defobj = obj;
       var mx = this.htmlObject.getElementsByClassName('propdiv')[0];
       mx.innerHTML = '';
       const ls = document.createElement('span');
@@ -443,6 +447,7 @@ this.status.sizable = true;
       for (var i = 0; i < list.length; i++) {
         this.addprop(list[i].obj, list[i].name);
       }
+      this.updateBoxModelEditor();
     };
 
     cp.appendChild(cv);
@@ -486,6 +491,9 @@ this.status.sizable = true;
       this.tabs[name] = area;
       this.filters[name] = '';
     });
+
+    if (this.tabs['stylebox']) this.initStyleBoxTab(this.tabs['stylebox']);
+    if (this.tabs['animation']) this.initAnimationTab(this.tabs['animation']);
 
     this.contentPanel.style.fontSize = '12px';
     this.contentPanel.style.overflow = 'hidden';
@@ -562,6 +570,123 @@ this.status.sizable = true;
     cntx.appendChild(cv);
 
     return { container: cntx, keysDiv: cp, valuesDiv: cv };
+  }
+
+  initStyleBoxTab(area) {
+    const editor = this.createBoxModelEditor();
+    area.valuesDiv.insertBefore(editor, area.valuesDiv.firstChild);
+  }
+
+  createBoxModelEditor() {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'padding:4px;text-align:center;';
+
+    const marginBox = document.createElement('div');
+    marginBox.style.cssText = 'display:inline-block;background:#fdd;padding:10px;';
+    const borderBox = document.createElement('div');
+    borderBox.style.cssText = 'background:#dfd;border:4px solid #000;padding:10px;';
+    const paddingBox = document.createElement('div');
+    paddingBox.style.cssText = 'background:#ddf;padding:10px;';
+    const contentBox = document.createElement('div');
+    contentBox.style.cssText = 'background:#fff;height:40px;';
+
+    paddingBox.appendChild(contentBox);
+    borderBox.appendChild(paddingBox);
+    marginBox.appendChild(borderBox);
+    wrap.appendChild(marginBox);
+
+    const controls = document.createElement('div');
+    controls.style.cssText = 'margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;justify-content:center;';
+
+    this.boxInputs = {};
+
+    const makeInput = (label, prop, type = 'text') => {
+      const l = document.createElement('label');
+      l.style.cssText = 'font-size:11px;';
+      l.textContent = label;
+      const inp = document.createElement('input');
+      inp.type = type;
+      inp.style.cssText = 'width:60px;margin-left:2px;';
+      l.appendChild(inp);
+      controls.appendChild(l);
+      this.boxInputs[prop] = inp;
+      inp.onchange = () => {
+        if (!this.defobj || !this.defobj.style) return;
+        this.defobj.style[prop] = inp.value;
+        this.updateBoxModelEditor();
+      };
+    };
+
+    makeInput('Margin', 'margin');
+    makeInput('Border', 'borderWidth');
+    makeInput('Padding', 'padding');
+    makeInput('Bg', 'backgroundColor', 'color');
+
+    wrap.appendChild(controls);
+
+    this.boxEls = { marginBox, borderBox, paddingBox, contentBox };
+    this.updateBoxModelEditor();
+    return wrap;
+  }
+
+  updateBoxModelEditor() {
+    if (!this.boxInputs || !this.defobj || !this.defobj.style) return;
+    const st = this.defobj.style;
+    const toHex = (color) => {
+      const tmp = document.createElement('div');
+      tmp.style.color = color || '#ffffff';
+      document.body.appendChild(tmp);
+      const rgb = getComputedStyle(tmp).color.match(/\d+/g).map(Number);
+      tmp.remove();
+      return Tcolor.rgbToHex(rgb[0], rgb[1], rgb[2]);
+    };
+    this.boxInputs.margin.value = st.margin || '';
+    this.boxInputs.borderWidth.value = st.borderWidth || '';
+    this.boxInputs.padding.value = st.padding || '';
+    this.boxInputs.backgroundColor.value = toHex(st.backgroundColor);
+    this.boxEls.marginBox.style.padding = st.margin || '0';
+    this.boxEls.borderBox.style.borderWidth = st.borderWidth || '0';
+    this.boxEls.paddingBox.style.padding = st.padding || '0';
+    this.boxEls.contentBox.style.backgroundColor = st.backgroundColor || '#ffffff';
+  }
+
+  initAnimationTab(area) {
+    const controls = document.createElement('div');
+    controls.style.cssText = 'padding:4px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;';
+
+    const nameInput = document.createElement('input');
+    nameInput.placeholder = 'name';
+    nameInput.style.width = '80px';
+    const durInput = document.createElement('input');
+    durInput.placeholder = 'duration';
+    durInput.style.width = '70px';
+    const funcInput = document.createElement('input');
+    funcInput.placeholder = 'timing';
+    funcInput.style.width = '70px';
+    const iterInput = document.createElement('input');
+    iterInput.placeholder = 'iter';
+    iterInput.style.width = '50px';
+    const playBtn = document.createElement('button');
+    playBtn.textContent = 'Play';
+    const stopBtn = document.createElement('button');
+    stopBtn.textContent = 'Stop';
+
+    playBtn.onclick = () => {
+      if (!this.defobj || !this.defobj.style) return;
+      this.defobj.style.animationName = nameInput.value;
+      this.defobj.style.animationDuration = durInput.value;
+      this.defobj.style.animationTimingFunction = funcInput.value;
+      this.defobj.style.animationIterationCount = iterInput.value || '1';
+    };
+
+    stopBtn.onclick = () => {
+      if (this.defobj && this.defobj.style) {
+        this.defobj.style.animation = 'none';
+      }
+    };
+
+    controls.append(nameInput, durInput, funcInput, iterInput, playBtn, stopBtn);
+    area.valuesDiv.insertBefore(controls, area.valuesDiv.firstChild);
   }
 
   switchTab(name) {
@@ -671,8 +796,9 @@ this.status.sizable = true;
     const getCat = (key, val) => {
       // Event handler properties typically start with "on".  They may
       // be functions or `null` when no handler is attached; in either
-      // case they belong in the "events" tab.
-      if (/^on/i.test(key)) return 'events';
+      // case they belong in the "events" tab.  Additionally, any null
+      // property is grouped under "events" for easier inspection.
+      if (/^on/i.test(key) || val === null) return 'events';
       if (typeof val === 'function') return 'functions';
       if (val instanceof CSSStyleDeclaration) return 'style';
       return 'props';
