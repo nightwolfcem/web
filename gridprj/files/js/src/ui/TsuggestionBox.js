@@ -31,6 +31,7 @@ export class TsuggestionBox extends TabsoluteElement {
         this.hide();
         this.items = [];
         this.selectedIndex = -1;
+        this._scrollHandler = () => this.#reposition();
         TsuggestionBox.#instance = this;
     }
 
@@ -43,6 +44,7 @@ export class TsuggestionBox extends TabsoluteElement {
         this.htmlObject.style.width = input.getBoundingClientRect().width + 'px';
         this.update(suggestions, onSelect);
         this.popup();
+        window.addEventListener('scroll', this._scrollHandler, true);
     }
 
     update(suggestions, onSelect) {
@@ -75,6 +77,17 @@ export class TsuggestionBox extends TabsoluteElement {
 
     getSelected() {
         return this.items[this.selectedIndex] ?? null;
+    }
+
+    hide() {
+        super.hide();
+        window.removeEventListener('scroll', this._scrollHandler, true);
+    }
+
+    #reposition() {
+        if (this.status?.visible && this.targetElement) {
+            this.rect.alignTo(this.targetElement, this.align, this.offsetX, this.offsetY);
+        }
     }
 }
 
