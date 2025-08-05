@@ -51,10 +51,12 @@ window.addEventListener('DOMContentLoaded', () => {
   document.body.appendChild(outerBody);
 
   const sb = TsuggestionBox.getInstance();
-DOM.baseLayer?.subLayers.dialog?.appendChild(sb.htmlObject);
+ // Place the box on the dialog layer so overlays don't cover it
+  DOM.baseLayer?.subLayers.dialog?.appendChild(sb);
+
   function attachSuggestions(inp) {
-  
-   const update = () => {
+    const update = () => {
+
       const val = inp.value.trim().toLowerCase();
       const suggestions = ['one','two','three'].filter(s => s.startsWith(val));
       sb.showFor(inp, suggestions, v => (inp.value = v));
@@ -62,7 +64,12 @@ DOM.baseLayer?.subLayers.dialog?.appendChild(sb.htmlObject);
     inp.addEventListener('input', update);
     inp.addEventListener('focus', update);
     inp.addEventListener('blur', () => sb.hide());
-  }
+ let p = inp.parentElement;
+    while (p) {
+      p.addEventListener('scroll', () => sb.popup());
+      p = p.parentElement;
+    }
+
 
   attachSuggestions(input1);
   attachSuggestions(input2);
