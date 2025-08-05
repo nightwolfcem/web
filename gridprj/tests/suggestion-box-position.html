@@ -51,12 +51,17 @@ window.addEventListener('DOMContentLoaded', () => {
   document.body.appendChild(outerBody);
 
   const sb = TsuggestionBox.getInstance();
-
+DOM.baseLayer?.subLayers.dialog?.appendChild(sb.htmlObject);
   function attachSuggestions(inp) {
-    inp.addEventListener('input', () => {
-      const suggestions = ['one','two','three'].filter(s => s.startsWith(inp.value));
-      sb.showFor(inp, suggestions, v => inp.value = v);
-    });
+  
+   const update = () => {
+      const val = inp.value.trim().toLowerCase();
+      const suggestions = ['one','two','three'].filter(s => s.startsWith(val));
+      sb.showFor(inp, suggestions, v => (inp.value = v));
+    };
+    inp.addEventListener('input', update);
+    inp.addEventListener('focus', update);
+    inp.addEventListener('blur', () => sb.hide());
   }
 
   attachSuggestions(input1);
