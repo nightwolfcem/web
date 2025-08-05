@@ -1,9 +1,5 @@
 import { cssProps } from '../../../data/cssProperties.js';
-import { TabsoluteElement } from '../../../dom/TabsoluteElement.js';
-import { Ealign } from '../../../core/enums.js';
-import { DOM } from '../../../dom/dom.js';
-
-let sharedSuggestionBox;
+import { TsuggestionBox } from '../../TsuggestionBox.js';
 
 export class TcompoundValueControl extends TbaseControl {
     render() {
@@ -16,26 +12,7 @@ export class TcompoundValueControl extends TbaseControl {
         input.placeholder = this.meta.syntax || 'Değerleri boşlukla ayırarak girin...';
         container.appendChild(input);
 
-        const getSuggestionBox = () => {
-            if (!sharedSuggestionBox) {
-                sharedSuggestionBox = new TabsoluteElement({
-                    align: Ealign.bottom | Ealign.left | Ealign.right,
-                    parent: DOM.baseLayer.subLayers.dropdown,
-                    className: 'suggestion-box',
-                    style: {
-                        border: '1px solid #ccc',
-                        background: '#fff',
-                        maxHeight: '150px',
-                        overflowY: 'auto',
-                        boxSizing: 'border-box'
-                    }
-                });
-                sharedSuggestionBox.hide();
-            }
-            sharedSuggestionBox.targetElement = input;
-            return sharedSuggestionBox;
-        };
-
+        const suggestionBox = TsuggestionBox.getInstance();
 
         const expectedTokens = [];
         const staticOptions = [];
@@ -80,48 +57,45 @@ export class TcompoundValueControl extends TbaseControl {
             return Array.from(suggestions).filter(s => s.toLowerCase().startsWith(current));
         };
 
- const updateSuggestions = () => {
-            const box = getSuggestionBox();
-            const suggestions = getSuggestions();
-            box.htmlObject.innerHTML = '';
-            if (suggestions.length === 0) {
-                box.hide();
-
-                return;
+        const applySuggestion = (sugg) => {
+            const text = input.value;
+            const tokens = text.trim() === '' ? [] : text.trim().split(/\s+/);
+            const editingIndex = text.endsWith(' ') ? tokens.length : tokens.length - 1;
+            tokens[editingIndex] = sugg;
+            let newValue = tokens.join(' ');
+            if (!staticOptions.includes(sugg)) {
+                newValue += ' ';
             }
+            input.value = newValue;
+            suggestionBox.hide();
+            input.focus();
+            this.onChange(input.value.trim());
+        };
 
-            suggestions.forEach(sugg => {
-                const item = document.createElement('div');
-                item.className = 'suggestion-item';
-                item.textContent = sugg;
-                item.style.padding = '5px';
-                item.style.cursor = 'pointer';
-
-                item.addEventListener('mousedown', e => {
-                    e.preventDefault();
-                    const text = input.value;
-                    const tokens = text.trim() === '' ? [] : text.trim().split(/\s+/);
-                    const editingIndex = text.endsWith(' ') ? tokens.length : tokens.length - 1;
-                    tokens[editingIndex] = sugg;
-                    let newValue = tokens.join(' ');
-                    if (!staticOptions.includes(sugg)) {
-                        newValue += ' ';
-                    }
-                    input.value = newValue;
-                    box.hide();
-
-                    input.focus();
-                    this.onChange(input.value.trim());
-                });
-                box.appendChild(item);
-            });
-            box.htmlObject.style.width = input.getBoundingClientRect().width + 'px';
-            box.popup();
+        const updateSuggestions = () => {
+            const suggestions = getSuggestions();
+            suggestionBox.showFor(input, suggestions, applySuggestion);
         };
 
         input.addEventListener('input', updateSuggestions);
+        input.addEventListener('keydown', e => {
+            if (!suggestionBox.status.visible) return;
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                suggestionBox.moveSelection(1);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                suggestionBox.moveSelection(-1);
+            } else if (e.key === 'Enter') {
+                const sel = suggestionBox.getSelected();
+                if (sel) {
+                    e.preventDefault();
+                    applySuggestion(sel);
+                }
+            }
+        });
         input.addEventListener('change', () => this.onChange(input.value.trim()));
-        input.addEventListener('blur', () => setTimeout(() => sharedSuggestionBox?.hide(), 200));
+        input.addEventListener('blur', () => setTimeout(() => suggestionBox.hide(), 200));
 
         return container;
     }
