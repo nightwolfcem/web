@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>TsuggestionBox positioning demo</title>
+<style>
+  .scroll-box {
+    overflow: auto;
+    height: 120px;
+    border: 1px solid #ccc;
+    padding: 8px;
+    margin-bottom: 20px;
+  }
+  .inner-box {
+    height: 200px;
+    overflow: auto;
+    padding: 8px;
+  }
+</style>
+</head>
+<body>
+<script type="module">
+import { DOM } from '../files/js/src/dom/dom.js';
+import { Twindow } from '../files/js/src/ui/Twindow.js';
+import { TsuggestionBox } from '../files/js/src/ui/TsuggestionBox.js';
+
+// initialize DOM helpers
+window.addEventListener('DOMContentLoaded', () => {
+  // Example 1: input inside a Twindow with nested scrollable parents
+  const win = new Twindow();
+  win.showDialog();
+
+  const outer = document.createElement('div');
+  outer.className = 'scroll-box';
+  const inner = document.createElement('div');
+  inner.className = 'inner-box';
+  const input1 = document.createElement('input');
+  inner.appendChild(input1);
+  outer.appendChild(inner);
+  win.contentPanel.appendChild(outer);
+
+  // Example 2: input directly in body with scrollable parents
+  const outerBody = document.createElement('div');
+  outerBody.className = 'scroll-box';
+  const innerBody = document.createElement('div');
+  innerBody.className = 'inner-box';
+  innerBody.style.marginTop = '150px';
+  const input2 = document.createElement('input');
+  innerBody.appendChild(input2);
+  outerBody.appendChild(innerBody);
+  document.body.appendChild(outerBody);
+
+  const sb = TsuggestionBox.getInstance();
+
+  function attachSuggestions(inp) {
+    inp.addEventListener('input', () => {
+      const suggestions = ['one','two','three'].filter(s => s.startsWith(inp.value));
+      sb.showFor(inp, suggestions, v => inp.value = v);
+    });
+  }
+
+  attachSuggestions(input1);
+  attachSuggestions(input2);
+});
+</script>
+</body>
+</html>
