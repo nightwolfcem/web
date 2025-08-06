@@ -426,10 +426,23 @@ this.status.sizable = true;
       };
       mx.appendChild(ls);
       this.clear();
+      const styleTabs = ['style', 'stylebox', 'font', 'animation'];
       Object.keys(this.tabs).forEach(t => {
-        if (t === 'style' && obj.style) this.findsubprops(obj.style, null, t);
-        else if (t !== 'style') this.findsubprops(obj, null, t);
+        if (styleTabs.includes(t)) {
+          if (obj.style) {
+            this.tabs[t].tab.style.display = '';
+            this.findsubprops(obj.style, null, t);
+          } else {
+            this.tabs[t].tab.style.display = 'none';
+          }
+        } else {
+          this.tabs[t].tab.style.display = '';
+          this.findsubprops(obj, null, t);
+        }
       });
+      if (!obj.style && styleTabs.includes(this.activeTab)) {
+        this.switchTab('props');
+      }
       var k, l, list = [];
       k = obj;
       while (k) {
@@ -462,13 +475,14 @@ this.status.sizable = true;
     this.contentPanel.appendChild(cp);
 
     // --- Tab container setup ---
-    // Updated tab layout: style properties are split into three
-    // dedicated sections.  "style" shows all CSS properties,
-    // "stylebox" focuses on box-model related styles like borders
-    // and padding, while "animation" lists animation and transition
-    // related styles.  The previous "nulls" tab has been removed and
-    // null or event handler properties now appear under "events".
-    const tabNames = ['style', 'stylebox', 'props', 'functions', 'events', 'animation'];
+    // Updated tab layout: style properties are split into multiple
+    // dedicated sections.  "style" shows all CSS properties, "stylebox"
+    // focuses on box-model related styles like borders and padding,
+    // "font" isolates font-related properties and "animation" lists
+    // animation and transition related styles.  The previous "nulls"
+    // tab has been removed and null or event handler properties now
+    // appear under "events".
+    const tabNames = ['style', 'stylebox', 'font', 'props', 'functions', 'events', 'animation'];
     this.tabBar = document.createElement('ul');
     this.tabBar.className = 'prop-tab-bar';
     this.tabBar.style.cssText = 'list-style:none;margin:0;padding:0;display:flex;border-bottom:1px solid #ccc;';
@@ -488,6 +502,7 @@ this.status.sizable = true;
       const area = this.createTabArea();
       area.container.style.display = 'none';
       tabContainer.appendChild(area.container);
+      area.tab = li;
       this.tabs[name] = area;
       this.filters[name] = '';
     });
@@ -502,13 +517,13 @@ this.status.sizable = true;
 
     this.switchTab('props');
     // initial render for all tabs.  Tabs that operate on the element's
-    // style object (`style`, `stylebox` and `animation`) are populated
-    // from `this.defobj.style`, while the others inspect the element
-    // itself.
+    // style object ("style", "stylebox", "font" and "animation") are
+    // populated from `this.defobj.style`, while the others inspect the
+    // element itself.
     tabNames.forEach(t => {
-      if ((t === 'style' || t === 'stylebox' || t === 'animation') && this.defobj.style) {
+      if ((t === 'style' || t === 'stylebox' || t === 'font' || t === 'animation') && this.defobj.style) {
         this.findsubprops(this.defobj.style, null, t);
-      } else if (t !== 'style' && t !== 'stylebox' && t !== 'animation') {
+      } else if (t !== 'style' && t !== 'stylebox' && t !== 'font' && t !== 'animation') {
         this.findsubprops(this.defobj, null, t);
       }
     });
@@ -588,7 +603,11 @@ this.status.sizable = true;
     const paddingBox = document.createElement('div');
     paddingBox.style.cssText = 'background:#ddf;padding:10px;';
     const contentBox = document.createElement('div');
-    contentBox.style.cssText = 'background:#fff;height:40px;';
+    contentBox.style.cssText = 'background:#fff;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;';
+    const fontText = document.createElement('div');
+    fontText.textContent = 'Text';
+    fontText.onclick = () => this.switchTab('font');
+    contentBox.appendChild(fontText);
 
     paddingBox.appendChild(contentBox);
     borderBox.appendChild(paddingBox);
@@ -621,6 +640,7 @@ this.status.sizable = true;
     makeInput('Border', 'borderWidth');
     makeInput('Padding', 'padding');
     makeInput('Bg', 'backgroundColor', 'color');
+    makeInput('Border Color', 'borderColor', 'color');
 
     wrap.appendChild(controls);
 
@@ -644,8 +664,10 @@ this.status.sizable = true;
     this.boxInputs.borderWidth.value = st.borderWidth || '';
     this.boxInputs.padding.value = st.padding || '';
     this.boxInputs.backgroundColor.value = toHex(st.backgroundColor);
+    this.boxInputs.borderColor.value = toHex(st.borderColor);
     this.boxEls.marginBox.style.padding = st.margin || '0';
     this.boxEls.borderBox.style.borderWidth = st.borderWidth || '0';
+    this.boxEls.borderBox.style.borderColor = st.borderColor || '#000000';
     this.boxEls.paddingBox.style.padding = st.padding || '0';
     this.boxEls.contentBox.style.backgroundColor = st.backgroundColor || '#ffffff';
   }
@@ -816,6 +838,11 @@ this.status.sizable = true;
         } else if (type === 'animation') {
           // Show animation and transition related style properties.
           if (!/(animation|transition)/i.test(i)) {
+            continue;
+          }
+        } else if (type === 'font') {
+          // Only include font related properties.
+          if (!/^font/i.test(i)) {
             continue;
           }
         } else if (type && type !== 'style' && cat !== type) {
