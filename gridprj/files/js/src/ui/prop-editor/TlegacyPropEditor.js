@@ -915,7 +915,9 @@ this.status.sizable = true;
                     const cssName = toKebabCase(i);
                     if (cssProps.properties[cssName]) {
                       const control = TControlFactory.createControl(cssName, obj.ownerElement || obj._element || obj, (val) => {
-                        obj[i] = val;
+                        const important = /\s*!important\s*$/i.test(val);
+                        const value = important ? val.replace(/\s*!important\s*$/i, '').trim() : val;
+                        obj.setProperty(cssName, value, important ? 'important' : '');
                       });
                       ns = control;
                       ns.firstChild.style.width = '100%';
