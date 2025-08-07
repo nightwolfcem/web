@@ -19,16 +19,31 @@ export class TautoCompleteControl extends TbaseControl {
         const dataList = document.createElement('datalist');
         dataList.id = dataListId;
         
-        this.values.forEach(val => {
+       this.values.forEach(val => {
             const option = document.createElement('option');
-            option.value = val;
+            option.value = val.startsWith('[fn:') && val.endsWith(']')
+                ? val.slice(4, -1) + '()'
+                : val;
             dataList.appendChild(option);
         });
 
-        input.addEventListener('change', () => this.onChange(input.value));
+        input.addEventListener('change', () => {
+            let val = input.value.trim();
+            if (val.startsWith('[fn:') && val.endsWith(']')) {
+                val = val.slice(4, -1) + '()';
+                input.value = val;
+            }
+            this.onChange(val);
+            if (val.endsWith('()')) {
+                const pos = val.indexOf('()') + 1;
+                input.setSelectionRange(pos, pos);
+                input.focus();
+            }
+        });
         
         container.append(input, dataList);
         return container;
     }
 }
 window.TautoCompleteControl = TautoCompleteControl;
+
