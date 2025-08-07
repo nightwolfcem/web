@@ -3380,6 +3380,16 @@ export const cssProps = {
       }
     }
   },
+    "functions": {
+      "linear-gradient": {
+        "params": ["<angle>", "<color-stop>", "<color-stop>"],
+        "template": "linear-gradient(<angle>, <color-stop>, <color-stop>)"
+      },
+      "radial-gradient": {
+        "params": ["<shape-size>", "<position>", "<color-stop>", "<color-stop>"],
+        "template": "radial-gradient(<shape-size> at <position>, <color-stop>, <color-stop>)"
+      }
+    },
     // Diğer veri setleri (font-family isimleri vb.)
     "familyNames": [
         "Times New Roman", "Georgia", "Garamond", "Arial", "Helvetica", "Verdana", "Courier New", "Lucida Console", "Impact", "Comic Sans MS"
