@@ -4,11 +4,21 @@ import { JSDOM } from 'jsdom';
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url: 'http://localhost' });
 global.window = dom.window;
 global.document = dom.window.document;
+global.DOMRect = dom.window.DOMRect;
+global.location = dom.window.location;
+global.HTMLElement = dom.window.HTMLElement;
+global.getComputedStyle = dom.window.getComputedStyle;
+global.scrollX = 0;
+global.scrollY = 0;
 
 // Load modules
 // 'src' klasörü artık 'files/js/src' konumuna taşındı.
 // Testlerdeki modül yollarını güncel konuma göre düzenliyoruz.
 const { DOM } = await import('../files/js/src/dom/dom.js');
+const { TpositionedElement } = await import('../files/js/src/dom/TpositionedElement.js');
+global.TpositionedElement = TpositionedElement;
+const { EcaptionButton } = await import('../files/js/src/core/enums.js');
+global.EcaptionButton = EcaptionButton;
 const { Twindow } = await import('../files/js/src/ui/Twindow.js');
 
 // trigger DOM load handlers

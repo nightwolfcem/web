@@ -426,7 +426,7 @@ this.status.sizable = true;
       };
       mx.appendChild(ls);
       this.clear();
-      const styleTabs = ['style', 'stylebox', 'font', 'animation'];
+      const styleTabs = ['style', 'box', 'color', 'transform', 'animation'];
       Object.keys(this.tabs).forEach(t => {
         if (styleTabs.includes(t)) {
           if (obj.style) {
@@ -475,14 +475,13 @@ this.status.sizable = true;
     this.contentPanel.appendChild(cp);
 
     // --- Tab container setup ---
-    // Updated tab layout: style properties are split into multiple
-    // dedicated sections.  "style" shows all CSS properties, "stylebox"
-    // focuses on box-model related styles like borders and padding,
-    // "font" isolates font-related properties and "animation" lists
-    // animation and transition related styles.  The previous "nulls"
-    // tab has been removed and null or event handler properties now
-    // appear under "events".
-    const tabNames = ['style', 'stylebox', 'font', 'props', 'functions', 'events', 'animation'];
+    // Updated tab layout: "style" shows all CSS properties, "box"
+    // focuses on box-model related styles, "color" groups color and
+    // background/image properties, "transform" lists 2D/3D transform
+    // rules and "animation" covers animation and transition related
+    // styles.  Additional tabs expose general properties, functions and
+    // events.
+    const tabNames = ['style', 'box', 'color', 'transform', 'animation', 'props', 'functions', 'events'];
     this.tabBar = document.createElement('ul');
     this.tabBar.className = 'prop-tab-bar';
     this.tabBar.style.cssText = 'list-style:none;margin:0;padding:0;display:flex;border-bottom:1px solid #ccc;';
@@ -507,7 +506,7 @@ this.status.sizable = true;
       this.filters[name] = '';
     });
 
-    if (this.tabs['stylebox']) this.initStyleBoxTab(this.tabs['stylebox']);
+    if (this.tabs['box']) this.initBoxModelTab(this.tabs['box']);
     if (this.tabs['animation']) this.initAnimationTab(this.tabs['animation']);
 
     this.contentPanel.style.fontSize = '12px';
@@ -517,13 +516,13 @@ this.status.sizable = true;
 
     this.switchTab('props');
     // initial render for all tabs.  Tabs that operate on the element's
-    // style object ("style", "stylebox", "font" and "animation") are
-    // populated from `this.defobj.style`, while the others inspect the
-    // element itself.
+    // style object ("style", "box", "color", "transform" and
+    // "animation") are populated from `this.defobj.style`, while the
+    // others inspect the element itself.
     tabNames.forEach(t => {
-      if ((t === 'style' || t === 'stylebox' || t === 'font' || t === 'animation') && this.defobj.style) {
+      if (['style', 'box', 'color', 'transform', 'animation'].includes(t) && this.defobj.style) {
         this.findsubprops(this.defobj.style, null, t);
-      } else if (t !== 'style' && t !== 'stylebox' && t !== 'font' && t !== 'animation') {
+      } else if (!['style', 'box', 'color', 'transform', 'animation'].includes(t)) {
         this.findsubprops(this.defobj, null, t);
       }
     });
@@ -587,7 +586,7 @@ this.status.sizable = true;
     return { container: cntx, keysDiv: cp, valuesDiv: cv };
   }
 
-  initStyleBoxTab(area) {
+  initBoxModelTab(area) {
     const editor = this.createBoxModelEditor();
     area.valuesDiv.insertBefore(editor, area.valuesDiv.firstChild);
   }
@@ -878,19 +877,24 @@ this.status.sizable = true;
       if (!(obj.constructor.name == 'CSSStyleDeclaration' && !isNaN(Number(i)))) {
         let cat = type === 'style' ? 'style' : getCat(i, obj[i]);
         // Custom filters for special style-based tabs.
-        if (type === 'stylebox') {
+        if (type === 'box') {
           // Show box model related style properties.
-          if (!/^(border|padding|width|height|background|color)/i.test(i)) {
+          if (!/^(margin|padding|border|width|height|top|left|right|bottom|position)/i.test(i)) {
+            continue;
+          }
+        } else if (type === 'color') {
+          // Group color, background, image and opacity properties.
+          if (!/(color|background|image|opacity)/i.test(i)) {
+            continue;
+          }
+        } else if (type === 'transform') {
+          // List transform and perspective related properties.
+          if (!/(transform|perspective)/i.test(i)) {
             continue;
           }
         } else if (type === 'animation') {
           // Show animation and transition related style properties.
           if (!/(animation|transition)/i.test(i)) {
-            continue;
-          }
-        } else if (type === 'font') {
-          // Only include font related properties.
-          if (!/^font/i.test(i)) {
             continue;
           }
         } else if (type && type !== 'style' && cat !== type) {
