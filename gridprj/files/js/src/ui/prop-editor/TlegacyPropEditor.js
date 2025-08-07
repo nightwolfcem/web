@@ -482,6 +482,7 @@ this.status.sizable = true;
     // styles.  Additional tabs expose general properties, functions and
     // events.
     const tabNames = ['style', 'box', 'color', 'transform', 'animation', 'props', 'functions', 'events'];
+    const gridlessTabs = ['box', 'color', 'transform', 'animation'];
     this.tabBar = document.createElement('ul');
     this.tabBar.className = 'prop-tab-bar';
     this.tabBar.style.cssText = 'list-style:none;margin:0;padding:0;display:flex;border-bottom:1px solid #ccc;';
@@ -498,7 +499,7 @@ this.status.sizable = true;
       li.onclick = () => this.switchTab(name);
       this.tabBar.appendChild(li);
 
-      const area = this.createTabArea();
+      const area = this.createTabArea(gridlessTabs.includes(name));
       area.container.style.display = 'none';
       tabContainer.appendChild(area.container);
       area.tab = li;
@@ -507,6 +508,8 @@ this.status.sizable = true;
     });
 
     if (this.tabs['box']) this.initBoxModelTab(this.tabs['box']);
+    if (this.tabs['color']) this.initColorTab(this.tabs['color']);
+    if (this.tabs['transform']) this.initTransformTab(this.tabs['transform']);
     if (this.tabs['animation']) this.initAnimationTab(this.tabs['animation']);
 
     this.contentPanel.style.fontSize = '12px';
@@ -520,9 +523,10 @@ this.status.sizable = true;
     // "animation") are populated from `this.defobj.style`, while the
     // others inspect the element itself.
     tabNames.forEach(t => {
-      if (['style', 'box', 'color', 'transform', 'animation'].includes(t) && this.defobj.style) {
+      if (gridlessTabs.includes(t)) return;
+      if (t === 'style' && this.defobj.style) {
         this.findsubprops(this.defobj.style, null, t);
-      } else if (!['style', 'box', 'color', 'transform', 'animation'].includes(t)) {
+      } else if (t !== 'style') {
         this.findsubprops(this.defobj, null, t);
       }
     });
@@ -541,17 +545,29 @@ this.status.sizable = true;
     this.htmlObject.onwheel = (e) => {
       const ho = this.htmlObject;
       const area = this.tabs[this.activeTab];
-      if (e.currentTarget == ho)
+      if (e.currentTarget == ho && area.keysDiv) {
         area.keysDiv.scrollTop = area.keysDiv.scrollTop + e.deltaY;
-      area.valuesDiv.scrollTop = area.valuesDiv.scrollTop + e.deltaY;
+      }
+      if (area.valuesDiv) {
+        area.valuesDiv.scrollTop = area.valuesDiv.scrollTop + e.deltaY;
+      }
       e.preventDefault();
     };
     this.viewObject(window);
   }
 
-  createTabArea() {
+  createTabArea(noGrid = false) {
     const cntx = document.createElement('div');
     cntx.style.cssText = 'width:100%;overflow:hidden;height:100%;display:inline-block;background-color:#fefefe;white-space:nowrap';
+    if (noGrid) cntx.classList.add('no-grid');
+
+    const cv = document.createElement('div');
+    cv.className = 'prop-values';
+    if (noGrid) {
+      cv.style.cssText = 'height:100%;width:100%;display:block;overflow:auto;';
+      cntx.appendChild(cv);
+      return { container: cntx, valuesDiv: cv };
+    }
 
     const cp = document.createElement('div');
     cp.className = 'prop-keys';
@@ -571,8 +587,6 @@ this.status.sizable = true;
     };
     const sp = splitBar.htmlObject;
 
-    const cv = document.createElement('div');
-    cv.className = 'prop-values';
     cv.style.cssText = 'height:100%;width:calc(100% - 105px);display:inline-block;margin-left:3px;vertical-align:top;';
     cv.innerHTML = '<table cellpadding=0 cellspacing=0 style="table-layout:fixed;width:100%;border-collapse:collapse;"></table>';
     cv.onscroll = function () {
@@ -758,6 +772,96 @@ this.status.sizable = true;
     area.valuesDiv.insertBefore(controls, area.valuesDiv.firstChild);
   }
 
+  initColorTab(area) {
+    const controls = document.createElement('div');
+    controls.style.cssText = 'padding:4px;display:flex;flex-direction:column;gap:6px;';
+
+    const toHex = (color) => {
+      const tmp = document.createElement('div');
+      tmp.style.color = color || '#000000';
+      document.body.appendChild(tmp);
+      const rgb = getComputedStyle(tmp).color.match(/\d+/g).map(Number);
+      tmp.remove();
+      return Tcolor.rgbToHex(rgb[0], rgb[1], rgb[2]);
+    };
+
+    const makeInput = (label, prop) => {
+      const wrap = document.createElement('label');
+      wrap.style.cssText = 'font-size:11px;display:flex;align-items:center;gap:4px;';
+      wrap.textContent = label + ':';
+      const inp = document.createElement('input');
+      inp.type = 'color';
+      inp.value = toHex(this.defobj && this.defobj.style ? this.defobj.style[prop] : '#000000');
+      inp.onchange = () => {
+        if (this.defobj && this.defobj.style) {
+          this.defobj.style[prop] = inp.value;
+        }
+      };
+      wrap.appendChild(inp);
+      controls.appendChild(wrap);
+    };
+
+    makeInput('Text', 'color');
+    makeInput('Background', 'backgroundColor');
+    makeInput('Border', 'borderColor');
+
+    area.valuesDiv.appendChild(controls);
+  }
+
+  initTransformTab(area) {
+    const controls = document.createElement('div');
+    controls.style.cssText = 'padding:4px;display:flex;flex-direction:column;gap:6px;';
+
+    const makeInput = (label, unit = '') => {
+      const wrap = document.createElement('label');
+      wrap.style.cssText = 'font-size:11px;display:flex;align-items:center;gap:4px;';
+      wrap.textContent = label + ':';
+      const inp = document.createElement('input');
+      inp.type = 'number';
+      inp.style.width = '60px';
+      wrap.appendChild(inp);
+      controls.appendChild(wrap);
+      return { inp, unit };
+    };
+
+    const rotate = makeInput('Rotate (deg)', 'deg');
+    const scale = makeInput('Scale');
+    const tx = makeInput('Translate X (px)', 'px');
+    const ty = makeInput('Translate Y (px)', 'px');
+
+    const parseCurrent = () => {
+      if (!this.defobj || !this.defobj.style) return;
+      const tr = this.defobj.style.transform || '';
+      const r = tr.match(/rotate\(([^)]+)\)/);
+      const s = tr.match(/scale\(([^)]+)\)/);
+      const t = tr.match(/translate\(([^)]+)\)/);
+      if (r) rotate.inp.value = parseFloat(r[1]);
+      if (s) scale.inp.value = parseFloat(s[1]);
+      if (t) {
+        const parts = t[1].split(/[,\s]+/);
+        tx.inp.value = parseFloat(parts[0]);
+        ty.inp.value = parseFloat(parts[1] || 0);
+      }
+    };
+
+    const update = () => {
+      if (!this.defobj || !this.defobj.style) return;
+      const r = rotate.inp.value || 0;
+      const s = scale.inp.value || 1;
+      const x = tx.inp.value || 0;
+      const y = ty.inp.value || 0;
+      this.defobj.style.transform = `rotate(${r}deg) scale(${s}) translate(${x}px, ${y}px)`;
+    };
+
+    [rotate, scale, tx, ty].forEach(cfg => {
+      cfg.inp.onchange = update;
+      cfg.inp.oninput = update;
+    });
+
+    parseCurrent();
+    area.valuesDiv.appendChild(controls);
+  }
+
   switchTab(name) {
     if (!this.tabs[name]) return;
     Object.entries(this.tabs).forEach(([t, area]) => {
@@ -777,7 +881,7 @@ this.status.sizable = true;
   clear() {
     Object.values(this.tabs).forEach(area => {
       const tbls = area.container.getElementsByTagName('table');
-      if (tbls[1] && tbls[1].getElementsByTagName('tbody')[0]) {
+      if (tbls.length > 1 && tbls[1].getElementsByTagName('tbody')[0]) {
         tbls[1].removeChild(tbls[1].getElementsByTagName('tbody')[0]);
         tbls[0].removeChild(tbls[0].getElementsByTagName('tbody')[0]);
       }
@@ -789,6 +893,7 @@ this.status.sizable = true;
     const area = this.tabs[this.activeTab];
     const tp = area.container.getElementsByTagName('table')[0];
     const tv = area.container.getElementsByTagName('table')[1];
+    if (!tp || !tv) return;
     const g = new RegExp(t, 'i', 'g');
     for (let i = 0; i < tp.rows.length; i++) {
       tp.rows[i].style._display = tp.rows[i].style.display;
@@ -801,14 +906,15 @@ this.status.sizable = true;
         tv.rows[i].style.display = 'none';
       }
     }
-    area.keysDiv.scrollTop = 0;
-    area.valuesDiv.scrollTop = 0;
+    if (area.keysDiv) area.keysDiv.scrollTop = 0;
+    if (area.valuesDiv) area.valuesDiv.scrollTop = 0;
   }
 
   expand(rv) {
     const area = this.tabs[rv.tab || this.activeTab];
     var l, m, lc, c, tp = area.container.getElementsByTagName('table')[0];
     const tv = area.container.getElementsByTagName('table')[1];
+    if (!tp || !tv) return;
     function exclp(r, e, f) {
       var k, v, i, g = new RegExp('^' + r.lvl);
       for (i = r.rowIndex + 1; i < tp.rows.length; i++) {
