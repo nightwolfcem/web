@@ -596,23 +596,40 @@ this.status.sizable = true;
     const wrap = document.createElement('div');
     wrap.style.cssText = 'padding:4px;text-align:center;';
 
-    const marginBox = document.createElement('div');
-    marginBox.style.cssText = 'display:inline-block;background:#fdd;padding:10px;';
-    const borderBox = document.createElement('div');
-    borderBox.style.cssText = 'background:#dfd;border:4px solid #000;padding:10px;';
-    const paddingBox = document.createElement('div');
-    paddingBox.style.cssText = 'background:#ddf;padding:10px;';
-    const contentBox = document.createElement('div');
-    contentBox.style.cssText = 'background:#fff;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;';
-    const fontText = document.createElement('div');
-    fontText.textContent = 'Text';
-    fontText.onclick = () => this.switchTab('font');
-    contentBox.appendChild(fontText);
+    const makeBox = (name, style) => {
+      const box = document.createElement('div');
+      box.style.cssText = 'position:relative;' + style;
+      const label = document.createElement('div');
+      label.textContent = name;
+      label.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:11px;';
+      box.appendChild(label);
+      const top = document.createElement('span');
+      top.style.cssText = 'position:absolute;top:0;left:50%;transform:translate(-50%,-100%);font-size:11px;';
+      const right = document.createElement('span');
+      right.style.cssText = 'position:absolute;top:50%;right:0;transform:translate(100%,-50%);font-size:11px;';
+      const bottom = document.createElement('span');
+      bottom.style.cssText = 'position:absolute;bottom:0;left:50%;transform:translate(-50%,100%);font-size:11px;';
+      const left = document.createElement('span');
+      left.style.cssText = 'position:absolute;top:50%;left:0;transform:translate(-100%,-50%);font-size:11px;';
+      box.appendChild(top);
+      box.appendChild(right);
+      box.appendChild(bottom);
+      box.appendChild(left);
+      return { box, spans: { top, right, bottom, left } };
+    };
 
-    paddingBox.appendChild(contentBox);
-    borderBox.appendChild(paddingBox);
-    marginBox.appendChild(borderBox);
-    wrap.appendChild(marginBox);
+    const margin = makeBox('margin', 'background:#fdd;padding:10px;display:inline-block;');
+    const border = makeBox('border', 'background:#dfd;border-style:solid;border-color:#000;padding:10px;');
+    const padding = makeBox('padding', 'background:#ddf;padding:10px;');
+    const contentBox = document.createElement('div');
+    contentBox.style.cssText = 'position:relative;background:#fff;height:40px;display:flex;align-items:center;justify-content:center;';
+    const contentLabel = document.createElement('span');
+    contentBox.appendChild(contentLabel);
+
+    padding.box.appendChild(contentBox);
+    border.box.appendChild(padding.box);
+    margin.box.appendChild(border.box);
+    wrap.appendChild(margin.box);
 
     const controls = document.createElement('div');
     controls.style.cssText = 'margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;justify-content:center;';
@@ -644,7 +661,8 @@ this.status.sizable = true;
 
     wrap.appendChild(controls);
 
-    this.boxEls = { marginBox, borderBox, paddingBox, contentBox };
+    this.boxEls = { marginBox: margin.box, borderBox: border.box, paddingBox: padding.box, contentBox };
+    this.boxValues = { margin: margin.spans, border: border.spans, padding: padding.spans, content: contentLabel };
     this.updateBoxModelEditor();
     return wrap;
   }
@@ -652,6 +670,7 @@ this.status.sizable = true;
   updateBoxModelEditor() {
     if (!this.boxInputs || !this.defobj || !this.defobj.style) return;
     const st = this.defobj.style;
+    const cs = getComputedStyle(this.defobj);
     const toHex = (color) => {
       const tmp = document.createElement('div');
       tmp.style.color = color || '#ffffff';
@@ -665,11 +684,40 @@ this.status.sizable = true;
     this.boxInputs.padding.value = st.padding || '';
     this.boxInputs.backgroundColor.value = toHex(st.backgroundColor);
     this.boxInputs.borderColor.value = toHex(st.borderColor);
-    this.boxEls.marginBox.style.padding = st.margin || '0';
-    this.boxEls.borderBox.style.borderWidth = st.borderWidth || '0';
+
+    this.boxEls.marginBox.style.paddingTop = cs.marginTop;
+    this.boxEls.marginBox.style.paddingRight = cs.marginRight;
+    this.boxEls.marginBox.style.paddingBottom = cs.marginBottom;
+    this.boxEls.marginBox.style.paddingLeft = cs.marginLeft;
+
+    this.boxEls.borderBox.style.borderTopWidth = cs.borderTopWidth;
+    this.boxEls.borderBox.style.borderRightWidth = cs.borderRightWidth;
+    this.boxEls.borderBox.style.borderBottomWidth = cs.borderBottomWidth;
+    this.boxEls.borderBox.style.borderLeftWidth = cs.borderLeftWidth;
     this.boxEls.borderBox.style.borderColor = st.borderColor || '#000000';
-    this.boxEls.paddingBox.style.padding = st.padding || '0';
+
+    this.boxEls.paddingBox.style.paddingTop = cs.paddingTop;
+    this.boxEls.paddingBox.style.paddingRight = cs.paddingRight;
+    this.boxEls.paddingBox.style.paddingBottom = cs.paddingBottom;
+    this.boxEls.paddingBox.style.paddingLeft = cs.paddingLeft;
     this.boxEls.contentBox.style.backgroundColor = st.backgroundColor || '#ffffff';
+
+    this.boxValues.margin.top.textContent = cs.marginTop;
+    this.boxValues.margin.right.textContent = cs.marginRight;
+    this.boxValues.margin.bottom.textContent = cs.marginBottom;
+    this.boxValues.margin.left.textContent = cs.marginLeft;
+
+    this.boxValues.border.top.textContent = cs.borderTopWidth;
+    this.boxValues.border.right.textContent = cs.borderRightWidth;
+    this.boxValues.border.bottom.textContent = cs.borderBottomWidth;
+    this.boxValues.border.left.textContent = cs.borderLeftWidth;
+
+    this.boxValues.padding.top.textContent = cs.paddingTop;
+    this.boxValues.padding.right.textContent = cs.paddingRight;
+    this.boxValues.padding.bottom.textContent = cs.paddingBottom;
+    this.boxValues.padding.left.textContent = cs.paddingLeft;
+
+    this.boxValues.content.textContent = cs.width + ' × ' + cs.height;
   }
 
   initAnimationTab(area) {
