@@ -6,6 +6,7 @@ import { Tcolor, calculateLuminance } from '../../utils/colorUtils.js';
 import { cssProps } from '../../data/cssProperties.js';
 import { TSplitBar } from '../TSplitBar.js';
 import { TControlFactory } from '../style-editor/TControlFactory.js';
+import { TBoxModelPanel } from '../style-editor/TBoxModelPanel.js';
 import '../../core/prototypes.js';
 import { classToObjects } from '../../core/classUtils.js';
 import { Tlayer } from '../../dom/Tlayer.js';
@@ -264,9 +265,9 @@ this.status.sizable = true;
     this.filters = {};
     this.activeTab = 'props';
     this.cntx = null;
-    // Box model editor references
-    this.boxInputs = null;
-    this.boxEls = null;
+    // Box model editor panel
+    this.boxPanel = null;
+    this.boxPanelContainer = null;
     cp = document.createElement('div');
     cp.className = 'cp';
     cp.style.cssText = 'width: 100%;border: 1px inset; box-sizing: border-box;display:inline-block;height: 35px;';
@@ -602,136 +603,23 @@ this.status.sizable = true;
   }
 
   initBoxModelTab(area) {
-    const editor = this.createBoxModelEditor();
-    area.valuesDiv.insertBefore(editor, area.valuesDiv.firstChild);
-  }
-
-  createBoxModelEditor() {
     const wrap = document.createElement('div');
-    wrap.style.cssText = 'padding:4px;text-align:center;';
-
-    const makeBox = (name, style) => {
-      const box = document.createElement('div');
-      box.style.cssText = 'position:relative;' + style;
-      const label = document.createElement('div');
-      label.textContent = name;
-      label.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:11px;';
-      box.appendChild(label);
-      const top = document.createElement('span');
-      top.style.cssText = 'position:absolute;top:0;left:50%;transform:translate(-50%,-100%);font-size:11px;';
-      const right = document.createElement('span');
-      right.style.cssText = 'position:absolute;top:50%;right:0;transform:translate(100%,-50%);font-size:11px;';
-      const bottom = document.createElement('span');
-      bottom.style.cssText = 'position:absolute;bottom:0;left:50%;transform:translate(-50%,100%);font-size:11px;';
-      const left = document.createElement('span');
-      left.style.cssText = 'position:absolute;top:50%;left:0;transform:translate(-100%,-50%);font-size:11px;';
-      box.appendChild(top);
-      box.appendChild(right);
-      box.appendChild(bottom);
-      box.appendChild(left);
-      return { box, spans: { top, right, bottom, left } };
-    };
-
-    const margin = makeBox('margin', 'background:#fdd;padding:10px;display:inline-block;');
-    const border = makeBox('border', 'background:#dfd;border-style:solid;border-color:#000;padding:10px;');
-    const padding = makeBox('padding', 'background:#ddf;padding:10px;');
-    const contentBox = document.createElement('div');
-    contentBox.style.cssText = 'position:relative;background:#fff;height:40px;display:flex;align-items:center;justify-content:center;';
-    const contentLabel = document.createElement('span');
-    contentBox.appendChild(contentLabel);
-
-    padding.box.appendChild(contentBox);
-    border.box.appendChild(padding.box);
-    margin.box.appendChild(border.box);
-    wrap.appendChild(margin.box);
-
-    const controls = document.createElement('div');
-    controls.style.cssText = 'margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;justify-content:center;';
-
-    this.boxInputs = {};
-
-    const makeInput = (label, prop, type = 'text') => {
-      const l = document.createElement('label');
-      l.style.cssText = 'font-size:11px;';
-      l.textContent = label;
-      const inp = document.createElement('input');
-      inp.type = type;
-      inp.style.cssText = 'width:60px;margin-left:2px;';
-      l.appendChild(inp);
-      controls.appendChild(l);
-      this.boxInputs[prop] = inp;
-      inp.onchange = () => {
-        if (!this.defobj || !this.defobj.style) return;
-        this.defobj.style[prop] = inp.value;
-        this.updateBoxModelEditor();
-      };
-    };
-
-    makeInput('Margin', 'margin');
-    makeInput('Border', 'borderWidth');
-    makeInput('Padding', 'padding');
-    makeInput('Bg', 'backgroundColor', 'color');
-    makeInput('Border Color', 'borderColor', 'color');
-
-    wrap.appendChild(controls);
-
-    this.boxEls = { marginBox: margin.box, borderBox: border.box, paddingBox: padding.box, contentBox };
-    this.boxValues = { margin: margin.spans, border: border.spans, padding: padding.spans, content: contentLabel };
-    this.updateBoxModelEditor();
-    return wrap;
+    area.valuesDiv.insertBefore(wrap, area.valuesDiv.firstChild);
+    this.boxPanelContainer = wrap;
+    const target = this.defobj && this.defobj.style ? this.defobj : document.createElement('div');
+    this.boxPanel = new TBoxModelPanel(target, wrap);
+    this.boxPanel.showControls('margin');
   }
 
   updateBoxModelEditor() {
-    if (!this.boxInputs || !this.defobj || !this.defobj.style) return;
-    const st = this.defobj.style;
-    const cs = getComputedStyle(this.defobj);
-    const toHex = (color) => {
-      const tmp = document.createElement('div');
-      tmp.style.color = color || '#ffffff';
-      document.body.appendChild(tmp);
-      const rgb = getComputedStyle(tmp).color.match(/\d+/g).map(Number);
-      tmp.remove();
-      return Tcolor.rgbToHex(rgb[0], rgb[1], rgb[2]);
-    };
-    this.boxInputs.margin.value = st.margin || '';
-    this.boxInputs.borderWidth.value = st.borderWidth || '';
-    this.boxInputs.padding.value = st.padding || '';
-    this.boxInputs.backgroundColor.value = toHex(st.backgroundColor);
-    this.boxInputs.borderColor.value = toHex(st.borderColor);
-
-    this.boxEls.marginBox.style.paddingTop = cs.marginTop;
-    this.boxEls.marginBox.style.paddingRight = cs.marginRight;
-    this.boxEls.marginBox.style.paddingBottom = cs.marginBottom;
-    this.boxEls.marginBox.style.paddingLeft = cs.marginLeft;
-
-    this.boxEls.borderBox.style.borderTopWidth = cs.borderTopWidth;
-    this.boxEls.borderBox.style.borderRightWidth = cs.borderRightWidth;
-    this.boxEls.borderBox.style.borderBottomWidth = cs.borderBottomWidth;
-    this.boxEls.borderBox.style.borderLeftWidth = cs.borderLeftWidth;
-    this.boxEls.borderBox.style.borderColor = st.borderColor || '#000000';
-
-    this.boxEls.paddingBox.style.paddingTop = cs.paddingTop;
-    this.boxEls.paddingBox.style.paddingRight = cs.paddingRight;
-    this.boxEls.paddingBox.style.paddingBottom = cs.paddingBottom;
-    this.boxEls.paddingBox.style.paddingLeft = cs.paddingLeft;
-    this.boxEls.contentBox.style.backgroundColor = st.backgroundColor || '#ffffff';
-
-    this.boxValues.margin.top.textContent = cs.marginTop;
-    this.boxValues.margin.right.textContent = cs.marginRight;
-    this.boxValues.margin.bottom.textContent = cs.marginBottom;
-    this.boxValues.margin.left.textContent = cs.marginLeft;
-
-    this.boxValues.border.top.textContent = cs.borderTopWidth;
-    this.boxValues.border.right.textContent = cs.borderRightWidth;
-    this.boxValues.border.bottom.textContent = cs.borderBottomWidth;
-    this.boxValues.border.left.textContent = cs.borderLeftWidth;
-
-    this.boxValues.padding.top.textContent = cs.paddingTop;
-    this.boxValues.padding.right.textContent = cs.paddingRight;
-    this.boxValues.padding.bottom.textContent = cs.paddingBottom;
-    this.boxValues.padding.left.textContent = cs.paddingLeft;
-
-    this.boxValues.content.textContent = cs.width + ' × ' + cs.height;
+    if (!this.boxPanel) return;
+    if (this.defobj && this.defobj.style) {
+      this.boxPanelContainer.style.display = '';
+      this.boxPanel.target = this.defobj;
+      this.boxPanel.updateDiagram();
+    } else if (this.boxPanelContainer) {
+      this.boxPanelContainer.style.display = 'none';
+    }
   }
 
   initAnimationTab(area) {
