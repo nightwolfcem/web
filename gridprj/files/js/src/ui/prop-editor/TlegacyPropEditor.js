@@ -569,6 +569,7 @@ this.status.sizable = true;
       return { container: cntx, valuesDiv: cv };
     }
 
+
     const cp = document.createElement('div');
     cp.className = 'prop-keys';
     cp.style.cssText = 'display:inline-block;width:100px;height:100%;overflow:hidden;';
