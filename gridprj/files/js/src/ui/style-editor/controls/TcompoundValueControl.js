@@ -1,5 +1,6 @@
 import { cssProps } from '../../../data/cssProperties.js';
 import { TsuggestionBox } from '../../TsuggestionBox.js';
+import { TbaseControl } from './TbaseControl.js';
 
 export class TcompoundValueControl extends TbaseControl {
     render() {
@@ -28,9 +29,11 @@ export class TcompoundValueControl extends TbaseControl {
 
         const getSuggestions = () => {
             const val = input.value;
-            const tokens = val.split(/\s+/);
+            const tokens = val.trim() === '' ? [] : val.trim().split(/\s+/);
+            // If cursor is at a new token, include empty string for matching
             if (val.endsWith(' ')) tokens.push('');
-            const current = tokens[tokens.length - 1].toLowerCase();
+            const current = tokens.length ? tokens[tokens.length - 1].toLowerCase() : '';
+            const usedTokens = new Set(tokens.slice(0, -1).map(t => t.toLowerCase()));
             const suggestions = new Set();
 
             expectedTokens.forEach(subProp => {
@@ -54,19 +57,33 @@ export class TcompoundValueControl extends TbaseControl {
 
             staticOptions.forEach(opt => suggestions.add(opt));
 
-            return Array.from(suggestions).filter(s => s.toLowerCase().startsWith(current));
+            return Array.from(suggestions).filter(s => {
+                const lower = s.toLowerCase();
+                if (usedTokens.has(lower)) return false;
+                return lower.startsWith(current);
+            });
         };
 
         const applySuggestion = (sugg) => {
             const text = input.value;
             const tokens = text.trim() === '' ? [] : text.trim().split(/\s+/);
             const editingIndex = text.endsWith(' ') ? tokens.length : tokens.length - 1;
-            tokens[editingIndex] = sugg;
-            let newValue = tokens.join(' ');
-            if (!staticOptions.includes(sugg)) {
-                newValue += ' ';
+
+            if (sugg.endsWith('()')) {
+                tokens[editingIndex] = sugg;
+                input.value = tokens.join(' ');
+                // place caret inside parentheses for immediate editing
+                const pos = input.value.lastIndexOf('()');
+                input.setSelectionRange(pos + 1, pos + 1);
+            } else {
+                tokens[editingIndex] = sugg;
+                let newValue = tokens.join(' ');
+                if (!staticOptions.includes(sugg)) {
+                    newValue += ' ';
+                }
+                input.value = newValue;
             }
-            input.value = newValue;
+
             suggestionBox.hide();
             input.focus();
             this.onChange(input.value.trim());
