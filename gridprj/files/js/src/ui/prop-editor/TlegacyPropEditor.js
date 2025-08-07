@@ -482,6 +482,7 @@ this.status.sizable = true;
     // styles.  Additional tabs expose general properties, functions and
     // events.
     const tabNames = ['style', 'box', 'color', 'transform', 'animation', 'props', 'functions', 'events'];
+    const gridlessTabs = ['box', 'color', 'transform', 'animation'];
     this.tabBar = document.createElement('ul');
     this.tabBar.className = 'prop-tab-bar';
     this.tabBar.style.cssText = 'list-style:none;margin:0;padding:0;display:flex;border-bottom:1px solid #ccc;';
@@ -498,7 +499,7 @@ this.status.sizable = true;
       li.onclick = () => this.switchTab(name);
       this.tabBar.appendChild(li);
 
-      const area = this.createTabArea();
+      const area = this.createTabArea(gridlessTabs.includes(name));
       area.container.style.display = 'none';
       tabContainer.appendChild(area.container);
       area.tab = li;
@@ -549,9 +550,10 @@ this.status.sizable = true;
     this.viewObject(window);
   }
 
-  createTabArea() {
+  createTabArea(noGrid = false) {
     const cntx = document.createElement('div');
     cntx.style.cssText = 'width:100%;overflow:hidden;height:100%;display:inline-block;background-color:#fefefe;white-space:nowrap';
+    if (noGrid) cntx.classList.add('no-grid');
 
     const cp = document.createElement('div');
     cp.className = 'prop-keys';
