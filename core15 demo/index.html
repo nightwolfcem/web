@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>core15 Demo Advanced</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #20232a;
+    }
+    #stage {
+      position: absolute;
+      inset: 16px;
+      background: #f0f2f7;
+      border-radius: 8px;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 18px 45px rgba(0,0,0,0.22);
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <div id="stage"></div>
+
+  <!-- Entry point: ES module -->
+  <script type="module" src="./index.js"></script>
+</body>
+</html>
